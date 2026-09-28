@@ -1,5 +1,5 @@
 // Interactive COG map viewer (OpenLayers, global `ol` UMD bundle from CDN).
-// Lives on the homepage (index.html) only, with its own category/product/
+// Lives on map.html only, with its own category/product/
 // response picker -- mirrors js/product-picker.js's shape (used by Time
 // Series/Seasonal Cycle) but is entirely independent, since the map also
 // drives period/mode/year controls no other page has. Colors are never
@@ -181,7 +181,7 @@ const COG_NODATA = -32768;
 // ol.source.GeoTIFF (reproduced in isolation, 2026-09, headless Chromium);
 // WebGLTile+GeoTIFF is the stable, working combination once geotiff.js
 // (the separate TIFF-decoding library ol.source.GeoTIFF depends on at
-// runtime) is loaded alongside ol.js -- see index.html's <script> tags.
+// runtime) is loaded alongside ol.js -- see map.html's <script> tags.
 // Baseline/climatology maps get a smooth linear color ramp instead of
 // discrete bins -- common/maps.py's own _scale() uses a plain continuous
 // Normalize(vmin, vmax) for any non-signed field (never a BoundaryNorm), so

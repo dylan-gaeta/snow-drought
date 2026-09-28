@@ -127,8 +127,8 @@ a:hover { color: var(--navy); }
   border-bottom-color: var(--gold);
 }
 
-/* 8 nav items (one per figure type) don't fit a flat inline row past a
-   fairly wide viewport -- collapse into a toggled dropdown below that
+/* 9 nav items (Home + one per figure type) don't fit a flat inline row past
+   a fairly wide viewport -- collapse into a toggled dropdown below that
    point instead of letting it wrap raggedly across 2-3 lines. */
 .nav-toggle {
   display: none;
@@ -252,6 +252,35 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .figure-card img { width: 100%; display: block; }
 .figure-card .caption { padding: 0.9rem 1rem; font-size: 0.92rem; color: var(--text-muted); }
 .figure-card .caption strong { color: var(--text); }
+
+/* Home page: one button per figure-type page, not a repeat of the plain
+   text links a bullet list would give -- the whole card is clickable. */
+.home-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.home-nav-card {
+  display: block;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue-dark);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.2rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), border-left-color var(--transition);
+}
+.home-nav-card:hover { box-shadow: var(--shadow-md); border-left-color: var(--gold); }
+.home-nav-card strong {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  color: var(--navy);
+  margin-bottom: 0.3rem;
+}
+.home-nav-card span { display: block; font-size: 0.88rem; color: var(--text-muted); }
 
 .category-chip {
   display: inline-block;

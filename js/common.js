@@ -1,4 +1,4 @@
-// Shared across every page (index.html, explore.html, seasonal.html,
+// Shared across every page (index.html, map.html, explore.html, seasonal.html,
 // compare.html, data.html, heatmaps.html, findings.html, about.html): the
 // manifest fetch and the small set of constants/helpers every page needs.
 // No page-specific state lives here.
