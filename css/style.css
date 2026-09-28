@@ -26,6 +26,7 @@
 
   --radius-sm: 6px;
   --radius-md: 10px;
+  --legend-bar-width: 22px;
   --shadow-sm: 0 1px 2px rgba(22, 46, 81, 0.06), 0 1px 1px rgba(22, 46, 81, 0.04);
   --shadow-md: 0 4px 12px rgba(22, 46, 81, 0.10), 0 1px 3px rgba(22, 46, 81, 0.08);
   --shadow-focus: 0 0 0 3px rgba(0, 113, 188, 0.28);
@@ -439,14 +440,22 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .compare-legend-item { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; white-space: nowrap; }
 .compare-legend-swatch { display: inline-block; width: 1.1em; height: 0.3em; border-radius: 2px; flex-shrink: 0; }
 
-.region-toggle, .view-tabs {
+/* Carries all 22 regions (ALL/CO-UT-WY + 4 NOAA climate regions + 11 states
+   + 5 HUC2 basins) -- a flat inline-flex row with no wrap just grew wider
+   than its container and ran off the page (confirmed live, 2026-09-28).
+   Wrapping onto multiple lines instead of clipping is a minimal fix for the
+   overflow; whether 22 flat buttons is still the right widget for this many
+   regions (vs. the grouped Regions/States/HUC2 dropdown the Summary Table
+   already uses for the same data) is a separate, bigger question, not
+   decided here. */
+.region-toggle {
   display: inline-flex;
+  flex-wrap: wrap;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
-.region-toggle button, .view-tabs button {
+.region-toggle button {
   border: none;
   background: #fff;
   padding: 0.5rem 1rem;
@@ -458,12 +467,9 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   border-right: 1px solid var(--border);
   transition: background var(--transition), color var(--transition);
 }
-.region-toggle button:last-child, .view-tabs button:last-child { border-right: none; }
-.region-toggle button:hover:not(.active), .view-tabs button:hover:not(.active) { background: #eef1f5; color: var(--text); }
-.region-toggle button.active, .view-tabs button.active { background: var(--blue-dark); color: #fff; }
-
-.view-panel { display: none; }
-.view-panel.active { display: block; animation: fade-in 180ms ease; }
+.region-toggle button:last-child { border-right: none; }
+.region-toggle button:hover:not(.active) { background: #eef1f5; color: var(--text); }
+.region-toggle button.active { background: var(--blue-dark); color: #fff; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
@@ -572,12 +578,12 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   flex-direction: column;
   margin-bottom: 1rem;
 }
-/* The tick label is positioned outside the swatch's own right edge (below),
-   so the swatch itself only fills part of the row -- leaving it 100% wide
-   left no room for that label and it overflowed straight past the sidebar's
-   edge, clipped and invisible (confirmed: values like "91" rendering as a
-   clipped "9"). */
-.ol-legend-swatch { position: relative; display: block; width: calc(100% - 48px); height: 22px; }
+/* A slim reference-legend bar (matches the climatology/raw gradient bar
+   directly below, same --legend-bar-width) with its tick label sitting in
+   the wide open space to the right -- not a wide block filling the sidebar
+   (confirmed live, 2026-09-28: a near-full-width bar read as visually
+   heavier/worse than two consistent slim bars, not better). */
+.ol-legend-swatch { position: relative; display: block; width: var(--legend-bar-width); height: 22px; }
 .ol-legend-tick {
   position: absolute;
   left: 100%;
@@ -592,15 +598,15 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
    -- see buildContinuousColorExpression in js/map-viewer.js) with a handful
    of evenly-spaced tick labels positioned alongside it by percentage, same
    height/vertical convention (highest value at top) as the anomaly legend's
-   discrete swatch stack above. */
+   discrete swatch stack above. Same slim --legend-bar-width as that swatch
+   stack, not a wide block filling the sidebar -- both read as one
+   consistent style of reference legend, not two different widths.
+   (confirmed live, 2026-09-28: matching them by WIDENING this one to the
+   anomaly legend's old near-full-width read as visually heavier/worse, not
+   better -- narrow is the correct direction for both.) */
 .ol-legend-gradient-wrap { position: relative; display: flex; align-items: stretch; height: 220px; margin-bottom: 1rem; }
-/* Matches the discrete anomaly legend's own width allocation directly above
-   (bar = calc(100% - 48px), ticks get the rest) -- this was a fixed 22px
-   bar regardless of sidebar width, a sliver next to the anomaly legend's
-   near-full-width swatches (confirmed live, 2026-09-28: ~5mm vs ~100mm on
-   screen for what's meant to read as the same kind of element). */
-.ol-legend-gradient { flex: 1; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-.ol-legend-gradient-ticks { position: relative; width: 40px; flex-shrink: 0; margin-left: 8px; }
+.ol-legend-gradient { width: var(--legend-bar-width); flex-shrink: 0; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.ol-legend-gradient-ticks { position: relative; flex: 1; margin-left: 8px; }
 .ol-legend-gradient-tick {
   position: absolute;
   left: 0;
