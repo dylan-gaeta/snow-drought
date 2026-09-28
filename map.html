@@ -68,11 +68,10 @@
             <button type="button" data-mode="raw">Raw value</button>
             <button type="button" data-mode="anomaly">Anomaly</button>
           </div>
-          <div class="year-slider-wrap" id="ol-year-slider-wrap" style="display:none;">
-            <span id="ol-year-slider-min" class="year-slider-bound"></span>
-            <input type="range" id="ol-year-slider" min="0" max="0" value="0" step="1" aria-label="Year">
-            <span id="ol-year-slider-max" class="year-slider-bound"></span>
-            <span id="ol-year-slider-label" class="year-slider-value"></span>
+          <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
+            <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
+            <select id="ol-year-select" aria-label="Year"></select>
+            <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
           </div>
           <label class="boundary-toggle"><input type="checkbox" id="ol-boundary-toggle" checked> State boundaries</label>
         </div>

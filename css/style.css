@@ -546,10 +546,34 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .no-data-cell { padding: 0.4rem 0.6rem; }
 
 .boundary-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; }
-.year-slider-wrap { display: inline-flex; align-items: center; gap: 0.6rem; max-width: 100%; }
-.year-slider-wrap #ol-year-slider { width: 220px; max-width: 40vw; }
-.year-slider-bound { font-size: 0.8rem; color: var(--text-muted); }
-.year-slider-value { font-size: 0.9rem; font-weight: 700; color: var(--navy); min-width: 3.2em; }
+/* Dropdown + prev/next steppers, not a drag slider -- exact, one click/tap,
+   a native picker on mobile, no fine-motor precision needed (Dylan,
+   2026-09: "these sliders are not the optimal way to select the year"). */
+.year-control-wrap { display: inline-flex; align-items: center; gap: 0.4rem; }
+.year-control-wrap select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--navy);
+  background: #fff;
+}
+.year-control-wrap button {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.year-control-wrap button:hover:not(:disabled) { background: #eef1f5; }
+.year-control-wrap button:disabled { color: var(--border); cursor: default; }
 #ol-map-wrap {
   background: #fff;
   border: 1px solid var(--border);

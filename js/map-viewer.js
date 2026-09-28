@@ -163,7 +163,7 @@ const olMapState = {
   period: null,
   mode: "climatology", // "climatology" | "raw" | "anomaly" -- one consistent control for every period
   year: null, // only meaningful when mode !== "climatology"
-  sliderYears: [],
+  availableYears: [],
   styleCache: {},
   currentStyle: null,
   currentCogUrl: null,
@@ -303,14 +303,13 @@ function initInteractiveMap() {
     document.querySelectorAll("#ol-mode-toggle button").forEach((btn) => btn.classList.toggle("active", btn === button));
     updateInteractiveMapLayer();
   });
-  document.getElementById("ol-year-slider").addEventListener("input", (event) => {
-    const years = olMapState.sliderYears || [];
-    const year = years[parseInt(event.target.value, 10)];
-    if (year === undefined) return;
-    olMapState.year = year;
-    document.getElementById("ol-year-slider-label").textContent = String(year);
+  document.getElementById("ol-year-select").addEventListener("change", (event) => {
+    olMapState.year = parseInt(event.target.value, 10);
+    updateYearStepperButtons();
     updateInteractiveMapLayer();
   });
+  document.getElementById("ol-year-prev-btn").addEventListener("click", () => stepYear(-1));
+  document.getElementById("ol-year-next-btn").addEventListener("click", () => stepYear(1));
   document.getElementById("ol-boundary-toggle").addEventListener("change", (event) => {
     olMapState.boundaryLayer.setVisible(event.target.checked);
   });
@@ -404,15 +403,18 @@ function updateModeToggleAvailability(slot) {
   });
 }
 
+// A drag slider gave no precise, tap-friendly way to land on a specific
+// year -- 36 years across a ~250px track is under 7px per year, with no
+// visible per-year granularity (Dylan, 2026-09: "these sliders are not the
+// optimal way to select the year"). A dropdown (exact, one click/tap, native
+// picker on mobile) plus prev/next steppers (fast keyboard/tap browsing)
+// replaces it entirely.
 function updateYearControlForPeriod(slot) {
-  const sliderWrap = document.getElementById("ol-year-slider-wrap");
-  const slider = document.getElementById("ol-year-slider");
-  const label = document.getElementById("ol-year-slider-label");
-  const minBound = document.getElementById("ol-year-slider-min");
-  const maxBound = document.getElementById("ol-year-slider-max");
+  const wrap = document.getElementById("ol-year-control-wrap");
+  const select = document.getElementById("ol-year-select");
 
   if (olMapState.mode === "climatology") {
-    sliderWrap.style.display = "none";
+    wrap.style.display = "none";
     return;
   }
   const prefix = `${olMapState.mode}_`;
@@ -420,26 +422,46 @@ function updateYearControlForPeriod(slot) {
     .filter((k) => k.startsWith(prefix))
     .map((k) => parseInt(k.slice(prefix.length), 10))
     .sort((a, b) => a - b);
-  olMapState.sliderYears = years;
+  olMapState.availableYears = years;
   // Not every product/period has this mode's COGs yet (e.g. the raw-value
-  // export is still mid-rollout) -- hide the slider entirely rather than
+  // export is still mid-rollout) -- hide the control entirely rather than
   // show it stuck at an empty range with no year to pick.
   if (years.length === 0) {
-    sliderWrap.style.display = "none";
+    wrap.style.display = "none";
     olMapState.year = null;
     return;
   }
-  sliderWrap.style.display = "inline-flex";
+  wrap.style.display = "inline-flex";
   if (!years.includes(olMapState.year)) {
     olMapState.year = years[years.length - 1];
   }
-  slider.min = "0";
-  slider.max = String(Math.max(years.length - 1, 0));
-  minBound.textContent = years.length ? String(years[0]) : "";
-  maxBound.textContent = years.length ? String(years[years.length - 1]) : "";
+  select.innerHTML = "";
+  years.forEach((year) => {
+    const option = document.createElement("option");
+    option.value = String(year);
+    option.textContent = String(year);
+    select.appendChild(option);
+  });
+  select.value = String(olMapState.year);
+  updateYearStepperButtons();
+}
+
+function updateYearStepperButtons() {
+  const years = olMapState.availableYears || [];
   const currentIndex = years.indexOf(olMapState.year);
-  slider.value = String(Math.max(currentIndex, 0));
-  label.textContent = olMapState.year !== null ? String(olMapState.year) : "";
+  document.getElementById("ol-year-prev-btn").disabled = currentIndex <= 0;
+  document.getElementById("ol-year-next-btn").disabled = currentIndex === -1 || currentIndex >= years.length - 1;
+}
+
+function stepYear(delta) {
+  const years = olMapState.availableYears || [];
+  const currentIndex = years.indexOf(olMapState.year);
+  const nextIndex = currentIndex + delta;
+  if (nextIndex < 0 || nextIndex >= years.length) return;
+  olMapState.year = years[nextIndex];
+  document.getElementById("ol-year-select").value = String(olMapState.year);
+  updateYearStepperButtons();
+  updateInteractiveMapLayer();
 }
 
 async function updateInteractiveMapLayer() {
@@ -457,14 +479,14 @@ async function updateInteractiveMapLayer() {
     document.getElementById("ol-legend").innerHTML = "";
     // Same staleness for the controls that live outside #ol-map-wrap (so
     // hiding the map alone doesn't hide them): mode buttons kept the
-    // previous product's enabled/disabled state, the year slider kept its
+    // previous product's enabled/disabled state, the year control kept its
     // previous range, and the download/copy actions still pointed at the
     // previous product's file.
     document.querySelectorAll("#ol-mode-toggle button[data-mode]").forEach((btn) => {
       btn.disabled = true;
       btn.title = "No data for this selection.";
     });
-    document.getElementById("ol-year-slider-wrap").style.display = "none";
+    document.getElementById("ol-year-control-wrap").style.display = "none";
     olMapState.currentCogUrl = null;
     const geotiffLink = document.getElementById("ol-geotiff-link");
     geotiffLink.removeAttribute("href");
