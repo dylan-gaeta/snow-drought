@@ -647,27 +647,6 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   white-space: nowrap;
   color: var(--text-muted);
 }
-/* Baseline/climatology legend: a smooth gradient bar (not discrete swatches
-   -- see buildContinuousColorExpression in js/map-viewer.js) with a handful
-   of evenly-spaced tick labels positioned alongside it by percentage, same
-   height/vertical convention (highest value at top) as the anomaly legend's
-   discrete swatch stack above. Same slim --legend-bar-width as that swatch
-   stack, not a wide block filling the sidebar -- both read as one
-   consistent style of reference legend, not two different widths.
-   (confirmed live, 2026-09-28: matching them by WIDENING this one to the
-   anomaly legend's old near-full-width read as visually heavier/worse, not
-   better -- narrow is the correct direction for both.) */
-.ol-legend-gradient-wrap { position: relative; display: flex; align-items: stretch; height: 220px; margin-bottom: 1rem; }
-.ol-legend-gradient { width: var(--legend-bar-width); flex-shrink: 0; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-.ol-legend-gradient-ticks { position: relative; flex: 1; margin-left: 8px; }
-.ol-legend-gradient-tick {
-  position: absolute;
-  left: 0;
-  transform: translateY(-50%);
-  font-size: 12px;
-  white-space: nowrap;
-  color: var(--text-muted);
-}
 #ol-query-readout { margin-top: 0.6rem; font-size: 0.9rem; color: var(--text); min-height: 1.2em; }
 /* Vertical, not the horizontal wrapping row this used when it sat in the
    full-width space below the map -- the sidebar column is narrow. */

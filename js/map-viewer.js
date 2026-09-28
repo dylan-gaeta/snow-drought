@@ -182,39 +182,17 @@ const COG_NODATA = -32768;
 // WebGLTile+GeoTIFF is the stable, working combination once geotiff.js
 // (the separate TIFF-decoding library ol.source.GeoTIFF depends on at
 // runtime) is loaded alongside ol.js -- see map.html's <script> tags.
-// Baseline/climatology maps get a smooth linear color ramp instead of
-// discrete bins -- common/maps.py's own _scale() uses a plain continuous
-// Normalize(vmin, vmax) for any non-signed field (never a BoundaryNorm), so
-// binning this into a handful of swatches made each one span a visibly wide
-// chunk of the value range compared to the pipeline's own static maps.
-// boundaries here is just [vmin, vmax]; colors is BASELINE_CMAP_HEX's many
-// stops, spread evenly across that range.
-//
-// GLSL stop cap: some style JSON ships a 256-stop palette, and an
-// "interpolate" expression with that many stops fails to compile on real
-// hardware ("Expression too complex", confirmed 2026-09 -- every Drought
-// Indices climatology map silently rendered nothing, just the basemap).
-// Linear interpolation between stops looks smooth on screen well below 256
-// -- subsample down to a safe count here rather than depend on every style
-// JSON already being capped server-side.
-const MAX_GRADIENT_STOPS = 32;
-
-function buildContinuousColorExpression(vmin, vmax, colors, scale) {
-  if (colors.length > MAX_GRADIENT_STOPS) {
-    colors = Array.from(
-      { length: MAX_GRADIENT_STOPS },
-      (_, i) => colors[Math.round((i / (MAX_GRADIENT_STOPS - 1)) * (colors.length - 1))],
-    );
-  }
-  const band = ["band", 1];
-  const value = ["/", band, scale];
-  const interp = ["interpolate", ["linear"], value];
-  const n = colors.length;
-  for (let i = 0; i < n; i++) {
-    interp.push(vmin + (i / (n - 1)) * (vmax - vmin), colors[i]);
-  }
-  return ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0], interp];
-}
+// Every mode (Climatology/Raw/Anomaly) renders as this same number of
+// discrete bins now, not a mix of smooth gradients and discrete stacks
+// (Dylan, 2026-09: "there is absolutely no reason the climatology maps and
+// anomaly maps aren't 100% identical, including the colorbar style").
+// Matches Anomaly's own server-side bin count exactly (common/maps.py's
+// _diverging_bins(), bins_per_side=5 -> 11 bins: 5 per side plus one center
+// bin straddling zero -- confirmed via dashboard_cog_export.py's own N_BINS,
+// not assumed) so a Climatology/Raw legend (built client-side from just
+// [vmin, vmax], see updateInteractiveMapLayer) looks identical in shape to
+// an Anomaly one, not just similar.
+const DISCRETE_BINS = 11;
 
 function buildBinnedColorExpression(boundaries, colors, scale) {
   const band = ["band", 1];
@@ -537,71 +515,51 @@ async function updateInteractiveMapLayer() {
 
   const legend = document.getElementById("ol-legend");
   const units = entry.units || "";
-  // Climatology and Raw value are both the same physical field (one a
-  // multi-year mean, one a single year) and share the continuous scale +
-  // uniform sequential palette; only Anomaly is a signed departure with its
-  // own discrete diverging bins.
-  const isContinuous = olMapState.mode !== "anomaly";
-  const palette = isContinuous ? style.baseline_colors : style.anomaly_colors;
+  const palette = olMapState.mode === "climatology" || olMapState.mode === "raw"
+    ? style.baseline_colors : style.anomaly_colors;
   // Detrend status only describes how the anomaly was computed -- not
   // meaningful for the climatology/raw views, so the badge only shows there.
   const label = olMapState.mode === "climatology" ? `Climatology (${units})`
     : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
     : `${units} anomaly ${detrendBadgeHtml(entry.detrend_method)}`;
-  const boundaries = fileEntry.boundaries;
-  if (boundaries && isContinuous) {
-    // Baseline: a continuous ramp needs just [vmin, vmax] -- read as the
-    // first/last element, not literally boundaries[0]/boundaries[1]. Style
-    // JSON exported before this continuous-scale change still ships the
-    // OLD N_BINS+1-element linspace array here; boundaries[0] is the true
-    // vmin either way, but boundaries[1] in that old array is only 1/11th
-    // of the way to the true vmax, not the vmax itself -- reading it as
-    // vmax clipped nearly every real value to the top color (confirmed
-    // 2026-09: an ERA5-Land T2m climatology map rendered almost entirely
-    // one flat color). Evenly-spaced tick labels alongside a smooth
-    // gradient bar, the same way a matplotlib continuous colorbar reads,
-    // not discrete swatches. Vertical, highest value at top, matching the
-    // anomaly legend below and every static map in the pipeline.
-    const vmin = boundaries[0];
-    const vmax = boundaries[boundaries.length - 1];
-    const N_TICKS = 6;
-    const tickValues = Array.from({ length: N_TICKS }, (_, i) => vmin + (i / (N_TICKS - 1)) * (vmax - vmin));
-    const decimals = pickTickDecimals(tickValues);
-    const ticks = tickValues.slice().reverse().map((v, i) => {
-      const top = (i / (N_TICKS - 1)) * 100;
-      return `<span class="ol-legend-gradient-tick" style="top:${top}%">${v.toFixed(decimals)}</span>`;
-    }).join("");
-    const gradient = `linear-gradient(to top, ${palette.join(", ")})`;
-    legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
-      `<div class="ol-legend-gradient-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +
-      `<div class="ol-legend-gradient-ticks">${ticks}</div></div>`;
-  } else if (boundaries) {
-    const nBins = boundaries.length - 1;
-    // Matches common/maps.py's _label_colorbar exactly: one tick per bin,
-    // centered on the swatch it labels, not one tick per boundary -- reads
-    // the way every other legend in the pipeline's own static maps already
-    // does ("this color = this value"). Vertical, highest value at top
-    // (the standard vertical-colorbar convention) -- the sidebar this
-    // lives in is narrow and tall, not wide, so stacking bins top-to-bottom
-    // fits its real shape instead of needing a horizontal bar wider than
-    // the column it's in.
-    const centers = Array.from({ length: nBins }, (_, i) => (boundaries[i] + boundaries[i + 1]) / 2);
-    const decimals = pickTickDecimals(centers);
-    const swatches = centers.map((v, i) => {
-      const text = v.toFixed(decimals);
-      const tick = `<span class="ol-legend-tick">${text}</span>`;
-      return `<span class="ol-legend-swatch" style="background:${palette[i]}" title="${boundaries[i].toFixed(decimals)} to ${boundaries[i + 1].toFixed(decimals)}">${tick}</span>`;
-    }).reverse().join("");
-    legend.innerHTML = `<div class="ol-legend-label">${label}</div><div class="ol-legend-scale">${swatches}</div>`;
-  } else {
+  let boundaries = fileEntry.boundaries;
+  let binColors = palette;
+  let colorExpr = null;
+  if (!boundaries) {
     // Native standardized indices (SPI/SPEI/EDDI/...): value IS the anomaly,
     // no boundaries computed yet -- show units only, no color scale.
     legend.innerHTML = `<div class="ol-legend-label">${units} ${detrendBadgeHtml(entry.detrend_method)}</div>`;
+  } else {
+    // Climatology/Raw ships only [vmin, vmax] (a continuous ramp needs
+    // nothing more), but every map now renders as discrete bins -- Anomaly
+    // included, no exceptions (Dylan, 2026-09: "all the maps should use
+    // discrete color bins... there is absolutely no reason the climatology
+    // maps and anomaly maps aren't 100% identical, including the colorbar
+    // style"). Expand [vmin, vmax] into DISCRETE_BINS evenly-spaced edges
+    // and downsample the 256-stop continuous palette to match -- Anomaly's
+    // own boundaries/anomaly_colors are already exactly DISCRETE_BINS bins
+    // from the server (_diverging_bins), so only Climatology/Raw needs this.
+    if (boundaries.length === 2) {
+      const [vmin, vmax] = boundaries;
+      boundaries = Array.from({ length: DISCRETE_BINS + 1 }, (_, i) => vmin + (i / DISCRETE_BINS) * (vmax - vmin));
+      binColors = Array.from(
+        { length: DISCRETE_BINS },
+        (_, i) => palette[Math.round((i / (DISCRETE_BINS - 1)) * (palette.length - 1))],
+      );
+    }
+    const nBins = boundaries.length - 1;
+    // Matches common/maps.py's _label_colorbar: one tick per bin, centered
+    // on the swatch it labels, not one tick per boundary. Vertical, highest
+    // value at top -- the sidebar this lives in is narrow and tall, not wide.
+    const centers = Array.from({ length: nBins }, (_, i) => (boundaries[i] + boundaries[i + 1]) / 2);
+    const decimals = pickTickDecimals(centers);
+    const swatches = centers.map((v, i) => {
+      const tick = `<span class="ol-legend-tick">${v.toFixed(decimals)}</span>`;
+      return `<span class="ol-legend-swatch" style="background:${binColors[i]}" title="${boundaries[i].toFixed(decimals)} to ${boundaries[i + 1].toFixed(decimals)}">${tick}</span>`;
+    }).reverse().join("");
+    legend.innerHTML = `<div class="ol-legend-label">${label}</div><div class="ol-legend-scale">${swatches}</div>`;
+    colorExpr = buildBinnedColorExpression(boundaries, binColors, fileEntry.scale);
   }
-
-  const colorExpr = !boundaries ? null
-    : isContinuous ? buildContinuousColorExpression(boundaries[0], boundaries[boundaries.length - 1], palette, fileEntry.scale)
-    : buildBinnedColorExpression(boundaries, palette, fileEntry.scale);
 
   if (olMapState.rasterLayer) olMapState.map.removeLayer(olMapState.rasterLayer);
   olMapState.rasterLayer = new ol.layer.WebGLTile({
