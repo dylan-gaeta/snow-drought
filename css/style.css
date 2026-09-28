@@ -594,8 +594,13 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
    height/vertical convention (highest value at top) as the anomaly legend's
    discrete swatch stack above. */
 .ol-legend-gradient-wrap { position: relative; display: flex; align-items: stretch; height: 220px; margin-bottom: 1rem; }
-.ol-legend-gradient { width: 22px; border-radius: var(--radius-sm); border: 1px solid var(--border); flex-shrink: 0; }
-.ol-legend-gradient-ticks { position: relative; flex: 1; margin-left: 8px; }
+/* Matches the discrete anomaly legend's own width allocation directly above
+   (bar = calc(100% - 48px), ticks get the rest) -- this was a fixed 22px
+   bar regardless of sidebar width, a sliver next to the anomaly legend's
+   near-full-width swatches (confirmed live, 2026-09-28: ~5mm vs ~100mm on
+   screen for what's meant to read as the same kind of element). */
+.ol-legend-gradient { flex: 1; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.ol-legend-gradient-ticks { position: relative; width: 40px; flex-shrink: 0; margin-left: 8px; }
 .ol-legend-gradient-tick {
   position: absolute;
   left: 0;
