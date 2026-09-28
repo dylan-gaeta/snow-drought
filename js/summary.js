@@ -1,8 +1,8 @@
-// Regional summary table (data.html). Computed entirely client-side from the
-// same monthly grid-cell-detrended anomaly arrays the Explore page uses -- no new
-// statistics invented here. Each response's multi-month aggregation rule
-// (sum / mean / day_weighted_mean / native_index) comes from
-// code/14_dashboard_export.py's AGGREGATION_RULE, audited against each
+// Summary Table page (data.html). Computed entirely client-side from the
+// same monthly grid-cell-detrended anomaly arrays the Time Series page
+// uses -- no new statistics invented here. Each response's multi-month
+// aggregation rule (sum / mean / day_weighted_mean / native_index) comes
+// from code/dashboard_export.py's AGGREGATION_RULE, audited against each
 // product's actual reducer/analyzer code, not guessed. "Stress vs relief"
 // coloring uses drier_is_high, straight from config.py's own
 // response_drier_is_high() -- the same function the canonical multi-product
@@ -11,8 +11,6 @@
 const summaryState = { window: "DJFM", year: 2026, valueType: "sigma", regionGroup: "summary" };
 let summaryRegionColumns = []; // [{code, label}], rebuilt whenever regionGroup changes
 
-// fetchTimeseriesJson (js/common.js) shares one cache with js/heatmaps.js,
-// which loads on this same page -- no separate cache needed here.
 async function fetchSummaryData(product, response) {
   return fetchTimeseriesJson(`${product}_${response}`);
 }
@@ -206,7 +204,4 @@ async function renderSummaryTable() {
   }
 }
 
-// No self-invoking init here -- this shares data.html with js/heatmaps.js,
-// which owns the single loadManifest() call and calls initSummaryTable()
-// itself (calling loadManifest() twice would double the 342KB manifest
-// fetch for no reason).
+loadManifest().then(initSummaryTable);

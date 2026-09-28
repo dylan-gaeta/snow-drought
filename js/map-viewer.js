@@ -1,11 +1,13 @@
 // Interactive COG map viewer (OpenLayers, global `ol` UMD bundle from CDN).
 // Lives on the homepage (index.html) only, with its own category/product/
-// response picker -- mirrors "Explore the data"'s picker (js/explore.js's
-// explorerState) but is entirely independent. Colors are never computed in
-// JS: every value comes from the per-product style JSON exported by
-// code/17_dashboard_cog_export.py (same boundaries/colors the pipeline's own
-// PNG maps use, via common/maps.py's _diverging_bins + config.py's
-// response_anomaly_cmap -- ported once server-side, not re-derived here).
+// response picker -- mirrors js/product-picker.js's shape (used by Time
+// Series/Seasonal Cycle) but is entirely independent, since the map also
+// drives period/mode/year controls no other page has. Colors are never
+// computed in JS: every value comes from the per-product style JSON
+// exported by code/dashboard_cog_export.py (same boundaries/colors the
+// pipeline's own PNG maps use, via common/maps.py's _diverging_bins +
+// config.py's response_anomaly_cmap -- ported once server-side, not
+// re-derived here).
 
 const mapPickerState = { category: null, product: null, response: null };
 

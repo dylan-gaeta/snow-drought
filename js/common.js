@@ -1,6 +1,20 @@
-// Shared across every page (index.html, explore.html, findings.html,
-// about.html): the manifest fetch and the small set of constants/helpers
-// every page needs. No page-specific state lives here.
+// Shared across every page (index.html, explore.html, seasonal.html,
+// compare.html, data.html, heatmaps.html, findings.html, about.html): the
+// manifest fetch and the small set of constants/helpers every page needs.
+// No page-specific state lives here.
+
+// 8 nav items collapse into a toggled dropdown below 900px (see
+// .nav-toggle/.site-nav.open in style.css) -- wires the hamburger button
+// every page's header includes. A no-op if a page has no #nav-toggle.
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("nav-toggle");
+  const nav = document.getElementById("site-nav");
+  if (!toggle || !nav) return;
+  toggle.addEventListener("click", () => {
+    const open = nav.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+});
 
 // Hard floor across every page (Dylan, 2026-09): a handful of products
 // (SPI/SPEI/PRISM-based) have a real record back to 1895, which compresses

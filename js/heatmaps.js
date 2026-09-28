@@ -1,18 +1,12 @@
-// Anomaly heatmaps -- data.html's other big cross-product view, alongside
-// the summary table (js/summary.js). Split out of js/explore.js (2026-09)
-// when explore.html was narrowed to just the single-product timeseries/
-// seasonal/compare views and this moved to its own page with the summary
-// table under "dataset exploration."
-//
-// Product x time standardized-anomaly matrix, computed dynamically from the
-// same data every other chart on this dashboard uses -- not a static image.
-// "monthly" is a fixed special case (direct per-month sigma, the most
-// recent 12 calendar months available, for comparing products along one
-// shared recent timeline). Every other family is "this window, by year" --
-// the same season/month windows and the same computeWindowValue()
-// aggregation the interactive map's period select and the homepage summary
-// table already use, so a heatmap row and the matching map/table value are
-// always computed the same way.
+// Heatmap page (heatmaps.html). Product x time standardized-anomaly matrix,
+// computed dynamically from the same data every other chart on this
+// dashboard uses -- not a static image. "monthly" is a fixed special case
+// (direct per-month sigma, the most recent 12 calendar months available,
+// for comparing products along one shared recent timeline). Every other
+// family is "this window, by year" -- the same season/month windows and
+// the same computeWindowValue() aggregation the interactive map's period
+// select and the summary table already use, so a heatmap row and the
+// matching map/table value are always computed the same way.
 const HEATMAP_FAMILIES = { monthly: { label: "Monthly anomalies (most recent 12 months)" } };
 SEASON_ORDER.forEach((key) => {
   HEATMAP_FAMILIES[`window_${key}`] = { label: `${key} (${SEASON_LABELS[key]}), by year`, window: key };
@@ -78,8 +72,6 @@ function selectHeatmapCategory(category) {
   renderHeatmap();
 }
 
-// fetchTimeseriesJson (js/common.js) shares one cache with js/summary.js,
-// which loads on this same page -- no separate cache needed here.
 async function fetchHeatmapSeries(key) {
   return fetchTimeseriesJson(key);
 }
@@ -237,10 +229,4 @@ async function renderHeatmap() {
   Plotly.newPlot(chart, [trace], layout, { responsive: true, displaylogo: false });
 }
 
-// Single loadManifest() call for the whole page (data.html loads
-// common.js/summary.js/heatmaps.js together) -- js/summary.js deliberately
-// has no self-invoking init of its own, same reason.
-loadManifest().then(() => {
-  initSummaryTable();
-  initHeatmaps();
-});
+loadManifest().then(initHeatmaps);

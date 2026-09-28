@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Monthly time series -- raw values and standardized anomalies -- for every dataset in the Western US snow drought pipeline.">
-<title>Time Series &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="Water-year seasonal cycle -- climatology plus highlight years -- for every dataset in the Western US snow drought pipeline.">
+<title>Seasonal Cycle &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
@@ -22,8 +22,8 @@
     <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
     <nav class="site-nav" id="site-nav">
       <a href="index.html">Map</a>
-      <a href="explore.html" class="active">Time Series</a>
-      <a href="seasonal.html">Seasonal Cycle</a>
+      <a href="explore.html">Time Series</a>
+      <a href="seasonal.html" class="active">Seasonal Cycle</a>
       <a href="compare.html">Compare</a>
       <a href="data.html">Summary Table</a>
       <a href="heatmaps.html">Heatmap</a>
@@ -35,12 +35,11 @@
 
 <main>
 
-  <section id="explorer">
-    <h2>Time Series</h2>
-    <p class="finding-note">Every canonical dataset: category, product,
-      variable, then raw value or standardized anomaly over its full
-      record. Anomalies are relative to each product's own fixed
-      calendar-month climatology, never year-over-year.</p>
+  <section id="seasonal">
+    <h2>Seasonal Cycle</h2>
+    <p class="finding-note">Every canonical dataset, one water year (Oct
+      &ndash;Sep) at a time: climatology mean &plusmn; 2&sigma;, plus a few
+      highlight years and any you add. Raw value or standardized anomaly.</p>
 
     <div class="product-search-wrap">
       <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
@@ -59,15 +58,17 @@
         <div class="product-meta" id="product-meta"></div>
 
         <div class="selector-row">
-          <div class="series-toggle" id="timeseries-toggle">
-            <button data-series="value" class="active">Raw</button>
-            <button data-series="sigma">Anomaly (&sigma;)</button>
+          <div class="series-toggle" id="seasonal-toggle">
+            <button data-series="raw" class="active">Raw</button>
+            <button data-series="anomaly">Anomaly</button>
           </div>
-          <label class="boundary-toggle" for="timeseries-start-year-select">Start year
-            <select id="timeseries-start-year-select" aria-label="Start year"></select>
+          <label class="boundary-toggle" for="seasonal-add-year-select">Add year
+            <select id="seasonal-add-year-select" aria-label="Add a year to the seasonal chart"></select>
           </label>
+          <button type="button" id="seasonal-add-year-btn">Add</button>
         </div>
-        <div id="timeseries-chart" style="height:480px;"></div>
+        <div id="seasonal-extra-years" class="year-chip-row"></div>
+        <div id="seasonal-chart" style="height:480px;"></div>
       </div>
     </div>
   </section>
@@ -87,6 +88,6 @@
 
 <script src="js/common.js"></script>
 <script src="js/product-picker.js"></script>
-<script src="js/explore.js"></script>
+<script src="js/seasonal.js"></script>
 </body>
 </html>

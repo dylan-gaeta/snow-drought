@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Regional summary table and cross-product anomaly heatmaps for every dataset in the Western US snow drought pipeline.">
-<title>Summary &amp; Heatmaps &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="Regional summary table -- every product, one month/season/year at a time -- for the Western US snow drought pipeline.">
+<title>Summary Table &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
@@ -19,11 +19,15 @@
       <small>NOAA Global Monitoring Laboratory &middot; Cooperative Institute for Research in Environmental Sciences</small>
       <small>Unofficial snow drought dashboard and data explorer. For educational purposes only</small>
     </a></h1>
-    <nav class="site-nav">
-      <a href="index.html">Home</a>
-      <a href="findings.html">Overview</a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-nav">
+      <a href="index.html">Map</a>
       <a href="explore.html">Time Series</a>
-      <a href="data.html" class="active">Summary & Heatmaps</a>
+      <a href="seasonal.html">Seasonal Cycle</a>
+      <a href="compare.html">Compare</a>
+      <a href="data.html" class="active">Summary Table</a>
+      <a href="heatmaps.html">Heatmap</a>
+      <a href="findings.html">Dierauer Classification</a>
       <a href="about.html">About</a>
     </nav>
   </div>
@@ -74,33 +78,6 @@
     </div>
   </section>
 
-  <section id="heatmaps">
-    <h2>Anomaly heatmaps by product and time</h2>
-    <p class="finding-note">Standardized anomaly (&sigma;) per product: one
-      row per product/response, one column per month or year. Same
-      <span style="color:#955910; font-weight:600;">stress</span> /
-      <span style="color:#0e726a; font-weight:600;">relief</span> convention
-      as the summary table above &mdash; each row is sign-flipped to its own
-      variable's stress direction (e.g. low snowpack is the stress
-      direction, not high), so gold is always stress and teal is always
-      relief, regardless of the variable's raw sign convention.</p>
-    <div class="heatmap-legend-key">
-      <span><span class="heatmap-legend-swatch" style="background:#955910;"></span> Stress</span>
-      <span><span class="heatmap-legend-swatch" style="background:#0e726a;"></span> Relief</span>
-    </div>
-    <div class="explorer-layout">
-      <nav class="category-tabs" id="heatmap-category-tabs" aria-label="Category"></nav>
-
-      <div>
-        <div class="selector-row">
-          <select id="heatmap-family-select" aria-label="Heatmap family"></select>
-          <select id="heatmap-region-select" aria-label="Region"></select>
-        </div>
-        <div id="heatmap-chart"></div>
-      </div>
-    </div>
-  </section>
-
 </main>
 
 <footer class="site-footer">
@@ -116,6 +93,5 @@
 
 <script src="js/common.js"></script>
 <script src="js/summary.js"></script>
-<script src="js/heatmaps.js"></script>
 </body>
 </html>

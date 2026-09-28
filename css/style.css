@@ -126,6 +126,49 @@ a:hover { color: var(--navy); }
   border-bottom-color: var(--gold);
 }
 
+/* 8 nav items (one per figure type) don't fit a flat inline row past a
+   fairly wide viewport -- collapse into a toggled dropdown below that
+   point instead of letting it wrap raggedly across 2-3 lines. */
+.nav-toggle {
+  display: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+.nav-toggle span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+}
+@media (max-width: 900px) {
+  .nav-toggle { display: flex; }
+  .site-nav {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .site-nav.open { display: flex; }
+  .site-nav a {
+    margin-left: 0;
+    padding: 0.6rem 0.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .site-nav a.active { border-bottom-color: var(--gold); }
+}
+
 main { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 3rem; }
 main section[id] { scroll-margin-top: 5rem; }
 

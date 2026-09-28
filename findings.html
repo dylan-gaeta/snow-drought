@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Overview of the Western US snow drought explorer's data views -- maps, time series, seasonal cycle, cross-product anomalies, heatmaps, data availability -- and the Dierauer snow-drought classification for the 2025-2026 winter.">
-<title>Overview &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="Dierauer, Allen & Whitfield (2019) dry / warm-and-dry / warm snow drought classification by winter, for the Western US snow drought pipeline.">
+<title>Dierauer Classification &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
@@ -19,11 +19,15 @@
       <small>NOAA Global Monitoring Laboratory &middot; Cooperative Institute for Research in Environmental Sciences</small>
       <small>Unofficial snow drought dashboard and data explorer. For educational purposes only</small>
     </a></h1>
-    <nav class="site-nav">
-      <a href="index.html">Home</a>
-      <a href="findings.html" class="active">Overview</a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-nav">
+      <a href="index.html">Map</a>
       <a href="explore.html">Time Series</a>
-      <a href="data.html">Summary & Heatmaps</a>
+      <a href="seasonal.html">Seasonal Cycle</a>
+      <a href="compare.html">Compare</a>
+      <a href="data.html">Summary Table</a>
+      <a href="heatmaps.html">Heatmap</a>
+      <a href="findings.html" class="active">Dierauer Classification</a>
       <a href="about.html">About</a>
     </nav>
   </div>
@@ -31,22 +35,9 @@
 
 <main>
 
-  <section id="overview">
-    <h2>Overview</h2>
-    <ul class="overview-list">
-      <li><strong>Maps</strong> &mdash; <a href="index.html">Home</a>: Cloud Optimized GeoTIFF maps, by month/season/year, per product.</li>
-      <li><strong>Time series &amp; seasonal cycle</strong> &mdash; <a href="explore.html">Time Series</a>: monthly values and anomalies, per product.</li>
-      <li><strong>Cross-product anomalies</strong> &mdash; <a href="explore.html#compare">Compare variables</a>: standardized-anomaly overlay by theme.</li>
-      <li><strong>Regional summary table</strong> &mdash; <a href="data.html">Summary &amp; Heatmaps</a>: all products/regions, one month/season/year.</li>
-      <li><strong>Heatmaps</strong> &mdash; <a href="data.html#heatmaps">Summary &amp; Heatmaps</a>: standardized anomaly, all products, full record.</li>
-      <li><strong>Data availability</strong> &mdash; <a href="about.html#observational-coverage">About</a>: record length and latency, per product.</li>
-    </ul>
-    <p class="finding-note">Baseline: each product's own fixed calendar-month climatology. Not year-over-year. Not a forecast. Methodology: <a href="about.html">About</a>.</p>
-  </section>
-
   <section id="snow-drought-classification">
     <div class="panel finding-card">
-      <h3>Snow drought classification by winter type</h3>
+      <h2>Snow drought classification by winter type</h2>
       <p class="finding-note">
         Dierauer, Allen &amp; Whitfield (2019, <em>Water Resources
         Research</em>) classification: dry / warm-and-dry / warm snow
@@ -64,6 +55,17 @@
   </section>
 
 </main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>
+      Source pipeline: snowdrought-carbon (private research repository, NOAA
+      Global Monitoring Laboratory &middot; Cooperative Institute for
+      Research in Environmental Sciences). See <a href="about.html">About</a>
+      for methodology, references, and contact information.
+    </p>
+  </div>
+</footer>
 
 <script src="js/common.js"></script>
 <script src="js/findings.js"></script>
