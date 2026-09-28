@@ -453,6 +453,20 @@ async function updateInteractiveMapLayer() {
     // live 2026-09-28: selecting a product with no COG coverage still showed
     // the prior product's fully-rendered legend.
     document.getElementById("ol-legend").innerHTML = "";
+    // Same staleness for the controls that live outside #ol-map-wrap (so
+    // hiding the map alone doesn't hide them): mode buttons kept the
+    // previous product's enabled/disabled state, the year slider kept its
+    // previous range, and the download/copy actions still pointed at the
+    // previous product's file.
+    document.querySelectorAll("#ol-mode-toggle button[data-mode]").forEach((btn) => {
+      btn.disabled = true;
+      btn.title = "No data for this selection.";
+    });
+    document.getElementById("ol-year-slider-wrap").style.display = "none";
+    olMapState.currentCogUrl = null;
+    const geotiffLink = document.getElementById("ol-geotiff-link");
+    geotiffLink.removeAttribute("href");
+    geotiffLink.removeAttribute("download");
     return;
   }
   const slot = style.periods[olMapState.period];
@@ -464,6 +478,13 @@ async function updateInteractiveMapLayer() {
     wrap.style.display = "none";
     emptyMsg.style.display = "block";
     document.getElementById("ol-legend").innerHTML = "";
+    // Mode buttons/slider were already set correctly for this slot above,
+    // but the download/copy actions still point at whatever file last
+    // rendered successfully -- same staleness as the branch above.
+    olMapState.currentCogUrl = null;
+    const geotiffLink = document.getElementById("ol-geotiff-link");
+    geotiffLink.removeAttribute("href");
+    geotiffLink.removeAttribute("download");
     return;
   }
   const file = fileEntry.file;
