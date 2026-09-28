@@ -271,6 +271,10 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   gap: 1.5rem;
   align-items: start;
 }
+/* Grid items default to min-width:auto -- the 1fr column refuses to shrink
+   below its content's natural width (the Plotly chart) instead of fitting
+   the available space, pushing the whole layout past the viewport edge. */
+.explorer-layout > div { min-width: 0; }
 @media (max-width: 820px) {
   .explorer-layout { grid-template-columns: 1fr; }
 }
