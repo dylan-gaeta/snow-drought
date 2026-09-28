@@ -448,6 +448,11 @@ async function updateInteractiveMapLayer() {
   if (!style || !style.periods[olMapState.period]) {
     wrap.style.display = "none";
     emptyMsg.style.display = "block";
+    // Otherwise the PREVIOUS product's legend (wrong units, wrong colors,
+    // wrong scale) stays on screen next to the "no map" message -- confirmed
+    // live 2026-09-28: selecting a product with no COG coverage still showed
+    // the prior product's fully-rendered legend.
+    document.getElementById("ol-legend").innerHTML = "";
     return;
   }
   const slot = style.periods[olMapState.period];
@@ -458,6 +463,7 @@ async function updateInteractiveMapLayer() {
   if (!fileEntry) {
     wrap.style.display = "none";
     emptyMsg.style.display = "block";
+    document.getElementById("ol-legend").innerHTML = "";
     return;
   }
   const file = fileEntry.file;
