@@ -590,6 +590,18 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 }
 .map-empty, .chart-empty { padding: 1.25rem 1.5rem; margin: 1rem 0; }
 .no-data-cell { padding: 0.4rem 0.6rem; }
+.gallery-figure-zoomable { cursor: zoom-in; }
+/* Fullscreen defaults to the image's own natural pixel size (often smaller
+   than the screen) letterboxed in black -- fit it to the viewport instead,
+   same rationale as #ol-map-wrap:fullscreen already handling this for the
+   interactive map. */
+.gallery-figure-zoomable:fullscreen {
+  cursor: zoom-out;
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+}
 
 .boundary-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; }
 /* Dropdown + prev/next steppers, not a drag slider -- exact, one click/tap,

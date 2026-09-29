@@ -5,6 +5,26 @@
 // for static maps, manifest.heatmaps for static heatmaps -- nothing is
 // guessed or hardcoded.
 
+// Every static figure image on this page can be clicked to fill the screen
+// -- same Fullscreen API map.html's own "Full screen" button already uses,
+// just triggered directly on the image instead of a separate button (Dylan,
+// 2026-09-29: "the user should be able to click on any figure and have it
+// magnify to full screen").
+const GALLERY_IMAGE_IDS = ["gallery-map-img", "gallery-timeseries-img", "gallery-seasonal-img", "gallery-heatmap-img"];
+function wireGalleryImageFullscreen() {
+  GALLERY_IMAGE_IDS.forEach((id) => {
+    const img = document.getElementById(id);
+    img.classList.add("gallery-figure-zoomable");
+    img.addEventListener("click", () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        img.requestFullscreen();
+      }
+    });
+  });
+}
+
 function galleryFigureLabel(key) {
   if (key === "baseline") return "Climatology";
   const match = key.match(/^(raw|anomaly)_(\d{4})$/);
@@ -265,6 +285,7 @@ async function init() {
   wireGalleryMapControls();
   wireGalleryRegionFigureControls(TIMESERIES_GALLERY_IDS);
   wireGalleryRegionFigureControls(SEASONAL_GALLERY_IDS);
+  wireGalleryImageFullscreen();
   initProductPicker(onGallerySelectionChanged);
   initGalleryHeatmaps();
 }
