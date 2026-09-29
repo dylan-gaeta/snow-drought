@@ -2,11 +2,13 @@
 # assetUrl() and scripts/sync_cogs_to_r2.sh), kept locally only as a dev
 # fallback. cogs/ is large binary data; data/ is small individually but
 # gets fully rewritten on every pipeline export, so committing it grows
-# git history forever with no way to reclaim the space. figures/maps/ is
-# dead output from a superseded architecture, not served anywhere.
+# git history forever with no way to reclaim the space. figures/maps/,
+# figures/timeseries/, and figures/seasonal/ are all read by gallery.html.
 /cogs/
 /data/
 /figures/maps/
+/figures/timeseries/
+/figures/seasonal/
 
 .DS_Store
 

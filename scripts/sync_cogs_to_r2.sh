@@ -8,10 +8,13 @@
 # history forever with no way to reclaim the space (moved out of git
 # 2026-09, see .gitignore).
 #
-# figures/maps/ and figures/heatmaps/ are read by gallery.html (added
-# 2026-09) -- figures/synthesis/ has no manifest index yet (dashboard_export
-# .py doesn't curate it into manifest.json the way maps/heatmaps are), so
-# nothing reads it and it's still not synced.
+# figures/maps/, figures/heatmaps/, figures/timeseries/, and
+# figures/seasonal/ are all read by gallery.html (timeseries/seasonal added
+# 2026-09-29, per Dylan: more important than the heatmaps already there) --
+# figures/synthesis/ has no manifest index (dashboard_export.py doesn't
+# curate it into manifest.json the way the other four are, and Dylan
+# explicitly does not want the old headline/synthesis framing revived), so
+# it's deliberately still not synced.
 #
 # R2 is not AWS -- this just reuses the aws-cli as a generic S3-compatible
 # client pointed at R2's own endpoint, since R2 speaks the S3 API.
@@ -82,3 +85,17 @@ aws s3 sync "$REPO_DIR/figures/heatmaps/" "s3://$R2_BUCKET/figures/heatmaps/" \
   --endpoint-url "$ENDPOINT" \
   --content-type "image/png"
 echo "synced $REPO_DIR/figures/heatmaps/ -> s3://$R2_BUCKET/figures/heatmaps/"
+
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+aws s3 sync "$REPO_DIR/figures/timeseries/" "s3://$R2_BUCKET/figures/timeseries/" \
+  --endpoint-url "$ENDPOINT" \
+  --content-type "image/png"
+echo "synced $REPO_DIR/figures/timeseries/ -> s3://$R2_BUCKET/figures/timeseries/"
+
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+aws s3 sync "$REPO_DIR/figures/seasonal/" "s3://$R2_BUCKET/figures/seasonal/" \
+  --endpoint-url "$ENDPOINT" \
+  --content-type "image/png"
+echo "synced $REPO_DIR/figures/seasonal/ -> s3://$R2_BUCKET/figures/seasonal/"

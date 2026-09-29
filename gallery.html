@@ -71,6 +71,38 @@
     </div>
   </section>
 
+  <section id="timeseries-gallery">
+    <h2>Static time series</h2>
+    <p class="finding-note">Full-record time series for the product/variable selected above, one pre-rendered PNG per region.</p>
+    <div class="selector-row">
+      <select id="gallery-timeseries-region-select" aria-label="Region"></select>
+      <select id="gallery-timeseries-figure-select" aria-label="Figure"></select>
+    </div>
+    <div id="gallery-timeseries-empty" class="map-empty" style="display:none;">No static time series available for this selection.</div>
+    <div id="gallery-timeseries-wrap" style="display:none;">
+      <img id="gallery-timeseries-img" alt="" style="max-width:100%; display:block; border:1px solid var(--border); border-radius:var(--radius-sm);">
+      <div class="ol-actions" style="margin-top:0.8rem; max-width:220px;">
+        <a id="gallery-timeseries-download" download>Download PNG</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="seasonal-gallery">
+    <h2>Static seasonal cycle</h2>
+    <p class="finding-note">Water-year climatology for the product/variable selected above, one pre-rendered PNG per region.</p>
+    <div class="selector-row">
+      <select id="gallery-seasonal-region-select" aria-label="Region"></select>
+      <select id="gallery-seasonal-figure-select" aria-label="Figure"></select>
+    </div>
+    <div id="gallery-seasonal-empty" class="map-empty" style="display:none;">No static seasonal cycle available for this selection.</div>
+    <div id="gallery-seasonal-wrap" style="display:none;">
+      <img id="gallery-seasonal-img" alt="" style="max-width:100%; display:block; border:1px solid var(--border); border-radius:var(--radius-sm);">
+      <div class="ol-actions" style="margin-top:0.8rem; max-width:220px;">
+        <a id="gallery-seasonal-download" download>Download PNG</a>
+      </div>
+    </div>
+  </section>
+
   <section id="heatmap-gallery">
     <h2>Static heatmaps</h2>
     <p class="finding-note">Cross-product anomaly heatmaps, one pre-rendered PNG per family/category.</p>

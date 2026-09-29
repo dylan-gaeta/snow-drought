@@ -74,10 +74,12 @@ function onGallerySelectionChanged(entry) {
     document.getElementById("gallery-map-wrap").style.display = "none";
     document.getElementById("gallery-map-empty").style.display = "block";
     document.getElementById("gallery-figure-select").innerHTML = "";
-    return;
+  } else {
+    populateGalleryFigureSelect(entry, periods[0]);
+    renderGalleryMap(entry);
   }
-  populateGalleryFigureSelect(entry, periods[0]);
-  renderGalleryMap(entry);
+  onGalleryRegionFiguresChanged(entry.timeseries_figures || {}, TIMESERIES_GALLERY_IDS);
+  onGalleryRegionFiguresChanged(entry.seasonal_figures || {}, SEASONAL_GALLERY_IDS);
 }
 
 function wireGalleryMapControls() {
@@ -88,6 +90,114 @@ function wireGalleryMapControls() {
   });
   document.getElementById("gallery-figure-select").addEventListener("change", () => {
     renderGalleryMap(currentPickerEntry());
+  });
+}
+
+// ------------------------------------------------ Time series / seasonal
+// Same shape for both: a PNG per region (WesternUS/COUTWY), classified into
+// raw/anomaly (+ year for seasonal) -- entry.timeseries_figures/
+// seasonal_figures come straight from 14_dashboard_export.py's
+// _curate_timeseries_figures/_curate_seasonal_figures, nothing guessed here.
+
+const TIMESERIES_GALLERY_IDS = {
+  regionSelect: "gallery-timeseries-region-select", figureSelect: "gallery-timeseries-figure-select",
+  wrap: "gallery-timeseries-wrap", empty: "gallery-timeseries-empty",
+  img: "gallery-timeseries-img", download: "gallery-timeseries-download",
+  figuresKey: "timeseries_figures", figDir: "timeseries",
+};
+const SEASONAL_GALLERY_IDS = {
+  regionSelect: "gallery-seasonal-region-select", figureSelect: "gallery-seasonal-figure-select",
+  wrap: "gallery-seasonal-wrap", empty: "gallery-seasonal-empty",
+  img: "gallery-seasonal-img", download: "gallery-seasonal-download",
+  figuresKey: "seasonal_figures", figDir: "seasonal",
+};
+
+function galleryRegionFigureLabel(key) {
+  const match = key.match(/^(raw|anomaly)(?:_(\d{4}))?$/);
+  if (!match) return key;
+  const prefix = match[1] === "raw" ? "Raw value" : "Anomaly";
+  return match[2] ? `${prefix}, ${match[2]}` : prefix;
+}
+
+function populateGalleryRegionSelect(ids, figuresByRegion) {
+  const select = document.getElementById(ids.regionSelect);
+  select.innerHTML = "";
+  // "ALL" (Western US) first, matching every other region picker on this
+  // site, then whatever else exists (only ALL/CO_UT_WY today) alphabetically.
+  const regions = Object.keys(figuresByRegion).sort((a, b) => {
+    if (a === "ALL") return -1;
+    if (b === "ALL") return 1;
+    return a.localeCompare(b);
+  });
+  regions.forEach((code) => {
+    const option = document.createElement("option");
+    option.value = code;
+    option.textContent = manifest.region_labels[code] || code;
+    select.appendChild(option);
+  });
+  return regions;
+}
+
+function populateGalleryRegionFigureSelect(ids, slot) {
+  const select = document.getElementById(ids.figureSelect);
+  select.innerHTML = "";
+  // Raw before anomaly, undated before dated, then chronological.
+  const keys = Object.keys(slot).sort((a, b) => {
+    const rank = (k) => (k.startsWith("raw") ? 0 : 1);
+    return rank(a) !== rank(b) ? rank(a) - rank(b) : a.localeCompare(b);
+  });
+  keys.forEach((key) => {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = galleryRegionFigureLabel(key);
+    select.appendChild(option);
+  });
+  return keys;
+}
+
+function renderGalleryRegionFigure(ids, figuresByRegion) {
+  const wrap = document.getElementById(ids.wrap);
+  const empty = document.getElementById(ids.empty);
+  const region = document.getElementById(ids.regionSelect).value;
+  const figureKey = document.getElementById(ids.figureSelect).value;
+  const relPath = (figuresByRegion[region] || {})[figureKey];
+  if (!relPath) {
+    wrap.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+  wrap.style.display = "";
+  empty.style.display = "none";
+  const url = assetUrl(`figures/${ids.figDir}/${relPath}`);
+  const img = document.getElementById(ids.img);
+  img.src = url;
+  img.alt = `${pickerState.product} ${pickerState.response}, ${galleryRegionFigureLabel(figureKey)}, ${manifest.region_labels[region] || region}`;
+  const download = document.getElementById(ids.download);
+  download.href = url;
+  download.setAttribute("download", relPath.split("/").pop());
+}
+
+function onGalleryRegionFiguresChanged(figuresByRegion, ids) {
+  const regions = populateGalleryRegionSelect(ids, figuresByRegion);
+  if (regions.length === 0) {
+    document.getElementById(ids.wrap).style.display = "none";
+    document.getElementById(ids.empty).style.display = "block";
+    document.getElementById(ids.figureSelect).innerHTML = "";
+    return;
+  }
+  populateGalleryRegionFigureSelect(ids, figuresByRegion[regions[0]]);
+  renderGalleryRegionFigure(ids, figuresByRegion);
+}
+
+function wireGalleryRegionFigureControls(ids) {
+  const getFigures = () => currentPickerEntry()[ids.figuresKey] || {};
+  document.getElementById(ids.regionSelect).addEventListener("change", () => {
+    const figuresByRegion = getFigures();
+    populateGalleryRegionFigureSelect(ids, figuresByRegion[document.getElementById(ids.regionSelect).value] || {});
+    renderGalleryRegionFigure(ids, figuresByRegion);
+  });
+  document.getElementById(ids.figureSelect).addEventListener("change", () => {
+    renderGalleryRegionFigure(ids, getFigures());
   });
 }
 
@@ -152,6 +262,8 @@ function renderGalleryHeatmap() {
 async function init() {
   await loadManifest();
   wireGalleryMapControls();
+  wireGalleryRegionFigureControls(TIMESERIES_GALLERY_IDS);
+  wireGalleryRegionFigureControls(SEASONAL_GALLERY_IDS);
   initProductPicker(onGallerySelectionChanged);
   initGalleryHeatmaps();
 }
