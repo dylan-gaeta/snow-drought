@@ -15,6 +15,17 @@ function currentResponseEntry() {
   return manifest.categories[mapPickerState.category][mapPickerState.product][mapPickerState.response];
 }
 
+// Anomaly-mode COG pixel values are a per-cell standardized departure
+// (sigma), not the physical-unit anomaly -- every product except USDM
+// (kept in its own severity units) and the native-standardized drought
+// indices (already standardized by construction, in their own index units)
+// -- see code/common/detrend.py's normal_score_grid, code/dashboard_cog_
+// export.py, 2026-09-29.
+function isStandardizedAnomalyProduct() {
+  return currentResponseEntry().aggregation !== "native_index"
+    && !(mapPickerState.product === "USDM" && mapPickerState.response === "USDM");
+}
+
 function parseSharedMapViewFromUrl() {
   if (!window.location.hash || window.location.hash.length < 2) return null;
   try {
@@ -333,8 +344,10 @@ function initInteractiveMap() {
         return;
       }
       const value = raw / olMapState.currentScale; // undo this file's own Int16 scale (varies per file, read from its style JSON entry)
+      const unitSuffix = olMapState.mode === "anomaly" && isStandardizedAnomalyProduct()
+        ? "σ" : (currentResponseEntry().units || "");
       const lonLat = ol.proj.toLonLat(event.coordinate);
-      readout.textContent = `${value.toFixed(2)} at ${lonLat[1].toFixed(3)}°N, ${lonLat[0].toFixed(3)}°E`;
+      readout.textContent = `${value.toFixed(2)}${unitSuffix ? " " + unitSuffix : ""} at ${lonLat[1].toFixed(3)}°N, ${lonLat[0].toFixed(3)}°E`;
     } catch (err) {
       readout.textContent = "Could not read a value at this point.";
     }
@@ -625,6 +638,7 @@ async function updateInteractiveMapLayer() {
   // meaningful for the climatology/raw views, so the badge only shows there.
   const label = olMapState.mode === "climatology" ? `Climatology (${units})`
     : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
+    : isStandardizedAnomalyProduct() ? `Standardized anomaly (σ) ${detrendBadgeHtml(entry.detrend_method)}`
     : `${units} anomaly ${detrendBadgeHtml(entry.detrend_method)}`;
   let boundaries = fileEntry.boundaries;
   let binColors = palette;
