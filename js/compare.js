@@ -46,11 +46,36 @@ const CATEGORY_OVERLAY_COLORS = [
   "#ffb2b2", "#ffd8b2", "#e5ffb2", "#b2e5ff", "#bfb2ff",
 ];
 
-// DASHBOARD_MIN_YEAR is defined once in js/common.js (shared by every page).
-function filterFrom1990(dates, values) {
+// null = default recent window, see populateStartYearSelect. Same rationale
+// as js/explore.js's timeseriesStartYear: the full 1990-2026 record crammed
+// into one chart is a solid smear, worse here than on Explore since Compare
+// overlays several lines at once, not one.
+let compareStartYear = null;
+const DEFAULT_RECENT_YEARS = 15;
+
+function populateStartYearSelect() {
+  const { minYear, maxYear } = fullRecordYearRange();
+  const select = document.getElementById("compare-start-year-select");
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = `All years (from ${minYear})`;
+  select.appendChild(allOption);
+  for (let y = minYear; y <= maxYear; y++) {
+    const option = document.createElement("option");
+    option.value = String(y);
+    option.textContent = String(y);
+    select.appendChild(option);
+  }
+  compareStartYear = Math.max(minYear, maxYear - DEFAULT_RECENT_YEARS + 1);
+  select.value = String(compareStartYear);
+}
+
+function filterFromStartYear(dates, values) {
+  const startYear = Math.max(DASHBOARD_MIN_YEAR, compareStartYear || DASHBOARD_MIN_YEAR);
   return {
-    dates: dates.filter((d) => parseInt(d.slice(0, 4), 10) >= DASHBOARD_MIN_YEAR),
-    values: values.filter((_, i) => parseInt(dates[i].slice(0, 4), 10) >= DASHBOARD_MIN_YEAR),
+    dates: dates.filter((d) => parseInt(d.slice(0, 4), 10) >= startYear),
+    values: values.filter((_, i) => parseInt(dates[i].slice(0, 4), 10) >= startYear),
   };
 }
 
@@ -75,6 +100,12 @@ function initCompareView() {
 
   document.getElementById("compare-region-select").addEventListener("change", (event) => {
     compareState.region = event.target.value;
+    renderCategoryOverlay();
+  });
+
+  populateStartYearSelect();
+  document.getElementById("compare-start-year-select").addEventListener("change", (event) => {
+    compareStartYear = event.target.value ? parseInt(event.target.value, 10) : null;
     renderCategoryOverlay();
   });
 
@@ -259,7 +290,7 @@ async function renderCategoryOverlay() {
     const name = `${product} ${response}${uniformMethod ? "" : detrendShortSuffix(detrendMethod)}`;
     const pairKey = `${product}|${response}`;
     const visible = checkedKey.has(pairKey);
-    const { dates, values } = filterFrom1990(region.dates, sigma);
+    const { dates, values } = filterFromStartYear(region.dates, sigma);
     traces.push({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
       line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },
@@ -284,7 +315,7 @@ async function renderCategoryOverlay() {
     const detrendMethod = entryProducts[entry.product][entry.response].detrend_method;
     const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
     const name = `${entry.product} ${entry.response}${detrendShortSuffix(detrendMethod)}`;
-    const { dates, values } = filterFrom1990(region.dates, sigma);
+    const { dates, values } = filterFromStartYear(region.dates, sigma);
     traces.push({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
       line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },

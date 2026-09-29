@@ -443,8 +443,61 @@ function stepYear(delta) {
   updateInteractiveMapLayer();
 }
 
+// Below-map table of per-region values for the currently-selected product/
+// response/period/mode/year -- reuses computeWindowValue exactly as
+// js/summary.js's Summary Table does (same sigma/percentile/rawValue
+// computation, same regionEntries() list) rather than reimplementing window
+// aggregation here. Raw mode shows the region's raw value; anomaly mode
+// shows its standardized anomaly (sigma) -- matching how every OTHER page's
+// "anomaly" number is expressed, not the map's own per-file physical-unit
+// color scale (Dylan, 2026-09: "we have all the regional anomaly/climatology
+// results in the data tables" -- pointing at the Summary Table's own
+// numbers, not a new statistic).
+function formatRegionTableValue(result, units, mode) {
+  if (mode === "raw") return `${result.rawValue.toFixed(2)} ${units}`;
+  const sign = result.sigma >= 0 ? "+" : "";
+  return `${sign}${result.sigma.toFixed(1)}`;
+}
+
+async function renderRegionValuesTable(entry) {
+  const note = document.getElementById("ol-region-table-note");
+  const body = document.getElementById("ol-region-table-body");
+  if (olMapState.mode === "climatology") {
+    body.innerHTML = "";
+    note.textContent = "Regional values are shown for Raw value or Anomaly mode -- Climatology is a multi-year average, not a single year's reading.";
+    return;
+  }
+  if (olMapState.year === null) {
+    body.innerHTML = "";
+    note.textContent = "No years available for this selection.";
+    return;
+  }
+  if (!entry.aggregation) {
+    body.innerHTML = "";
+    note.textContent = "No established window-aggregation rule for this variable.";
+    return;
+  }
+  const period = olMapState.period;
+  const year = olMapState.year;
+  const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
+  const rows = regionEntries().map(({ code, label }) => {
+    const region = data.regions[code];
+    const result = region ? computeWindowValue(data, region, period, year) : null;
+    if (!result) return `<tr><td>${label}</td><td>&mdash;</td></tr>`;
+    const isStress = data.drier_is_high ? result.sigma > 0 : result.sigma < 0;
+    const cls = olMapState.mode === "anomaly" ? (isStress ? "stress" : "relief") : "";
+    return `<tr><td>${label}</td><td class="${cls}">${formatRegionTableValue(result, data.units, olMapState.mode)}</td></tr>`;
+  });
+  body.innerHTML = rows.join("");
+  const nativeNote = data.native_standardized ? " Native standardized index." : "";
+  note.textContent = olMapState.mode === "raw"
+    ? `Window-aggregated raw value, ${olPeriodLabel(period)} ${year}.${nativeNote}`
+    : `Standardized anomaly (σ), ${olPeriodLabel(period)} ${year}, relative to each region's own baseline.${nativeNote}`;
+}
+
 async function updateInteractiveMapLayer() {
   const entry = currentResponseEntry();
+  renderRegionValuesTable(entry); // independent of the COG file itself -- reads the same timeseries JSON every other page uses, not the map image
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
   const emptyMsg = document.getElementById("ol-map-empty");
   // Reset to the default "no data expected" wording every call -- only the
@@ -641,6 +694,7 @@ async function renderInteractiveMap() {
   if (!olMapState.map) {
     document.getElementById("ol-map-empty").style.display = "block";
     document.getElementById("ol-map-empty").textContent = "Interactive map library failed to load.";
+    document.getElementById("ol-region-table-wrap").style.display = "none";
     return;
   }
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
@@ -654,8 +708,10 @@ async function renderInteractiveMap() {
     document.getElementById("ol-map-wrap").style.display = "none";
     document.getElementById("ol-map-empty").style.display = "block";
     document.getElementById("ol-map-empty").textContent = "No interactive map for this dataset yet.";
+    document.getElementById("ol-region-table-wrap").style.display = "none";
     return;
   }
+  document.getElementById("ol-region-table-wrap").style.display = "";
   document.querySelector(".map-controls").style.display = "";
   const periods = sortedPeriods(Object.keys(style.periods));
   periods.forEach((period) => {
