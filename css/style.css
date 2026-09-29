@@ -1,12 +1,17 @@
-/* Design tokens drawn from the USWDS/NOAA drought.gov institutional family
-   (navy/blue/gold token system, Source Sans Pro + Merriweather) -- no NOAA,
-   NIDIS, or NSIDC logos/seals reproduced; this is an independent research
-   site, not an official federal page, so no .gov trust banner either. */
+/* Design tokens drawn from matplotlib/NCL's BrBG diverging colormap (the
+   same brown=dry / teal=wet family used for moisture anomaly maps
+   throughout this dashboard, see --cat-drought etc. below) rather than a
+   generic institutional navy/blue -- ties the site's own chrome to the
+   dry-wet science it's presenting. Stops taken directly from
+   matplotlib.colormaps['BrBG'] at f=1.0 (navy-equivalent), f=0.9
+   (blue-dark-equivalent), f=0.8 (blue-equivalent), f=0.2 (gold-equivalent).
+   No NOAA, NIDIS, or NSIDC logos/seals reproduced; this is an independent
+   research site, not an official federal page, so no .gov trust banner. */
 :root {
-  --navy: #162e51;
-  --blue: #0071bc;
-  --blue-dark: #205493;
-  --gold: #fdb81e;
+  --navy: #003c30;
+  --blue: #35978f;
+  --blue-dark: #01665e;
+  --gold: #bf812d;
   --bg: #f5f6f7;
   --bg-panel: #ffffff;
   --border: #d6d7d9;
@@ -27,9 +32,9 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --legend-bar-width: 22px;
-  --shadow-sm: 0 1px 2px rgba(22, 46, 81, 0.06), 0 1px 1px rgba(22, 46, 81, 0.04);
-  --shadow-md: 0 4px 12px rgba(22, 46, 81, 0.10), 0 1px 3px rgba(22, 46, 81, 0.08);
-  --shadow-focus: 0 0 0 3px rgba(0, 113, 188, 0.28);
+  --shadow-sm: 0 1px 2px rgba(0, 60, 48, 0.06), 0 1px 1px rgba(0, 60, 48, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 60, 48, 0.10), 0 1px 3px rgba(0, 60, 48, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(53, 151, 143, 0.28);
   --transition: 150ms ease;
 }
 
