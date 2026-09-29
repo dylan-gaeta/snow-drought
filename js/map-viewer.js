@@ -15,17 +15,6 @@ function currentResponseEntry() {
   return manifest.categories[mapPickerState.category][mapPickerState.product][mapPickerState.response];
 }
 
-// Anomaly-mode COG pixel values are a per-cell standardized departure
-// (sigma), not the physical-unit anomaly -- every product except USDM
-// (kept in its own severity units) and the native-standardized drought
-// indices (already standardized by construction, in their own index units)
-// -- see code/common/detrend.py's normal_score_grid, code/dashboard_cog_
-// export.py, 2026-09-29.
-function isStandardizedAnomalyProduct() {
-  return currentResponseEntry().aggregation !== "native_index"
-    && !(mapPickerState.product === "USDM" && mapPickerState.response === "USDM");
-}
-
 function parseSharedMapViewFromUrl() {
   if (!window.location.hash || window.location.hash.length < 2) return null;
   try {
@@ -344,8 +333,7 @@ function initInteractiveMap() {
         return;
       }
       const value = raw / olMapState.currentScale; // undo this file's own Int16 scale (varies per file, read from its style JSON entry)
-      const unitSuffix = olMapState.mode === "anomaly" && isStandardizedAnomalyProduct()
-        ? "σ" : (currentResponseEntry().units || "");
+      const unitSuffix = currentResponseEntry().units || "";
       const lonLat = ol.proj.toLonLat(event.coordinate);
       readout.textContent = `${value.toFixed(2)}${unitSuffix ? " " + unitSuffix : ""} at ${lonLat[1].toFixed(3)}°N, ${lonLat[0].toFixed(3)}°E`;
     } catch (err) {
@@ -505,15 +493,30 @@ async function renderRegionValuesTable(entry) {
   const year = olMapState.year;
   heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
-  const rows = regionEntries().map(({ code, label }) => {
-    const region = data.regions[code];
-    const result = region ? computeWindowValue(data, region, period, year) : null;
-    if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
-    const cls = regionTableCellClass(result, data.drier_is_high);
-    const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
-    const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
-    const rankText = formatRankBadge(result, cls);
-    return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+  // Named regions + all 11 western states + all 5 HUC2 basins -- the same
+  // full region set data.html's Summary Table exposes (as three separate
+  // group tabs there; here as one list with group-row dividers, since rows
+  // scale far more gracefully than the Summary Table's per-region COLUMNS
+  // would). Was just the 6 named regions (Dylan, 2026-09-29: "doesn't
+  // include states or huc2 basins").
+  const regionGroups = [
+    { label: "Regions", entries: regionEntries() },
+    { label: "States", entries: manifest.western_states.map((code) => ({ code, label: manifest.state_labels[code] })) },
+    { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
+  ];
+  const rows = regionGroups.flatMap(({ label: groupLabel, entries }) => {
+    const groupRow = `<tr class="group-row"><td colspan="4">${groupLabel}</td></tr>`;
+    const dataRows = entries.map(({ code, label }) => {
+      const region = data.regions[code];
+      const result = region ? computeWindowValue(data, region, period, year) : null;
+      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+      const cls = regionTableCellClass(result, data.drier_is_high);
+      const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+      const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
+      const rankText = formatRankBadge(result, cls);
+      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+    });
+    return [groupRow, ...dataRows];
   });
   body.innerHTML = rows.join("");
   const nativeNote = data.native_standardized
@@ -652,7 +655,6 @@ async function updateInteractiveMapLayer() {
   // meaningful for the climatology/raw views, so the badge only shows there.
   const label = olMapState.mode === "climatology" ? `Climatology (${units})`
     : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
-    : isStandardizedAnomalyProduct() ? `Standardized anomaly (σ) ${detrendBadgeHtml(entry.detrend_method)}`
     : `${units} anomaly ${detrendBadgeHtml(entry.detrend_method)}`;
   let boundaries = fileEntry.boundaries;
   let binColors = palette;
