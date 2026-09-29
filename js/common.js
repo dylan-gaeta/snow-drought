@@ -234,18 +234,24 @@ function meanStd(values) {
   return { mean, std: Math.sqrt(variance) };
 }
 
-// Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex }
-// for one product/response/region/window/year. sigma/percentile standardize
-// the window-aggregated anomaly the same way common/detrend.py's
-// normal_score_transform standardizes a single month: rank the target
-// against the baseline years' own aggregated-anomaly distribution (Weibull
-// plotting position), then map that percentile through the inverse normal
-// CDF -- non-parametric, so it stays meaningful for skewed/bounded fields
-// instead of assuming the baseline years are normally distributed.
+// Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex,
+// stressRank, n } for one product/response/region/window/year.
+// sigma/percentile standardize the window-aggregated anomaly the same way
+// common/detrend.py's normal_score_transform standardizes a single month:
+// rank the target against the baseline years' own aggregated-anomaly
+// distribution (Weibull plotting position), then map that percentile
+// through the inverse normal CDF -- non-parametric, so it stays meaningful
+// for skewed/bounded fields instead of assuming the baseline years are
+// normally distributed.
 // percentOfNormal is null wherever the baseline mean is too close to zero to
 // divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
 // or for native standardized indices (already a departure statistic, not a
 // physical quantity with a "normal").
+// stressRank/n: this target year's rank among the n baseline years, counted
+// from the most stressful end (1 = the single most drought-stressed
+// baseline year for this response's own drier_is_high direction) -- the
+// same baseline sample sigma/percentile already rank against, just reported
+// as a plain ordinal instead of a standardized score.
 function computeWindowValue(data, region, windowKey, targetYear) {
   if (data.aggregation === "native_index") {
     // A native index (e.g. SPI-03) is already its own trailing N-month
@@ -259,7 +265,10 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const idx = region.dates.indexOf(dateStr);
     if (idx === -1) return null;
     const v = region.value[idx];
-    return { sigma: v, percentile: null, rawValue: v, percentOfNormal: null, isNativeIndex: true };
+    return {
+      sigma: v, percentile: null, rawValue: v, percentOfNormal: null,
+      isNativeIndex: true, stressRank: null, n: null,
+    };
   }
   const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
   const targetRaw = aggregateWindow(region, windowKey, targetYear, data.aggregation, "value");
@@ -279,6 +288,9 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const rank = baselineAnomalies.filter((a) => a <= targetAnomaly).length; // matches np.searchsorted(..., side="right")
   const percentile = ((rank + 0.5) / (n + 1)) * 100;
   const sigma = normInv(percentile / 100);
+  // rank counts from the driest/coolest (lowest-anomaly) end; drier_is_high
+  // determines which end is actually the stressed one for this response.
+  const stressRank = data.drier_is_high ? n - rank + 1 : rank;
 
   let percentOfNormal = null;
   if (baselineRaws.length >= 2) {
@@ -287,7 +299,10 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     // of normal" numerically unstable (small denominator), not meaningful.
     if (Math.abs(meanRaw) > stdRaw) percentOfNormal = ((targetRaw - meanRaw) / meanRaw) * 100;
   }
-  return { sigma, percentile, rawValue: targetRaw, percentOfNormal, isNativeIndex: false };
+  return {
+    sigma, percentile, rawValue: targetRaw, percentOfNormal,
+    isNativeIndex: false, stressRank, n,
+  };
 }
 
 let manifest = null;

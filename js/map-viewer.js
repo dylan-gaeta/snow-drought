@@ -466,46 +466,60 @@ function stepYear(delta) {
 // color scale (Dylan, 2026-09: "we have all the regional anomaly/climatology
 // results in the data tables" -- pointing at the Summary Table's own
 // numbers, not a new statistic).
-function formatRegionTableValue(result, units, mode) {
-  if (mode === "raw") return `${result.rawValue.toFixed(2)} ${units}`;
-  const sign = result.sigma >= 0 ? "+" : "";
-  return `${sign}${result.sigma.toFixed(1)}`;
+// Raw value, standardized anomaly, AND rank on record together, always --
+// not gated on the map's own Climatology/Raw/Anomaly mode toggle (Dylan,
+// 2026-09-29: these are the dashboard's key findings and belong displayed
+// together, not split across a mode switch). olMapState.year persists even
+// while the map itself sits in Climatology mode (only the year CONTROL is
+// hidden there, see updateYearControlForPeriod), so the same target year
+// stays available here regardless of which mode the map is showing.
+function regionTableCellClass(result, drierIsHigh) {
+  if (result.sigma === null) return "";
+  const isStress = drierIsHigh ? result.sigma > 0 : result.sigma < 0;
+  return isStress ? "stress" : "relief";
+}
+
+function formatRankBadge(result, cls) {
+  if (result.stressRank === null || result.n === null) return "&mdash;";
+  const badgeCls = cls === "stress" || cls === "relief" ? cls : "";
+  return `<span class="rank-badge ${badgeCls}">${result.stressRank}/${result.n}</span>`;
 }
 
 async function renderRegionValuesTable(entry) {
+  const heading = document.getElementById("ol-region-table-heading");
   const note = document.getElementById("ol-region-table-note");
   const body = document.getElementById("ol-region-table-body");
-  if (olMapState.mode === "climatology") {
-    body.innerHTML = "";
-    note.textContent = "Regional values are shown for Raw value or Anomaly mode -- Climatology is a multi-year average, not a single year's reading.";
-    return;
-  }
   if (olMapState.year === null) {
+    heading.textContent = "Regional values";
     body.innerHTML = "";
     note.textContent = "No years available for this selection.";
     return;
   }
   if (!entry.aggregation) {
+    heading.textContent = "Regional values";
     body.innerHTML = "";
     note.textContent = "No established window-aggregation rule for this variable.";
     return;
   }
   const period = olMapState.period;
   const year = olMapState.year;
+  heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
   const rows = regionEntries().map(({ code, label }) => {
     const region = data.regions[code];
     const result = region ? computeWindowValue(data, region, period, year) : null;
-    if (!result) return `<tr><td>${label}</td><td>&mdash;</td></tr>`;
-    const isStress = data.drier_is_high ? result.sigma > 0 : result.sigma < 0;
-    const cls = olMapState.mode === "anomaly" ? (isStress ? "stress" : "relief") : "";
-    return `<tr><td>${label}</td><td class="${cls}">${formatRegionTableValue(result, data.units, olMapState.mode)}</td></tr>`;
+    if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+    const cls = regionTableCellClass(result, data.drier_is_high);
+    const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+    const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
+    const rankText = formatRankBadge(result, cls);
+    return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
   });
   body.innerHTML = rows.join("");
-  const nativeNote = data.native_standardized ? " Native standardized index." : "";
-  note.textContent = olMapState.mode === "raw"
-    ? `Window-aggregated raw value, ${olPeriodLabel(period)} ${year}.${nativeNote}`
-    : `Standardized anomaly (σ), ${olPeriodLabel(period)} ${year}, relative to each region's own baseline.${nativeNote}`;
+  const nativeNote = data.native_standardized
+    ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
+    : "";
+  note.textContent = `Rank 1 = the most drought-stressed year of ${data.native_standardized ? "record" : "the baseline"} for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
 }
 
 async function updateInteractiveMapLayer() {

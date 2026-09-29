@@ -240,6 +240,33 @@ table.headline-table tbody tr:not(.group-row) { transition: background var(--tra
    the opposite direction for that same variable. */
 table.headline-table td.stress { color: #955910; font-weight: 600; }
 table.headline-table td.relief { color: #0e726a; font-weight: 600; }
+
+/* Map page's below-map regional summary -- raw value, standardized
+   anomaly, AND rank on record together, one of the dashboard's key
+   findings (Dylan, 2026-09-29: "should be displayed and integrated more
+   prominently"), so it gets the same card treatment as the map image
+   itself (.map-image-wrap) rather than sitting as a bare, easy-to-miss
+   table directly on the page background. */
+.region-table-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.1rem 1.25rem;
+  margin-top: 1rem;
+}
+.region-table-card h3 { margin-top: 0; margin-bottom: 0.3rem; }
+.rank-badge {
+  display: inline-block;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #eef1f5;
+  color: var(--navy);
+}
+.rank-badge.stress { background: #fbead2; color: #955910; }
+.rank-badge.relief { background: #dff3f1; color: #0e726a; }
 table.headline-table tr.group-row td {
   background: #f5f6f7;
   color: var(--navy);
