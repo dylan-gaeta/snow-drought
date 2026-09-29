@@ -643,7 +643,14 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
      lot of empty space to the map's right -- the legend, pixel readout, and
      action buttons live there now instead of stacked below the map. */
   display: grid;
-  grid-template-columns: max-content 1fr;
+  /* 1fr stretched the sidebar to fill whatever space was left of the map,
+     but the legend itself is only ever a narrow swatch bar + short tick
+     labels -- confirmed live: ~250px of blank space sat to its right, with
+     only the (already full-width, flex-stretched) action buttons below
+     using the column's actual width. max-content sizes it to its real
+     content -- the buttons' own text -- with .ol-sidebar's min-width below
+     as the floor. */
+  grid-template-columns: max-content max-content;
   gap: 1.25rem;
   align-items: start;
 }
