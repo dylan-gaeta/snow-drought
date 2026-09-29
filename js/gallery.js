@@ -12,22 +12,38 @@ function galleryFigureLabel(key) {
   return key;
 }
 
-function populateGalleryPeriodSelect(entry) {
-  const select = document.getElementById("gallery-period-select");
+// Rebuilding a <select>'s options (e.g. switching product) always reset it
+// back to the first option, even when the previously-chosen value was still
+// one of the new options -- confirmed live: pick DJFM, pick Anomaly 2026,
+// pick a different season, and both the region AND figure choice silently
+// jumped back to their defaults. Preserve the current value across a
+// rebuild whenever it's still a valid option; only fall back to the first
+// one when it genuinely isn't (e.g. that year doesn't exist for this
+// product). `entries` is an array of [value, label] pairs.
+function repopulateGallerySelect(select, entries) {
+  const previous = select.value;
   select.innerHTML = "";
-  const periods = sortedPeriods(Object.keys(entry.maps || {}));
-  periods.forEach((period) => {
+  entries.forEach(([value, label]) => {
     const option = document.createElement("option");
-    option.value = period;
-    option.textContent = SEASON_LABELS[period] || MONTH_NAMES[parseInt(period, 10) - 1];
+    option.value = value;
+    option.textContent = label;
     select.appendChild(option);
   });
+  if (entries.some(([value]) => value === previous)) {
+    select.value = previous;
+  }
+  return select.value;
+}
+
+function populateGalleryPeriodSelect(entry) {
+  const select = document.getElementById("gallery-period-select");
+  const periods = sortedPeriods(Object.keys(entry.maps || {}));
+  repopulateGallerySelect(select, periods.map((p) => [p, SEASON_LABELS[p] || MONTH_NAMES[parseInt(p, 10) - 1]]));
   return periods;
 }
 
 function populateGalleryFigureSelect(entry, period) {
   const select = document.getElementById("gallery-figure-select");
-  select.innerHTML = "";
   const slot = (entry.maps || {})[period] || {};
   // baseline first, then raw/anomaly years oldest to newest -- reads as a
   // natural progression, not the arbitrary key-insertion order of the JSON.
@@ -36,12 +52,7 @@ function populateGalleryFigureSelect(entry, period) {
     if (b === "baseline") return 1;
     return a.localeCompare(b);
   });
-  keys.forEach((key) => {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = galleryFigureLabel(key);
-    select.appendChild(option);
-  });
+  repopulateGallerySelect(select, keys.map((k) => [k, galleryFigureLabel(k)]));
   return { slot, keys };
 }
 
@@ -75,7 +86,8 @@ function onGallerySelectionChanged(entry) {
     document.getElementById("gallery-map-empty").style.display = "block";
     document.getElementById("gallery-figure-select").innerHTML = "";
   } else {
-    populateGalleryFigureSelect(entry, periods[0]);
+    const currentPeriod = document.getElementById("gallery-period-select").value;
+    populateGalleryFigureSelect(entry, currentPeriod);
     renderGalleryMap(entry);
   }
   onGalleryRegionFiguresChanged(entry.timeseries_figures || {}, TIMESERIES_GALLERY_IDS);
@@ -121,7 +133,6 @@ function galleryRegionFigureLabel(key) {
 
 function populateGalleryRegionSelect(ids, figuresByRegion) {
   const select = document.getElementById(ids.regionSelect);
-  select.innerHTML = "";
   // "ALL" (Western US) first, matching every other region picker on this
   // site, then whatever else exists (only ALL/CO_UT_WY today) alphabetically.
   const regions = Object.keys(figuresByRegion).sort((a, b) => {
@@ -129,29 +140,18 @@ function populateGalleryRegionSelect(ids, figuresByRegion) {
     if (b === "ALL") return 1;
     return a.localeCompare(b);
   });
-  regions.forEach((code) => {
-    const option = document.createElement("option");
-    option.value = code;
-    option.textContent = manifest.region_labels[code] || code;
-    select.appendChild(option);
-  });
+  repopulateGallerySelect(select, regions.map((code) => [code, manifest.region_labels[code] || code]));
   return regions;
 }
 
 function populateGalleryRegionFigureSelect(ids, slot) {
   const select = document.getElementById(ids.figureSelect);
-  select.innerHTML = "";
   // Raw before anomaly, undated before dated, then chronological.
   const keys = Object.keys(slot).sort((a, b) => {
     const rank = (k) => (k.startsWith("raw") ? 0 : 1);
     return rank(a) !== rank(b) ? rank(a) - rank(b) : a.localeCompare(b);
   });
-  keys.forEach((key) => {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = galleryRegionFigureLabel(key);
-    select.appendChild(option);
-  });
+  repopulateGallerySelect(select, keys.map((k) => [k, galleryRegionFigureLabel(k)]));
   return keys;
 }
 
@@ -185,7 +185,8 @@ function onGalleryRegionFiguresChanged(figuresByRegion, ids) {
     document.getElementById(ids.figureSelect).innerHTML = "";
     return;
   }
-  populateGalleryRegionFigureSelect(ids, figuresByRegion[regions[0]]);
+  const currentRegion = document.getElementById(ids.regionSelect).value;
+  populateGalleryRegionFigureSelect(ids, figuresByRegion[currentRegion] || {});
   renderGalleryRegionFigure(ids, figuresByRegion);
 }
 
