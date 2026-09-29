@@ -132,7 +132,7 @@ a:hover { color: var(--navy); }
   border-bottom-color: var(--gold);
 }
 
-/* 9 nav items (Home + one per figure type) don't fit a flat inline row past
+/* 10 nav items (Home + one per figure type) don't fit a flat inline row past
    a fairly wide viewport -- collapse into a toggled dropdown below that
    point instead of letting it wrap raggedly across 2-3 lines. */
 .nav-toggle {
