@@ -25,6 +25,12 @@ const compareState = {
   // rebuilt the legend from the hardcoded default, silently discarding
   // whatever the user had checked/unchecked (Dylan, 2026-09).
   checkedByCategory: {},
+  // User-added { category, product, response } triplets from ANY category,
+  // overlaid on top of whatever the currently-browsed category shows below.
+  // Persists across category/region switches -- unlike checkedByCategory,
+  // there's only one list, not one per category (Dylan, 2026-09: "you can't
+  // compare different products from different variable classes").
+  customSeries: [],
 };
 // NCL StepSeq25 (via the cmaps package), reordered hue-first-then-shade so
 // the first 5 entries alone span 5 distinct hues -- the biggest category
@@ -72,7 +78,68 @@ function initCompareView() {
     renderCategoryOverlay();
   });
 
+  wireAddSeriesControls();
   renderCategoryOverlay();
+}
+
+// Category/product/response cascade for adding an arbitrary extra series
+// from ANY category -- separate from the main category-select above, which
+// only browses one category's own checklist at a time.
+function populateAddCategorySelect() {
+  const select = document.getElementById("compare-add-category");
+  select.innerHTML = "";
+  manifest.category_order
+    .filter((cat) => Object.keys(manifest.categories[cat]).length > 0)
+    .forEach((cat) => {
+      const option = document.createElement("option");
+      option.value = cat;
+      option.textContent = categoryLabelWithIcon(cat);
+      select.appendChild(option);
+    });
+  populateAddProductSelect();
+}
+
+function populateAddProductSelect() {
+  const select = document.getElementById("compare-add-product");
+  select.innerHTML = "";
+  const category = document.getElementById("compare-add-category").value;
+  Object.keys(manifest.categories[category]).forEach((product) => {
+    const option = document.createElement("option");
+    option.value = product;
+    option.textContent = product;
+    select.appendChild(option);
+  });
+  populateAddResponseSelect();
+}
+
+function populateAddResponseSelect() {
+  const select = document.getElementById("compare-add-response");
+  select.innerHTML = "";
+  const category = document.getElementById("compare-add-category").value;
+  const product = document.getElementById("compare-add-product").value;
+  Object.keys(manifest.categories[category][product]).forEach((response) => {
+    const option = document.createElement("option");
+    option.value = response;
+    option.textContent = response;
+    select.appendChild(option);
+  });
+}
+
+function wireAddSeriesControls() {
+  populateAddCategorySelect();
+  document.getElementById("compare-add-category").addEventListener("change", populateAddProductSelect);
+  document.getElementById("compare-add-product").addEventListener("change", populateAddResponseSelect);
+  document.getElementById("compare-add-button").addEventListener("click", () => {
+    const category = document.getElementById("compare-add-category").value;
+    const product = document.getElementById("compare-add-product").value;
+    const response = document.getElementById("compare-add-response").value;
+    const alreadyAdded = compareState.customSeries.some(
+      (s) => s.category === category && s.product === product && s.response === response
+    );
+    if (alreadyAdded) return;
+    compareState.customSeries.push({ category, product, response });
+    renderCategoryOverlay();
+  });
 }
 
 function plotlyLayout() {
@@ -142,6 +209,38 @@ async function renderCategoryOverlay() {
     ? await Promise.all(pairs.map(({ product, response }) => fetchSeasonalJson(`${product}_${response}`)))
     : null;
 
+  // Extra series added from any category (compareState.customSeries), minus
+  // whatever duplicates a pair the browsed category is already plotting
+  // below -- adding e.g. "PRISM Precipitation" while browsing precipitation
+  // itself would otherwise double-plot the same line.
+  const extraEntries = compareState.customSeries.filter(
+    (s) => !(s.category === category && pairs.some((p) => p.product === s.product && p.response === s.response))
+  );
+  const extraSeriesList = await Promise.all(
+    extraEntries.map((e) => fetchTimeseriesJson(`${e.product}_${e.response}`))
+  );
+  const extraSeasonalList = await Promise.all(
+    extraEntries.map((e) => (e.category === "vegetation" ? fetchSeasonalJson(`${e.product}_${e.response}`) : null))
+  );
+
+  function standardizedSeries(product, response, region, seasonalRegion, entryCategory) {
+    let sigma = region.sigma;
+    if (entryCategory === "vegetation" && seasonalRegion) {
+      const mean = seasonalRegion.climatology_mean;
+      const trough = Math.min(...mean);
+      const amplitude = Math.max(...mean) - trough;
+      const keepMonth = mean.map((v) => (v - trough) > COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION * amplitude);
+      sigma = region.dates.map((d, i) => {
+        const month = parseInt(d.slice(5, 7), 10);
+        return keepMonth[month - 1] ? sigma[i] : null;
+      });
+    }
+    if (COMBINED_INVERTED_VALENCE_RESPONSES.has(response)) {
+      sigma = sigma.map((v) => (v === null || v === undefined ? null : -v));
+    }
+    return sigma;
+  }
+
   const traces = [];
   const legendItems = [];
   let colorIndex = 0;
@@ -150,24 +249,9 @@ async function renderCategoryOverlay() {
     const region = data.regions[compareState.region];
     if (!region) return;
 
-    let sigma = region.sigma;
-    if (category === "vegetation") {
-      const seasonal = seasonalList[pairIndex];
-      const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-      if (seasonalRegion) {
-        const mean = seasonalRegion.climatology_mean;
-        const trough = Math.min(...mean);
-        const amplitude = Math.max(...mean) - trough;
-        const keepMonth = mean.map((v) => (v - trough) > COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION * amplitude);
-        sigma = region.dates.map((d, i) => {
-          const month = parseInt(d.slice(5, 7), 10);
-          return keepMonth[month - 1] ? sigma[i] : null;
-        });
-      }
-    }
-    if (COMBINED_INVERTED_VALENCE_RESPONSES.has(response)) {
-      sigma = sigma.map((v) => (v === null || v === undefined ? null : -v));
-    }
+    const seasonal = seasonalList ? seasonalList[pairIndex] : null;
+    const seasonalRegion = seasonal && seasonal.regions[compareState.region];
+    const sigma = standardizedSeries(product, response, region, seasonalRegion, category);
 
     const isObservation = PRODUCT_OBSERVATION_KIND[product] === "observation";
     const detrendMethod = products[product][response].detrend_method;
@@ -184,8 +268,53 @@ async function renderCategoryOverlay() {
     legendItems.push({ name, color, visible, pairKey });
     colorIndex++;
   });
+
+  const extraChipColors = [];
+  extraEntries.forEach((entry, i) => {
+    const data = extraSeriesList[i];
+    const region = data.regions[compareState.region];
+    if (!region) { extraChipColors.push(null); return; }
+
+    const seasonal = extraSeasonalList[i];
+    const seasonalRegion = seasonal && seasonal.regions[compareState.region];
+    const sigma = standardizedSeries(entry.product, entry.response, region, seasonalRegion, entry.category);
+
+    const entryProducts = manifest.categories[entry.category];
+    const isObservation = PRODUCT_OBSERVATION_KIND[entry.product] === "observation";
+    const detrendMethod = entryProducts[entry.product][entry.response].detrend_method;
+    const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
+    const name = `${entry.product} ${entry.response}${detrendShortSuffix(detrendMethod)}`;
+    const { dates, values } = filterFrom1990(region.dates, sigma);
+    traces.push({
+      x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
+      line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },
+      name, visible: true,
+    });
+    extraChipColors.push(color);
+    colorIndex++;
+  });
+
   Plotly.newPlot(chart, traces, { ...plotlyLayout(), showlegend: false }, { responsive: true, displaylogo: false });
   renderCategoryLegend(legendItems);
+  renderExtraSeriesChips(extraEntries, extraChipColors);
+}
+
+function renderExtraSeriesChips(extraEntries, extraChipColors) {
+  const row = document.getElementById("compare-extra-series");
+  row.innerHTML = "";
+  extraEntries.forEach((entry, i) => {
+    const color = extraChipColors[i];
+    if (!color) return; // region had no data for this entry -- nothing plotted, nothing to show
+    const chip = document.createElement("span");
+    chip.className = "year-chip";
+    chip.style.background = color;
+    chip.innerHTML = `${entry.product} ${entry.response} <button type="button" aria-label="Remove ${entry.product} ${entry.response}">&times;</button>`;
+    chip.querySelector("button").addEventListener("click", () => {
+      compareState.customSeries = compareState.customSeries.filter((s) => s !== entry);
+      renderCategoryOverlay();
+    });
+    row.appendChild(chip);
+  });
 }
 
 function renderCategoryLegend(items) {
@@ -201,7 +330,13 @@ function renderCategoryLegend(items) {
       const checkedKey = compareState.checkedByCategory[compareState.category];
       if (event.target.checked) checkedKey.add(item.pairKey);
       else checkedKey.delete(item.pairKey);
-      Plotly.restyle(document.getElementById("compare-chart"), { visible: event.target.checked }, [i]);
+      const chart = document.getElementById("compare-chart");
+      Plotly.restyle(chart, { visible: event.target.checked }, [i]);
+      // restyle() alone doesn't recompute the axis range for the now-
+      // different set of visible traces -- confirmed live: check/uncheck a
+      // few series and the y-axis stayed pinned to whatever range the
+      // ORIGINAL default-visible traces needed, not the current ones.
+      Plotly.relayout(chart, { "yaxis.autorange": true });
     });
     const swatch = document.createElement("span");
     swatch.className = "compare-legend-swatch";
