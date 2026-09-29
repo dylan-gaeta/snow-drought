@@ -123,11 +123,18 @@ async function renderSeasonal() {
       });
     });
   }
+  // Plotly's default legend sits to the right of the plot -- fine on a wide
+  // screen, but on mobile it squeezed the actual chart into less than half
+  // the viewport width with illegible, crammed two-line month/year tick
+  // labels (confirmed live, 375px). Below the chart, horizontal, instead --
+  // same breakpoint map.html's own side-panel-to-stacked layout already uses.
+  const isNarrow = window.innerWidth < 820;
   const layout = {
-    margin: { t: 20, r: 20, b: 55, l: 60 },
+    margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },
     yaxis: { title: isAnomaly ? `${data.response} anomaly (${data.units})` : `${data.response} (${data.units})`, zeroline: isAnomaly },
     xaxis: { type: "category", tickvals: x, ticktext: tickText },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
+    legend: isNarrow ? { orientation: "h", x: 0.5, xanchor: "center", y: -0.25, yanchor: "top" } : {},
   };
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
   renderExtraYearChips();
