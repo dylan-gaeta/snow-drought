@@ -86,7 +86,7 @@ function renderMapCategoryTabs() {
     if (Object.keys(products).length === 0) return;
     const button = document.createElement("button");
     button.className = "category-tab";
-    button.textContent = manifest.category_labels[category];
+    button.textContent = categoryLabelWithIcon(category);
     button.style.setProperty("--cat", manifest.category_colors[category]);
     button.dataset.category = category;
     button.addEventListener("click", () => selectMapCategory(category));

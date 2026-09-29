@@ -170,7 +170,7 @@ async function renderSummaryTable() {
     anyRows = true;
     const groupRow = document.createElement("tr");
     groupRow.className = "group-row";
-    groupRow.innerHTML = `<td colspan="${colCount}">${manifest.category_labels[category]}</td>`;
+    groupRow.innerHTML = `<td colspan="${colCount}">${categoryLabelWithIcon(category)}</td>`;
     body.appendChild(groupRow);
     rows.forEach((row) => {
       const data = row.data;

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Sync the local cogs/ and data/ staging directories (written by the
-# snowdrought-carbon pipeline's export scripts) to the Cloudflare R2 bucket
-# that serves them to the live dashboard -- js/common.js's assetUrl() points
-# at this same bucket for both. cogs/ is large binary data, too big for git;
-# data/ is small individually but gets fully rewritten on every pipeline
-# export, so committing it to git grows repo history forever with no way to
-# reclaim the space (moved out of git 2026-09, see .gitignore).
+# Sync the local cogs/, data/, and figures/ staging directories (written by
+# the snowdrought-carbon pipeline's export scripts) to the Cloudflare R2
+# bucket that serves them to the live dashboard -- js/common.js's assetUrl()
+# points at this same bucket for all three. cogs/ and figures/ are large
+# binary data, too big for git; data/ is small individually but gets fully
+# rewritten on every pipeline export, so committing it to git grows repo
+# history forever with no way to reclaim the space (moved out of git
+# 2026-09, see .gitignore).
 #
-# (figures/maps/ and figures/synthesis|heatmaps/ -- static per-product map
-# and chart PNGs -- no longer need syncing: every dashboard page now
-# computes its own charts/maps client-side, so nothing reads figures/
-# anymore. Removed here 2026-09.)
+# figures/maps/ and figures/heatmaps/ are read by gallery.html (added
+# 2026-09) -- figures/synthesis/ has no manifest index yet (dashboard_export
+# .py doesn't curate it into manifest.json the way maps/heatmaps are), so
+# nothing reads it and it's still not synced.
 #
 # R2 is not AWS -- this just reuses the aws-cli as a generic S3-compatible
 # client pointed at R2's own endpoint, since R2 speaks the S3 API.

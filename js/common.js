@@ -16,6 +16,29 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// One glyph per category, everywhere a category label renders (category
+// tabs, category selects, table group rows, search results) -- Dylan,
+// 2026-09: "text icons for each of the variable groups, like a leaf for
+// photosynthesis." Keyed by manifest.category_order's own category ids, not
+// guessed from the display label text.
+// Written as \u{...} code point escapes, not literal characters -- some of
+// these are outside the Basic Multilingual Plane (surrogate-pair territory)
+// and got silently mangled as literal bytes through one editing pass.
+const CATEGORY_ICONS = {
+  snow: "\u{2744}", // snowflake
+  climate: "\u{1F321}", // thermometer
+  precipitation: "\u{1F327}", // cloud with rain
+  soil_moisture: "\u{1F4A7}", // droplet
+  vegetation: "\u{1F33F}", // herb (leaf)
+  fire: "\u{1F525}", // fire
+  drought: "\u{1F3DC}", // desert
+};
+
+function categoryLabelWithIcon(category) {
+  const icon = CATEGORY_ICONS[category];
+  return icon ? `${icon} ${manifest.category_labels[category]}` : manifest.category_labels[category];
+}
+
 // Hard floor across every page (Dylan, 2026-09): a handful of products
 // (SPI/SPEI/PRISM-based) have a real record back to 1895, which compresses
 // this whole dashboard's actual 1990-2026 baseline era into a sliver
@@ -498,7 +521,7 @@ function wireProductSearch(inputId, resultsId, onSelect) {
     results.innerHTML = matches.map((m, i) =>
       `<button type="button" class="search-result" data-index="${i}">
         <strong>${m.product}</strong> &ndash; ${m.response}
-        <span class="search-result-category">${manifest.category_labels[m.category]}</span>
+        <span class="search-result-category">${categoryLabelWithIcon(m.category)}</span>
       </button>`
     ).join("");
     results.style.display = "block";

@@ -33,7 +33,7 @@ function renderCoverageChart() {
   const traces = manifest.category_order.map((category) => {
     const catRows = rows.filter((r) => r.category === category);
     return {
-      type: "bar", orientation: "h", name: manifest.category_labels[category],
+      type: "bar", orientation: "h", name: categoryLabelWithIcon(category),
       y: catRows.map((r) => `${r.product} ${r.response}`),
       base: catRows.map((r) => r.start),
       x: catRows.map((r) => {

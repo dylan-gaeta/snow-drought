@@ -56,7 +56,7 @@ function renderHeatmapCategoryTabs() {
   manifest.category_order.forEach((category) => {
     const button = document.createElement("button");
     button.className = "category-tab";
-    button.textContent = manifest.category_labels[category];
+    button.textContent = categoryLabelWithIcon(category);
     button.style.setProperty("--cat", manifest.category_colors[category]);
     button.dataset.category = category;
     button.addEventListener("click", () => selectHeatmapCategory(category));

@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Monthly time series -- raw values and standardized anomalies -- for every dataset in the Western US snow drought pipeline.">
-<title>Time Series &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="Browse and download the pipeline's own pre-rendered static PNG maps and cross-product heatmaps, publication-ready, for the Western US snow drought pipeline.">
+<title>Figure Gallery &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
 <body>
 
@@ -23,13 +22,13 @@
     <nav class="site-nav" id="site-nav">
       <a href="index.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="explore.html" class="active">Time Series</a>
+      <a href="explore.html">Time Series</a>
       <a href="seasonal.html">Seasonal Cycle</a>
       <a href="compare.html">Compare</a>
       <a href="data.html">Summary Table</a>
       <a href="heatmaps.html">Heatmap</a>
       <a href="findings.html">Dierauer Classification</a>
-      <a href="gallery.html">Figure Gallery</a>
+      <a href="gallery.html" class="active">Figure Gallery</a>
       <a href="about.html">About</a>
     </nav>
   </div>
@@ -37,12 +36,9 @@
 
 <main>
 
-  <section id="explorer">
-    <h2>Time Series</h2>
-    <p class="finding-note">Every canonical dataset: category, product,
-      variable, then raw value or standardized anomaly over its full
-      record. Anomalies are relative to each product's own fixed
-      calendar-month climatology, never year-over-year.</p>
+  <section id="map-gallery">
+    <h2>Static maps</h2>
+    <p class="finding-note">The pipeline's own pre-rendered PNG maps, publication-ready (300 DPI). Same product/period picker as every other page; pick a figure below to preview or download.</p>
 
     <div class="product-search-wrap">
       <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
@@ -56,20 +52,37 @@
         <div class="selector-row">
           <select id="product-select" aria-label="Product"></select>
           <select id="response-select" aria-label="Variable"></select>
-          <div class="region-toggle" id="region-toggle"></div>
         </div>
+        <div id="region-toggle" style="display:none;"></div>
         <div class="product-meta" id="product-meta"></div>
 
         <div class="selector-row">
-          <div class="series-toggle" id="timeseries-toggle">
-            <button data-series="value" class="active">Raw</button>
-            <button data-series="sigma">Anomaly (&sigma;)</button>
-          </div>
-          <label class="boundary-toggle" for="timeseries-start-year-select">Start year
-            <select id="timeseries-start-year-select" aria-label="Start year"></select>
-          </label>
+          <select id="gallery-period-select" aria-label="Month or season"></select>
+          <select id="gallery-figure-select" aria-label="Figure"></select>
         </div>
-        <div id="timeseries-chart" style="height:480px;"></div>
+        <div id="gallery-map-empty" class="map-empty" style="display:none;">No static map available for this selection.</div>
+        <div id="gallery-map-wrap" style="display:none;">
+          <img id="gallery-map-img" alt="" style="max-width:100%; display:block; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <div class="ol-actions" style="margin-top:0.8rem; max-width:220px;">
+            <a id="gallery-map-download" download>Download PNG</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="heatmap-gallery">
+    <h2>Static heatmaps</h2>
+    <p class="finding-note">Cross-product anomaly heatmaps, one pre-rendered PNG per family/category.</p>
+    <div class="selector-row">
+      <select id="gallery-heatmap-family-select" aria-label="Heatmap family"></select>
+      <select id="gallery-heatmap-category-select" aria-label="Category"></select>
+    </div>
+    <div id="gallery-heatmap-empty" class="map-empty" style="display:none;">No static heatmap available for this selection.</div>
+    <div id="gallery-heatmap-wrap" style="display:none;">
+      <img id="gallery-heatmap-img" alt="" style="max-width:100%; display:block; border:1px solid var(--border); border-radius:var(--radius-sm);">
+      <div class="ol-actions" style="margin-top:0.8rem; max-width:220px;">
+        <a id="gallery-heatmap-download" download>Download PNG</a>
       </div>
     </div>
   </section>
@@ -89,6 +102,6 @@
 
 <script src="js/common.js"></script>
 <script src="js/product-picker.js"></script>
-<script src="js/explore.js"></script>
+<script src="js/gallery.js"></script>
 </body>
 </html>

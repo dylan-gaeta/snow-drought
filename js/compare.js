@@ -58,7 +58,7 @@ function initCompareView() {
   manifest.category_order.forEach((cat) => {
     const option = document.createElement("option");
     option.value = cat;
-    option.textContent = manifest.category_labels[cat];
+    option.textContent = categoryLabelWithIcon(cat);
     categorySelect.appendChild(option);
   });
   compareState.category = manifest.category_order[0];
