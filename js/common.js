@@ -50,6 +50,27 @@ function categoryLabelWithIcon(category) {
 // would be a bug if this one ever floored BELOW 1979 (data that doesn't exist).
 const DASHBOARD_MIN_YEAR = 1990;
 
+// The year range spanning every product's actual record_start/record_end,
+// floored at DASHBOARD_MIN_YEAR -- a handful of products (e.g. PRISM back to
+// 1895) would otherwise push the range's start back nearly a century for a
+// dropdown that's really about this dashboard's 1990-2026 baseline era. A
+// product with a shorter record than that still just produces "--" rows/cells
+// for years outside its own coverage. Shared across any page needing a
+// dashboard-wide year range (Summary Table, Heatmap), not page-specific.
+function fullRecordYearRange() {
+  let minYear = Infinity;
+  let maxYear = -Infinity;
+  for (const products of Object.values(manifest.categories)) {
+    for (const responses of Object.values(products)) {
+      for (const entry of Object.values(responses)) {
+        if (entry.record_start) minYear = Math.min(minYear, parseInt(entry.record_start.slice(0, 4), 10));
+        if (entry.record_end) maxYear = Math.max(maxYear, parseInt(entry.record_end.slice(0, 4), 10));
+      }
+    }
+  }
+  return { minYear: Math.max(DASHBOARD_MIN_YEAR, minYear), maxYear };
+}
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",

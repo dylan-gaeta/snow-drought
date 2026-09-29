@@ -103,8 +103,13 @@ a:hover { color: var(--navy); }
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--navy);
-  background: var(--gold);
+  /* navy-on-gold measured 3.79:1, below WCAG AA's 4.5:1 for this font size.
+     white on a darker BrBG brown stop (matplotlib f=0.1, one step darker
+     than --gold's f=0.2) measures 6.37:1 -- stays in the same dry/wet brown
+     family, doesn't touch --gold itself since that's used elsewhere for
+     accents that aren't a text/background contrast pair. */
+  color: #fff;
+  background: #8c510a;
   border-radius: 999px;
 }
 .site-header .wordmark small {
@@ -188,6 +193,21 @@ main section[id] { scroll-margin-top: 5rem; }
   margin-bottom: 1.75rem;
 }
 
+.summary-table-scroll {
+  overflow-x: auto;
+  /* Horizontal counterpart of .compare-legend's fade cue, same rationale:
+     the numeric region columns run off the right edge on mobile (844px
+     table in a 269px wrapper, confirmed 2026-09) with no visual hint more
+     columns are reachable by swiping. */
+  background:
+    linear-gradient(90deg, var(--bg-panel) 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(270deg, var(--bg-panel) 30%, rgba(255, 255, 255, 0)) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)) 100% 0;
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
 table.headline-table {
   width: 100%;
   border-collapse: collapse;
@@ -470,6 +490,21 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  /* Fade at top/bottom hints more items are scrollable -- categories with
+     enough variables to overflow (e.g. Snow & Cryosphere's 20 items in a
+     218px box, confirmed 2026-09) gave no visual cue anything was cut off.
+     background-attachment: local scrolls the fade layers WITH the content
+     (so they sit right at the true top/bottom edge); scroll keeps the
+     radial shadow layers fixed to the viewport, which is what makes them
+     visually fade away once you've actually scrolled past that edge. */
+  background:
+    linear-gradient(var(--bg-panel) 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(rgba(255, 255, 255, 0), var(--bg-panel) 70%) 0 100%,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)) 0 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 24px, 100% 24px, 100% 10px, 100% 10px;
+  background-attachment: local, local, scroll, scroll;
 }
 .compare-legend-item { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; white-space: nowrap; }
 .compare-legend-swatch { display: inline-block; width: 1.1em; height: 0.3em; border-radius: 2px; flex-shrink: 0; }
@@ -522,6 +557,12 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
    figsize=(12.0, 10.2) -- that script never calls set_aspect('equal'), so
    this is the source figure's actual proportions, not a forced square. */
 #quadrant-chart { max-width: 720px; aspect-ratio: 12 / 10.2; margin: 0 auto; }
+
+/* js/heatmaps.js sets #heatmap-chart's min-width per render (column count
+   varies a lot, from 12 months to 35+ years) -- this wrapper is what actually
+   scrolls once that width exceeds the viewport, same pattern data.html's
+   Summary Table already uses for its own too-wide-for-mobile table. */
+.heatmap-chart-scroll { overflow-x: auto; }
 
 .heatmap-legend-key {
   display: flex;

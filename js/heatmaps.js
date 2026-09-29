@@ -120,7 +120,15 @@ async function renderHeatmap() {
     return;
   }
   chart.innerHTML = '<p class="chart-empty">Computing…</p>';
+  try {
+    await renderHeatmapUnsafe(chart, pairs);
+  } catch (err) {
+    chart.innerHTML = '<p class="chart-empty">Could not render this heatmap. Try a different selection.</p>';
+    console.error("renderHeatmap failed:", err);
+  }
+}
 
+async function renderHeatmapUnsafe(chart, pairs) {
   // Fetch every product's JSON concurrently instead of one at a time --
   // "All products" is ~100 items, and awaiting each fetch in turn meant a
   // full re-render waited on ~100 sequential network round-trips
@@ -226,6 +234,18 @@ async function renderHeatmap() {
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
     height: Math.max(360, yLabels.length * 22 + 100),
   };
+  // Column count ranges from 12 (monthly) to 35+ (a full-record yearly
+  // window) -- Plotly's own responsive:true would otherwise shrink every
+  // column down to fit whatever narrow viewport it's given, squeezing a
+  // wide heatmap illegible on mobile. Force a real per-column width and let
+  // .heatmap-chart-scroll (css/style.css) handle the horizontal scroll
+  // instead, same as the Summary Table's own too-wide-for-mobile table.
+  chart.style.minWidth = `${Math.max(600, xLabels.length * 45 + 220)}px`;
+  // Plotly.newPlot() appends its own plot div into `chart` but doesn't touch
+  // pre-existing sibling elements -- the "Computing..." <p> set above the
+  // fetch would otherwise sit there forever, untouched, next to the finished
+  // chart. Clear it explicitly first.
+  chart.innerHTML = "";
   Plotly.newPlot(chart, [trace], layout, { responsive: true, displaylogo: false });
 }
 

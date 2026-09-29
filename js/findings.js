@@ -23,7 +23,8 @@ const QUADRANT_VARIABLES = {
   ppt_anom: { label: "PRISM Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
   swe_anom: { label: "SNOTEL Snowpack", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   vpd_anom: { label: "PRISM Max VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
-  sca_anom: { label: "MODIS Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  sca_terra_anom: { label: "MODIS-Terra Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  sca_aqua_anom: { label: "MODIS-Aqua Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
 const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", none: "#92c5de" };
 const REGIME_LABELS = {
@@ -149,9 +150,10 @@ function renderQuadrantChart() {
 
   const trace = {
     x: points.map((p) => p[x]), y: points.map((p) => p[y]),
-    mode: "markers+text", type: "scatter",
-    text: points.map((p) => String(p.winter_year)),
-    textposition: "top center", textfont: { size: 10, color: "#444" },
+    // Always-on year labels overlapped illegibly wherever points cluster --
+    // hover already shows "YYYY: regime" (hovertext below), so the year
+    // isn't lost, just no longer forced onto the chart itself.
+    mode: "markers", type: "scatter",
     marker: {
       size: points.map((p) => (p.winter_year === 2026 ? 16 : 9)),
       color: points.map((p) => REGIME_COLORS[p.regime]),

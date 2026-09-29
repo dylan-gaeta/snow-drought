@@ -39,8 +39,46 @@ aws s3 sync "$REPO_DIR/cogs/" "s3://$R2_BUCKET/cogs/" \
   --content-type "image/tiff"
 echo "synced $REPO_DIR/cogs/ -> s3://$R2_BUCKET/cogs/"
 
+# R2's raw pub-*.r2.dev endpoint doesn't compress responses even when the
+# client asks for it (confirmed via QA audit, 2026-09: manifest.json alone
+# is 444KB uncompressed vs. 39KB gzipped, a 91% reduction, and every one of
+# this dashboard's pages fetches it on load). aws s3 sync can't gzip on the
+# fly and set Content-Encoding per file, so gzip into a scratch mirror with
+# the exact same relative paths first, then sync THAT -- the URL path a
+# browser requests (data/manifest.json) doesn't change, only the bytes and
+# headers served from it do; browsers that sent Accept-Encoding: gzip (every
+# real browser) decompress transparently.
+GZIP_STAGING_DIR="$(mktemp -d)"
+trap 'rm -rf "$GZIP_STAGING_DIR"' EXIT
+(cd "$REPO_DIR/data" && find . -type f \( -name "*.json" -o -name "*.geojson" \) -print0) \
+  | while IFS= read -r -d "" rel; do
+      mkdir -p "$GZIP_STAGING_DIR/$(dirname "$rel")"
+      gzip -c "$REPO_DIR/data/$rel" > "$GZIP_STAGING_DIR/$rel"
+    done
+
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/data/" "s3://$R2_BUCKET/data/" \
-  --endpoint-url "$ENDPOINT"
-echo "synced $REPO_DIR/data/ -> s3://$R2_BUCKET/data/"
+aws s3 sync "$GZIP_STAGING_DIR/" "s3://$R2_BUCKET/data/" \
+  --endpoint-url "$ENDPOINT" \
+  --content-type "application/json" \
+  --content-encoding "gzip"
+echo "synced $REPO_DIR/data/ -> s3://$R2_BUCKET/data/ (gzip-encoded)"
+
+# gallery.html/js/gallery.js read figures/maps/ and figures/heatmaps/
+# directly (see the comment above) -- this sync call was never actually
+# added when that page was built, so every image on it has been 404ing
+# against R2 since (Dylan, 2026-09-28). figures/synthesis/ is deliberately
+# excluded, per the comment above: no manifest curates it, so nothing reads it.
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+aws s3 sync "$REPO_DIR/figures/maps/" "s3://$R2_BUCKET/figures/maps/" \
+  --endpoint-url "$ENDPOINT" \
+  --content-type "image/png"
+echo "synced $REPO_DIR/figures/maps/ -> s3://$R2_BUCKET/figures/maps/"
+
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+aws s3 sync "$REPO_DIR/figures/heatmaps/" "s3://$R2_BUCKET/figures/heatmaps/" \
+  --endpoint-url "$ENDPOINT" \
+  --content-type "image/png"
+echo "synced $REPO_DIR/figures/heatmaps/ -> s3://$R2_BUCKET/figures/heatmaps/"

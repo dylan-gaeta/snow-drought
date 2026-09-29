@@ -165,6 +165,7 @@ const olMapState = {
   year: null, // only meaningful when mode !== "climatology"
   availableYears: [],
   styleCache: {},
+  layerCache: {}, // COG url -> built ol.layer.WebGLTile, reused across mode/period/year revisits
   currentStyle: null,
   currentCogUrl: null,
   currentScale: null,
@@ -501,18 +502,6 @@ async function updateInteractiveMapLayer() {
     "download", `${mapPickerState.product}_${mapPickerState.response}_${olMapState.period}_${mapViewSuffix()}.tif`
   );
 
-  const source = new ol.source.GeoTIFF({
-    sources: [{ url, nodata: -32768 }],
-    normalize: false,
-    // The layer's own interpolate:false (below) only controls the final
-    // display-zoom texture sampling -- this source does its own separate
-    // resampling first, reprojecting the COG's native lat/lon grid into Web
-    // Mercator, and defaults to smoothing there too regardless of the
-    // layer setting (confirmed: still smooth blob-like gradients instead
-    // of sharp per-cell blocks with only the layer flag set).
-    interpolate: false,
-  });
-
   const legend = document.getElementById("ol-legend");
   const units = entry.units || "";
   const palette = olMapState.mode === "climatology" || olMapState.mode === "raw"
@@ -561,19 +550,47 @@ async function updateInteractiveMapLayer() {
     colorExpr = buildBinnedColorExpression(boundaries, binColors, fileEntry.scale);
   }
 
-  if (olMapState.rasterLayer) olMapState.map.removeLayer(olMapState.rasterLayer);
-  olMapState.rasterLayer = new ol.layer.WebGLTile({
-    source,
-    style: colorExpr ? { color: colorExpr } : undefined,
-    // Default WebGL texture sampling is bilinear -- it blends each screen
-    // pixel from its 4 nearest grid cells, smearing the real cell-by-cell
-    // structure into smooth gradients (confirmed: the pipeline's own
-    // matplotlib maps show crisp, blocky per-cell values with no such
-    // blending). Nearest-neighbor sampling makes one grid cell = one flat
-    // color block, matching the reference maps exactly.
-    interpolate: false,
-  });
-  olMapState.map.getLayers().insertAt(1, olMapState.rasterLayer); // above basemap, below boundaries
+  // Revisiting a mode/period/year already viewed this session re-fetched the
+  // same COG and rebuilt a fresh WebGL source/layer from scratch every time
+  // (confirmed live: the browser's HTTP cache absorbed the byte transfer,
+  // but decoded GeoTIFF metadata/tiles were still discarded and redone).
+  // The url already fully encodes product+response+period+mode+year, so its
+  // colors/boundaries are always the same on a repeat visit -- safe to
+  // reuse the whole built layer, same idea as fetchMapStyle's styleCache.
+  let layer = olMapState.layerCache[url];
+  if (!layer) {
+    const source = new ol.source.GeoTIFF({
+      sources: [{ url, nodata: -32768 }],
+      normalize: false,
+      // The layer's own interpolate:false (below) only controls the final
+      // display-zoom texture sampling -- this source does its own separate
+      // resampling first, reprojecting the COG's native lat/lon grid into
+      // Web Mercator, and defaults to smoothing there too regardless of the
+      // layer setting (confirmed: still smooth blob-like gradients instead
+      // of sharp per-cell blocks with only the layer flag set).
+      interpolate: false,
+    });
+    layer = new ol.layer.WebGLTile({
+      source,
+      style: colorExpr ? { color: colorExpr } : undefined,
+      // Default WebGL texture sampling is bilinear -- it blends each screen
+      // pixel from its 4 nearest grid cells, smearing the real cell-by-cell
+      // structure into smooth gradients (confirmed: the pipeline's own
+      // matplotlib maps show crisp, blocky per-cell values with no such
+      // blending). Nearest-neighbor sampling makes one grid cell = one flat
+      // color block, matching the reference maps exactly.
+      interpolate: false,
+    });
+    olMapState.layerCache[url] = layer;
+  }
+  if (olMapState.rasterLayer !== layer) {
+    // Detach (not dispose) the previously-active layer -- it stays in
+    // layerCache and gets reattached, not rebuilt, if the user comes back
+    // to it.
+    if (olMapState.rasterLayer) olMapState.map.removeLayer(olMapState.rasterLayer);
+    olMapState.rasterLayer = layer;
+    olMapState.map.getLayers().insertAt(1, olMapState.rasterLayer); // above basemap, below boundaries
+  }
 }
 
 async function renderInteractiveMap() {

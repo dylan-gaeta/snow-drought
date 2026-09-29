@@ -32,26 +32,7 @@ function rebuildRegionColumns() {
   });
 }
 
-// The year select's range comes from the actual record_start/record_end
-// spread across every product in the manifest, floored at DASHBOARD_MIN_YEAR
-// (js/common.js) -- a handful of products (e.g. PRISM back to 1895) would
-// otherwise push the range's start back nearly a century for a dropdown
-// that's really about this dashboard's 1990-2026 baseline era. A product
-// with a shorter record than that still just produces "--" rows for years
-// outside its own coverage, same as already happens for 2025 vs. 2026 today.
-function fullRecordYearRange() {
-  let minYear = Infinity;
-  let maxYear = -Infinity;
-  for (const products of Object.values(manifest.categories)) {
-    for (const responses of Object.values(products)) {
-      for (const entry of Object.values(responses)) {
-        if (entry.record_start) minYear = Math.min(minYear, parseInt(entry.record_start.slice(0, 4), 10));
-        if (entry.record_end) maxYear = Math.max(maxYear, parseInt(entry.record_end.slice(0, 4), 10));
-      }
-    }
-  }
-  return { minYear: Math.max(DASHBOARD_MIN_YEAR, minYear), maxYear };
-}
+// fullRecordYearRange() now lives in js/common.js -- shared with heatmaps.js.
 
 function initSummaryTable() {
   const windowSelect = document.getElementById("summary-window-select");
