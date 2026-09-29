@@ -447,6 +447,11 @@ async function updateInteractiveMapLayer() {
   const entry = currentResponseEntry();
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
   const emptyMsg = document.getElementById("ol-map-empty");
+  // Reset to the default "no data expected" wording every call -- only the
+  // load-failure branch below overrides it, and without this reset a prior
+  // failed selection's more specific text could linger and show incorrectly
+  // for a later, genuinely-just-missing selection.
+  emptyMsg.textContent = "No interactive map available for this selection.";
   const wrap = document.getElementById("ol-map-wrap");
   if (!style || !style.periods[olMapState.period]) {
     wrap.style.display = "none";
@@ -495,6 +500,54 @@ async function updateInteractiveMapLayer() {
   emptyMsg.style.display = "none";
 
   const url = assetUrl(`cogs/${file}`);
+  // Revisiting a mode/period/year already viewed this session re-fetched the
+  // same COG and rebuilt a fresh WebGL source/layer from scratch every time
+  // (confirmed live: the browser's HTTP cache absorbed the byte transfer,
+  // but decoded GeoTIFF metadata/tiles were still discarded and redone).
+  // The url already fully encodes product+response+period+mode+year, so its
+  // colors/boundaries are always the same on a repeat visit -- safe to
+  // reuse the whole built layer, same idea as fetchMapStyle's styleCache.
+  // layerCache[url] is undefined (never tried), a real layer (loaded fine),
+  // or null (tried and failed) -- three states, not just cached/uncached.
+  let layer = olMapState.layerCache[url];
+  let source = null;
+  if (layer === undefined) {
+    source = new ol.source.GeoTIFF({
+      sources: [{ url, nodata: -32768 }],
+      normalize: false,
+      // The layer's own interpolate:false (below) only controls the final
+      // display-zoom texture sampling -- this source does its own separate
+      // resampling first, reprojecting the COG's native lat/lon grid into
+      // Web Mercator, and defaults to smoothing there too regardless of the
+      // layer setting (confirmed: still smooth blob-like gradients instead
+      // of sharp per-cell blocks with only the layer flag set).
+      interpolate: false,
+    });
+    try {
+      // getView() fetches the file's own metadata (dimensions/projection) --
+      // the manifest can reference a COG that was never actually synced to
+      // R2 (a real gap found more than once this session). Without this
+      // check, a 404 there failed silently deep inside OpenLayers' own tile
+      // pipeline: no error, no layer, just an empty map that looked like it
+      // was loading forever instead of a clear "not available" message.
+      await source.getView();
+    } catch (err) {
+      olMapState.layerCache[url] = null;
+      layer = null;
+    }
+  }
+  if (layer === null) {
+    wrap.style.display = "none";
+    emptyMsg.style.display = "block";
+    emptyMsg.textContent = "Map file failed to load for this selection.";
+    document.getElementById("ol-legend").innerHTML = "";
+    olMapState.currentCogUrl = null;
+    const geotiffLink = document.getElementById("ol-geotiff-link");
+    geotiffLink.removeAttribute("href");
+    geotiffLink.removeAttribute("download");
+    return;
+  }
+
   olMapState.currentCogUrl = url;
   olMapState.currentScale = fileEntry.scale;
   document.getElementById("ol-geotiff-link").href = url;
@@ -550,26 +603,7 @@ async function updateInteractiveMapLayer() {
     colorExpr = buildBinnedColorExpression(boundaries, binColors, fileEntry.scale);
   }
 
-  // Revisiting a mode/period/year already viewed this session re-fetched the
-  // same COG and rebuilt a fresh WebGL source/layer from scratch every time
-  // (confirmed live: the browser's HTTP cache absorbed the byte transfer,
-  // but decoded GeoTIFF metadata/tiles were still discarded and redone).
-  // The url already fully encodes product+response+period+mode+year, so its
-  // colors/boundaries are always the same on a repeat visit -- safe to
-  // reuse the whole built layer, same idea as fetchMapStyle's styleCache.
-  let layer = olMapState.layerCache[url];
   if (!layer) {
-    const source = new ol.source.GeoTIFF({
-      sources: [{ url, nodata: -32768 }],
-      normalize: false,
-      // The layer's own interpolate:false (below) only controls the final
-      // display-zoom texture sampling -- this source does its own separate
-      // resampling first, reprojecting the COG's native lat/lon grid into
-      // Web Mercator, and defaults to smoothing there too regardless of the
-      // layer setting (confirmed: still smooth blob-like gradients instead
-      // of sharp per-cell blocks with only the layer flag set).
-      interpolate: false,
-    });
     layer = new ol.layer.WebGLTile({
       source,
       style: colorExpr ? { color: colorExpr } : undefined,
