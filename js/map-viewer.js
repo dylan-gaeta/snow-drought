@@ -530,7 +530,16 @@ async function updateInteractiveMapLayer() {
       // check, a 404 there failed silently deep inside OpenLayers' own tile
       // pipeline: no error, no layer, just an empty map that looked like it
       // was loading forever instead of a clear "not available" message.
-      await source.getView();
+      // A 404 does NOT reject this promise on its own -- confirmed directly
+      // (a forced-missing URL left it pending indefinitely, 0% CPU, 9+
+      // minutes) -- fetch() doesn't throw on HTTP error status, and
+      // geotiff.js evidently doesn't turn that into a rejection either. Race
+      // it against an explicit timeout so a broken file still resolves to
+      // the same "not available" state instead of hanging forever.
+      await Promise.race([
+        source.getView(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), 8000)),
+      ]);
     } catch (err) {
       olMapState.layerCache[url] = null;
       layer = null;
