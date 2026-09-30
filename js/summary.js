@@ -104,6 +104,10 @@ function formatSummaryValue(result, units, valueType) {
     const pctSign = result.percentOfNormal >= 0 ? "+" : "";
     return `${pctSign}${result.percentOfNormal.toFixed(0)}%`;
   }
+  if (valueType === "rank") {
+    if (result.stressRank === null || result.n === null) return "&mdash;";
+    return `${result.stressRank}/${result.n}`;
+  }
   return `${sign}${result.sigma.toFixed(1)}`; // "sigma" default
 }
 

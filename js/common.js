@@ -288,9 +288,31 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const rank = baselineAnomalies.filter((a) => a <= targetAnomaly).length; // matches np.searchsorted(..., side="right")
   const percentile = ((rank + 0.5) / (n + 1)) * 100;
   const sigma = normInv(percentile / 100);
+
+  // The displayed "rank on record" badge is a separate statistic from sigma:
+  // sigma/percentile stay anchored to the fixed baseline_start_year..
+  // baseline_end_year climatology (unchanged above, matching the Python
+  // pipeline's own baseline-relative standardization everywhere else). The
+  // rank badge instead compares the target year against every year with
+  // valid data in the record, not just the frozen baseline slice -- ranking
+  // only against the baseline meant a post-baseline year that set a new
+  // record (e.g. 2026) could never be distinguished from the baseline's own
+  // most extreme year (e.g. 2015): both simply "beat all baseline years" and
+  // saturated at the same rank, even though their actual anomalies differed
+  // by more than 2x (confirmed live, 2026-09-29, ERA5-Land T2m DJFM).
+  const recordAnomalies = [];
+  const firstRecordYear = parseInt(region.dates[0].slice(0, 4), 10);
+  const lastRecordYear = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
+  for (let y = firstRecordYear; y <= lastRecordYear; y++) {
+    const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
+    if (a !== null) recordAnomalies.push(a);
+  }
+  recordAnomalies.sort((a, b) => a - b);
+  const nRecord = recordAnomalies.length;
+  const rankRecord = recordAnomalies.filter((a) => a <= targetAnomaly).length;
   // rank counts from the driest/coolest (lowest-anomaly) end; drier_is_high
   // determines which end is actually the stressed one for this response.
-  const stressRank = data.drier_is_high ? n - rank + 1 : rank;
+  const stressRank = data.drier_is_high ? nRecord - rankRecord + 1 : rankRecord;
 
   let percentOfNormal = null;
   if (baselineRaws.length >= 2) {

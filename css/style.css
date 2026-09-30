@@ -231,6 +231,7 @@ table.headline-table thead th {
   font-weight: 700;
   position: sticky;
   top: 0;
+  white-space: nowrap; /* region codes like "CO-UT-WY" otherwise wrap at the hyphen */
 }
 table.headline-table tbody tr:not(.group-row):hover td { background: #f7f9fb; }
 table.headline-table tbody tr:not(.group-row) { transition: background var(--transition); }
