@@ -360,6 +360,26 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .detrend-badge.detrend-mean_centered { background: #eef1f5; color: #3d4451; }
 .detrend-badge.detrend-native_index { background: #e3f3ea; color: #1f6b41; }
 
+/* Interactive counterpart of .detrend-badge above -- same rounded-pill
+   shape/weight so it reads as the same kind of information, but a real
+   button (border, hover/pressed states) since this one actually does
+   something when clicked, not just a label. */
+.compare-legend-detrend-toggle {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  border-radius: 3px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1px solid #4c2889;
+  background: #eef1f5;
+  color: #3d4451;
+}
+.compare-legend-detrend-toggle[aria-pressed="true"] { background: #ede3fb; color: #4c2889; }
+.compare-legend-detrend-toggle:hover { filter: brightness(0.95); }
+
 /* User-added seasonal-chart years (js/explore.js's explorerState.extraYears)
    -- each removable via its own x, same idea as a browser tab-group chip. */
 .year-chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }
@@ -732,17 +752,23 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   margin-bottom: 1rem;
 }
 /* A slim reference-legend bar (matches the climatology/raw gradient bar
-   directly below, same --legend-bar-width) with its tick label sitting in
+   directly below, same --legend-bar-width) with tick labels sitting in
    the wide open space to the right -- not a wide block filling the sidebar
    (confirmed live, 2026-09-28: a near-full-width bar read as visually
    heavier/worse than two consistent slim bars, not better). */
-.ol-legend-swatch { position: relative; display: block; width: var(--legend-bar-width); height: 22px; }
+.ol-legend-scale-wrap { position: relative; }
+.ol-legend-swatch { display: block; width: var(--legend-bar-width); height: 22px; }
+/* Ticks are a separate absolutely-positioned overlay, not a child of each
+   swatch -- a tick marks the BREAK between two colors (Dylan, 2026-09-29:
+   "the colorbar ticks should be the color breaks, not a single point label
+   for a whole bin"), so it must sit exactly on the seam line, not floating
+   centered inside one bin. `top` is set per-tick inline (see map-viewer.js)
+   at i * LEGEND_SWATCH_HEIGHT_PX from the top of the whole scale. */
+.ol-legend-ticks { position: absolute; top: 0; left: 100%; margin-left: 8px; }
 .ol-legend-tick {
   position: absolute;
-  left: 100%;
-  top: 50%;
+  left: 0;
   transform: translateY(-50%);
-  margin-left: 8px;
   font-size: 12px;
   white-space: nowrap;
   color: var(--text-muted);

@@ -35,13 +35,41 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENDPOINT="https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
 
-AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
-AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/cogs/" "s3://$R2_BUCKET/cogs/" \
-  --endpoint-url "$ENDPOINT" \
-  --content-type "image/tiff"
-echo "synced $REPO_DIR/cogs/ -> s3://$R2_BUCKET/cogs/"
+# aws s3 sync returns non-zero if EVEN ONE file fails mid-transfer, which
+# (combined with this script's own set -e) killed the entire script before
+# later stages (figures/, or even the rest of cogs/) ever ran -- confirmed
+# live, 2026-09-29: two consecutive real syncs each hit a handful of
+# "SSLV3_ALERT_BAD_RECORD_MAC" failures (a transient TLS blip, not a real
+# data problem -- confirmed by the retry succeeding on the exact same file
+# seconds later) out of tens of thousands of files, and both times the
+# script silently stopped there. aws s3 sync is idempotent/incremental, so a
+# retry only re-attempts what's still missing/different -- 3 attempts with a
+# short pause absorbs a one-off network blip without masking a real,
+# persistent failure (the loop still exits non-zero after exhausting retries).
+sync_with_retry() {
+  local attempt
+  for attempt in 1 2 3; do
+    if aws s3 sync "$@" --endpoint-url "$ENDPOINT"; then
+      return 0
+    fi
+    echo "sync attempt $attempt/3 failed for: $*" >&2
+    if [ "$attempt" -lt 3 ]; then sleep 5; fi
+  done
+  echo "sync failed after 3 attempts, giving up: $*" >&2
+  return 1
+}
 
+# data/ (manifest.json, timeseries/seasonal JSON, and map_styles/ -- each
+# COG's boundaries/scale/colors) syncs BEFORE cogs/, not after. A COG's
+# int16 encoding scale is chosen per-file at export time (dashboard_cog_
+# export.py's _write_cog, sized to that file's own data range), so an old
+# style JSON paired with a freshly-regenerated COG decodes every pixel by
+# the WRONG scale -- confirmed live, 2026-09-29: ERA5-Land T2m's March 2026
+# anomaly (a record-setting value) rendered as a completely blank map this
+# way, mid-sync. Syncing data/ first means the worst case during a sync is
+# the reverse pairing (new style, old COG still uploading) -- the map still
+# renders, just briefly one file behind, never broken.
+#
 # R2's raw pub-*.r2.dev endpoint doesn't compress responses even when the
 # client asks for it (confirmed via QA audit, 2026-09: manifest.json alone
 # is 444KB uncompressed vs. 39KB gzipped, a 91% reduction, and every one of
@@ -61,11 +89,16 @@ trap 'rm -rf "$GZIP_STAGING_DIR"' EXIT
 
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$GZIP_STAGING_DIR/" "s3://$R2_BUCKET/data/" \
-  --endpoint-url "$ENDPOINT" \
+sync_with_retry "$GZIP_STAGING_DIR/" "s3://$R2_BUCKET/data/" \
   --content-type "application/json" \
   --content-encoding "gzip"
 echo "synced $REPO_DIR/data/ -> s3://$R2_BUCKET/data/ (gzip-encoded)"
+
+AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+sync_with_retry "$REPO_DIR/cogs/" "s3://$R2_BUCKET/cogs/" \
+  --content-type "image/tiff"
+echo "synced $REPO_DIR/cogs/ -> s3://$R2_BUCKET/cogs/"
 
 # gallery.html/js/gallery.js read figures/maps/ and figures/heatmaps/
 # directly (see the comment above) -- this sync call was never actually
@@ -74,28 +107,24 @@ echo "synced $REPO_DIR/data/ -> s3://$R2_BUCKET/data/ (gzip-encoded)"
 # excluded, per the comment above: no manifest curates it, so nothing reads it.
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/figures/maps/" "s3://$R2_BUCKET/figures/maps/" \
-  --endpoint-url "$ENDPOINT" \
+sync_with_retry "$REPO_DIR/figures/maps/" "s3://$R2_BUCKET/figures/maps/" \
   --content-type "image/png"
 echo "synced $REPO_DIR/figures/maps/ -> s3://$R2_BUCKET/figures/maps/"
 
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/figures/heatmaps/" "s3://$R2_BUCKET/figures/heatmaps/" \
-  --endpoint-url "$ENDPOINT" \
+sync_with_retry "$REPO_DIR/figures/heatmaps/" "s3://$R2_BUCKET/figures/heatmaps/" \
   --content-type "image/png"
 echo "synced $REPO_DIR/figures/heatmaps/ -> s3://$R2_BUCKET/figures/heatmaps/"
 
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/figures/timeseries/" "s3://$R2_BUCKET/figures/timeseries/" \
-  --endpoint-url "$ENDPOINT" \
+sync_with_retry "$REPO_DIR/figures/timeseries/" "s3://$R2_BUCKET/figures/timeseries/" \
   --content-type "image/png"
 echo "synced $REPO_DIR/figures/timeseries/ -> s3://$R2_BUCKET/figures/timeseries/"
 
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
-aws s3 sync "$REPO_DIR/figures/seasonal/" "s3://$R2_BUCKET/figures/seasonal/" \
-  --endpoint-url "$ENDPOINT" \
+sync_with_retry "$REPO_DIR/figures/seasonal/" "s3://$R2_BUCKET/figures/seasonal/" \
   --content-type "image/png"
 echo "synced $REPO_DIR/figures/seasonal/ -> s3://$R2_BUCKET/figures/seasonal/"

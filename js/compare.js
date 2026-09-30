@@ -31,6 +31,14 @@ const compareState = {
   // there's only one list, not one per category (Dylan, 2026-09: "you can't
   // compare different products from different variable classes").
   customSeries: [],
+  // Set of "product|response" pairKeys currently showing their OLS-detrended
+  // companion instead of the mean-centered default -- only ever populated
+  // for pairs where has_detrend_companion is true (Dylan, 2026-09-29: "the
+  // trended vs not-detrended tags should actually be toggle buttons for that
+  // row/figure"). Persists across region/category switches, same as
+  // checkedByCategory, for the same reason (don't silently discard a user
+  // choice on every re-render).
+  detrendToggled: new Set(),
 };
 // NCL StepSeq25 (via the cmaps package), reordered hue-first-then-shade so
 // the first 5 entries alone span 5 distinct hues -- the biggest category
@@ -254,8 +262,8 @@ async function renderCategoryOverlay() {
     extraEntries.map((e) => (e.category === "vegetation" ? fetchSeasonalJson(`${e.product}_${e.response}`) : null))
   );
 
-  function standardizedSeries(product, response, region, seasonalRegion, entryCategory) {
-    let sigma = region.sigma;
+  function standardizedSeries(product, response, region, seasonalRegion, entryCategory, useDetrend) {
+    let sigma = useDetrend ? region.sigma_detrend : region.sigma;
     if (entryCategory === "vegetation" && seasonalRegion) {
       const mean = seasonalRegion.climatology_mean;
       const trough = Math.min(...mean);
@@ -280,15 +288,25 @@ async function renderCategoryOverlay() {
     const region = data.regions[compareState.region];
     if (!region) return;
 
+    const pairKey = `${product}|${response}`;
+    const hasDetrend = !!products[product][response].has_detrend_companion;
+    const useDetrend = hasDetrend && compareState.detrendToggled.has(pairKey);
+
     const seasonal = seasonalList ? seasonalList[pairIndex] : null;
     const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-    const sigma = standardizedSeries(product, response, region, seasonalRegion, category);
+    const sigma = standardizedSeries(product, response, region, seasonalRegion, category, useDetrend);
 
     const isObservation = PRODUCT_OBSERVATION_KIND[product] === "observation";
     const detrendMethod = products[product][response].detrend_method;
     const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
-    const name = `${product} ${response}${uniformMethod ? "" : detrendShortSuffix(detrendMethod)}`;
-    const pairKey = `${product}|${response}`;
+    // A toggleable pair's name always shows its current state explicitly
+    // (not just when methods differ within the category, unlike the static
+    // uniformMethod suffix below) -- the whole point of the toggle is to let
+    // the same row read as either, so the label must say which one it is
+    // right now.
+    const name = hasDetrend
+      ? `${product} ${response} (${useDetrend ? "detrended" : "not detrended"})`
+      : `${product} ${response}${uniformMethod ? "" : detrendShortSuffix(detrendMethod)}`;
     const visible = checkedKey.has(pairKey);
     const { dates, values } = filterFromStartYear(region.dates, sigma);
     traces.push({
@@ -296,7 +314,7 @@ async function renderCategoryOverlay() {
       line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },
       name, visible,
     });
-    legendItems.push({ name, color, visible, pairKey });
+    legendItems.push({ name, color, visible, pairKey, hasDetrend, useDetrend });
     colorIndex++;
   });
 
@@ -375,6 +393,28 @@ function renderCategoryLegend(items) {
     label.appendChild(checkbox);
     label.appendChild(swatch);
     label.appendChild(document.createTextNode(item.name));
+    if (item.hasDetrend) {
+      // A real toggle for this one row, not a static tag (Dylan, 2026-09-29:
+      // "the trended vs not-detrended tags should actually be toggle buttons
+      // for that row/figure") -- both series are already in the fetched
+      // JSON (fetchTimeseriesJson's cache means this re-render is free of
+      // any new network round-trip), so a full renderCategoryOverlay() is
+      // simplest and keeps this in sync with every other state change
+      // (region/category/start-year) that already re-renders wholesale.
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "compare-legend-detrend-toggle";
+      toggle.textContent = item.useDetrend ? "Detrended" : "Not detrended";
+      toggle.setAttribute("aria-pressed", String(item.useDetrend));
+      toggle.title = "Toggle between the mean-centered and OLS-detrended anomaly for this variable";
+      toggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (item.useDetrend) compareState.detrendToggled.delete(item.pairKey);
+        else compareState.detrendToggled.add(item.pairKey);
+        renderCategoryOverlay();
+      });
+      label.appendChild(toggle);
+    }
     container.appendChild(label);
   });
 }

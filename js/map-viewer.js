@@ -195,6 +195,11 @@ const COG_NODATA = -32768;
 // an Anomaly one, not just similar.
 const DISCRETE_BINS = 11;
 
+// Must match .ol-legend-swatch's own CSS height exactly -- ticks are
+// absolutely positioned against this same pixel value so a label lands
+// precisely on the line between two color swatches, not floating loose.
+const LEGEND_SWATCH_HEIGHT_PX = 22;
+
 function buildBinnedColorExpression(boundaries, colors, scale) {
   const band = ["band", 1];
   const value = ["/", band, scale];
@@ -682,16 +687,30 @@ async function updateInteractiveMapLayer() {
       );
     }
     const nBins = boundaries.length - 1;
-    // Matches common/maps.py's _label_colorbar: one tick per bin, centered
-    // on the swatch it labels, not one tick per boundary. Vertical, highest
-    // value at top -- the sidebar this lives in is narrow and tall, not wide.
-    const centers = Array.from({ length: nBins }, (_, i) => (boundaries[i] + boundaries[i + 1]) / 2);
-    const decimals = pickTickDecimals(centers);
-    const swatches = centers.map((v, i) => {
-      const tick = `<span class="ol-legend-tick">${v.toFixed(decimals)}</span>`;
-      return `<span class="ol-legend-swatch" style="background:${binColors[i]}" title="${boundaries[i].toFixed(decimals)} to ${boundaries[i + 1].toFixed(decimals)}">${tick}</span>`;
+    // Ticks sit AT the color breaks (the line between two swatches), not
+    // floating at a single point inside one bin -- nBins+1 boundary values,
+    // not nBins bin-center values (Dylan, 2026-09-29: "the colorbar ticks
+    // should be the color BREAKS, not a single point label for a whole
+    // bin"). Vertical, highest value at top -- the sidebar this lives in is
+    // narrow and tall, not wide.
+    const decimals = pickTickDecimals(boundaries);
+    const swatches = binColors.map((color, i) => {
+      const lo = boundaries[i].toFixed(decimals);
+      const hi = boundaries[i + 1].toFixed(decimals);
+      return `<span class="ol-legend-swatch" style="background:${color}" title="${lo} to ${hi}"></span>`;
     }).reverse().join("");
-    legend.innerHTML = `<div class="ol-legend-label">${label}</div><div class="ol-legend-scale">${swatches}</div>`;
+    // One tick per boundary (nBins+1 total), each centered exactly on the
+    // seam between the two swatches it separates -- boundaries[nBins] at the
+    // very top (above the highest-value swatch) down to boundaries[0] at the
+    // very bottom, matching the swatches' own reversed (highest-first) order.
+    const ticks = Array.from({ length: nBins + 1 }, (_, i) => {
+      const value = boundaries[nBins - i];
+      const top = i * LEGEND_SWATCH_HEIGHT_PX;
+      return `<span class="ol-legend-tick" style="top:${top}px">${value.toFixed(decimals)}</span>`;
+    }).join("");
+    legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
+      `<div class="ol-legend-scale-wrap"><div class="ol-legend-scale">${swatches}</div>` +
+      `<div class="ol-legend-ticks">${ticks}</div></div>`;
     colorExpr = buildBinnedColorExpression(boundaries, binColors, fileEntry.scale);
   }
 
