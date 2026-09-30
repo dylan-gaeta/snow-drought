@@ -48,7 +48,14 @@ async function renderTimeseries() {
     return;
   }
   const isSigma = timeseriesSeries === "sigma";
-  const fullY = isSigma ? region.sigma : region.value;
+  // Sign-flipped by drier_is_high so positive always reads as the stress
+  // direction, same convention js/summary.js, js/heatmaps.js, and
+  // js/map-viewer.js already use -- this page used to plot sigma in each
+  // variable's own native sign with no flip at all (Dylan, 2026-09-29).
+  // Raw values are never flipped -- they're a physical quantity, not a
+  // stress-signed statistic.
+  const sign = data.drier_is_high ? 1 : -1;
+  const fullY = isSigma ? region.sigma.map((v) => (v === null || v === undefined ? null : sign * v)) : region.value;
   // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
   // a standardized departure -- their sigma series is identical to raw, not
   // a re-standardization (see common/canonical.py::_load_drought_index).

@@ -278,19 +278,6 @@ table.headline-table tr.group-row td {
   padding-top: 0.7em;
 }
 
-/* Winter (DJF/DJFM) vs growing-season (AMJJ) window, color-coded so the two
-   comparison windows read apart at a glance. */
-table.headline-table td.window-winter { background: #dceafc; color: #0b3d68; font-weight: 600; }
-table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; font-weight: 600; }
-.window-chip {
-  display: inline-block;
-  padding: 0.05em 0.5em;
-  border-radius: 3px;
-  font-weight: 700;
-}
-.window-chip.window-winter { background: #dceafc; color: #0b3d68; }
-.window-chip.window-growing { background: #fbe2ec; color: #7a1240; }
-
 .figure-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -334,15 +321,6 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
   margin-bottom: 0.3rem;
 }
 .home-nav-card span { display: block; font-size: 0.88rem; color: var(--text-muted); }
-
-.category-chip {
-  display: inline-block;
-  padding: 0.15em 0.6em;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #fff;
-}
 
 /* Whether a response's anomaly had a real per-grid-cell trend removed (OLS)
    vs. just a calendar-month mean subtracted (no trend removed) vs. is
@@ -592,7 +570,6 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .region-toggle button:last-child { border-right: none; }
 .region-toggle button:hover:not(.active) { background: #eef1f5; color: var(--text); }
 .region-toggle button.active { background: var(--blue-dark); color: #fff; }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
 .map-image-wrap {
@@ -831,8 +808,6 @@ table.headline-table td.window-growing { background: #fbe2ec; color: #7a1240; fo
 .product-meta p + p { margin-top: 0.35rem; }
 .product-glossary { color: var(--text); font-size: 0.92rem; }
 .product-facts { font-size: 0.85rem; color: var(--text-muted); }
-
-.see-also { font-size: 0.9rem; color: var(--text-muted); margin-top: 1rem; }
 
 .site-footer {
   background: var(--navy);

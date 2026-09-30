@@ -145,11 +145,3 @@ function wirePickerControls(onSelectionChanged) {
     onSelectionChanged(currentPickerEntry());
   });
 }
-
-// DASHBOARD_MIN_YEAR is defined once in js/common.js (shared by every page).
-function filterFrom1990(dates, values) {
-  return {
-    dates: dates.filter((d) => parseInt(d.slice(0, 4), 10) >= DASHBOARD_MIN_YEAR),
-    values: values.filter((_, i) => parseInt(dates[i].slice(0, 4), 10) >= DASHBOARD_MIN_YEAR),
-  };
-}

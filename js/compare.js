@@ -8,12 +8,14 @@
 // product/response the manifest already groups under one category
 // (manifest.categories[category], the same figure_category() grouping the
 // Python script's COMBINED_GROUPS is built from), styled solid
-// (observation) / dashed (model) per PRODUCT_OBSERVATION_KIND, sign-negated
-// per COMBINED_INVERTED_VALENCE_RESPONSES, and -- for vegetation -- limited
-// to each product's own growing-season months via
-// COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION so a near-zero dormant-
-// season baseline spread doesn't explode the standardized value. All three
-// constants mirror 00_config.py exactly (see js/common.js).
+// (observation) / dashed (model) per PRODUCT_OBSERVATION_KIND, sign-flipped
+// by drier_is_high so a positive value always reads as the stress direction
+// (the same convention js/summary.js, js/heatmaps.js, and js/map-viewer.js
+// already use), and -- for vegetation -- limited to each product's own
+// growing-season months via COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION
+// so a near-zero dormant-season baseline spread doesn't explode the
+// standardized value. Both constants mirror 00_config.py exactly (see
+// js/common.js).
 
 const compareState = {
   region: "ALL",
@@ -262,7 +264,7 @@ async function renderCategoryOverlay() {
     extraEntries.map((e) => (e.category === "vegetation" ? fetchSeasonalJson(`${e.product}_${e.response}`) : null))
   );
 
-  function standardizedSeries(product, response, region, seasonalRegion, entryCategory, useDetrend) {
+  function standardizedSeries(product, response, region, seasonalRegion, entryCategory, drierIsHigh, useDetrend) {
     let sigma = useDetrend ? region.sigma_detrend : region.sigma;
     if (entryCategory === "vegetation" && seasonalRegion) {
       const mean = seasonalRegion.climatology_mean;
@@ -270,14 +272,31 @@ async function renderCategoryOverlay() {
       const amplitude = Math.max(...mean) - trough;
       const keepMonth = mean.map((v) => (v - trough) > COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION * amplitude);
       sigma = region.dates.map((d, i) => {
-        const month = parseInt(d.slice(5, 7), 10);
-        return keepMonth[month - 1] ? sigma[i] : null;
+        // mean/keepMonth are water-year ordered (index 0 = Oct ... index 11
+        // = Sep, see manifest.water_year_month_names), but `d` is a real
+        // calendar date -- converting to a water-year index before indexing
+        // keepMonth is required, not optional. Indexing with the calendar
+        // month directly was a 3-month-offset bug: it kept December (the
+        // dormant trough month) and dropped March-May (the real growing-
+        // season ramp), confirmed against MODIS-Terra_GPP.json's own
+        // climatology (Dylan, 2026-09).
+        const calendarMonth = parseInt(d.slice(5, 7), 10);
+        const waterYearMonth = (calendarMonth - 10 + 12) % 12;
+        return keepMonth[waterYearMonth] ? sigma[i] : null;
       });
     }
-    if (COMBINED_INVERTED_VALENCE_RESPONSES.has(response)) {
-      sigma = sigma.map((v) => (v === null || v === undefined ? null : -v));
-    }
-    return sigma;
+    // Flip to the same drier_is_high convention js/summary.js, js/heatmaps.js,
+    // and js/map-viewer.js already use, so positive always means the stress
+    // direction here too -- replaces the old hardcoded 5-response
+    // COMBINED_INVERTED_VALENCE_RESPONSES negation (dead code once this
+    // flip applies everywhere: every response in that list was exactly the
+    // drier_is_high=True oddity within an otherwise drier_is_high=False/None
+    // group, e.g. NEE within vegetation, TD2m within climate -- this flip
+    // reproduces that same alignment for free, and also fixes drought-group
+    // EDDI-03/06/12 and USDM, which needed the identical treatment but had
+    // drifted out of this file's own copy of the Python constant).
+    const sign = drierIsHigh ? 1 : -1;
+    return sigma.map((v) => (v === null || v === undefined ? null : sign * v));
   }
 
   const traces = [];
@@ -294,7 +313,7 @@ async function renderCategoryOverlay() {
 
     const seasonal = seasonalList ? seasonalList[pairIndex] : null;
     const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-    const sigma = standardizedSeries(product, response, region, seasonalRegion, category, useDetrend);
+    const sigma = standardizedSeries(product, response, region, seasonalRegion, category, data.drier_is_high, useDetrend);
 
     const isObservation = PRODUCT_OBSERVATION_KIND[product] === "observation";
     const detrendMethod = products[product][response].detrend_method;
@@ -326,7 +345,7 @@ async function renderCategoryOverlay() {
 
     const seasonal = extraSeasonalList[i];
     const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-    const sigma = standardizedSeries(entry.product, entry.response, region, seasonalRegion, entry.category);
+    const sigma = standardizedSeries(entry.product, entry.response, region, seasonalRegion, entry.category, data.drier_is_high);
 
     const entryProducts = manifest.categories[entry.category];
     const isObservation = PRODUCT_OBSERVATION_KIND[entry.product] === "observation";

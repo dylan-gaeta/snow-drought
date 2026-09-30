@@ -231,7 +231,7 @@ function pickTickDecimals(boundaries) {
 }
 
 function olPeriodLabel(period) {
-  return SEASON_LABELS[period] || MONTH_NAMES[parseInt(period, 10) - 1];
+  return periodLabel(period); // shared implementation, js/common.js -- do not reimplement its body here
 }
 
 function initInteractiveMap() {
@@ -537,7 +537,14 @@ async function renderRegionValuesTable(entry) {
 
 async function updateInteractiveMapLayer() {
   const entry = currentResponseEntry();
-  renderRegionValuesTable(entry); // independent of the COG file itself -- reads the same timeseries JSON every other page uses, not the map image
+  // Reads the same timeseries JSON every other page uses, not the map image
+  // -- so a failure to load/render the actual raster tile below never
+  // affects this table. NOT fully independent of COG/style availability
+  // though: renderInteractiveMap() (below) returns early, skipping this
+  // whole function (and so this call), whenever fetchMapStyle() finds no
+  // style JSON for this product/response at all -- see its own "if
+  // (!style) ... return" branch.
+  renderRegionValuesTable(entry);
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
   const emptyMsg = document.getElementById("ol-map-empty");
   // Reset to the default "no data expected" wording every call -- only the

@@ -120,13 +120,6 @@ const PRODUCT_OBSERVATION_KIND = {
   "NEON": "observation",
 };
 
-// Mirrors config.py's COMBINED_INVERTED_VALENCE_RESPONSES exactly -- do not
-// diverge. These responses' natural sign is opposite their overlay group's
-// stress convention (e.g. dead fuel moisture rises when SAFER, opposite
-// fire-danger indices) and are negated before standardizing so a group
-// overlay reads sign-coherently.
-const COMBINED_INVERTED_VALENCE_RESPONSES = new Set(["FM100", "FM1000", "TD2m", "NEE", "LAND_CARBON_EXCHANGE"]);
-
 // Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION exactly.
 // A calendar month is kept in the vegetation group overlay only where its
 // baseline mean clears this fraction of the seasonal amplitude above the
@@ -252,13 +245,24 @@ function meanStd(values) {
 // baseline year for this response's own drier_is_high direction) -- the
 // same baseline sample sigma/percentile already rank against, just reported
 // as a plain ordinal instead of a standardized score.
-function computeWindowValue(data, region, windowKey, targetYear) {
+// useDetrend: when true, reads anomaly_detrend/sigma_detrend instead of
+// anomaly/sigma throughout -- same per-region field swap js/compare.js's
+// standardizedSeries() and js/map-viewer.js's checkbox handler already use
+// for the same OLS-detrended-companion toggle, just funneled through this
+// one shared aggregation path instead of reimplemented per caller. Only
+// meaningful where the response actually has a companion (has_detrend_
+// companion); every region for such a response carries both fields (no
+// region-by-region gating needed, confirmed against ERA5-Land_T2m.json's
+// full 22-region set), so this trusts the caller to gate useDetrend on that
+// same flag before passing true, exactly as js/compare.js already does.
+function computeWindowValue(data, region, windowKey, targetYear, useDetrend = false) {
   if (data.aggregation === "native_index") {
     // A native index (e.g. SPI-03) is already its own trailing N-month
     // statistic, so it can't be re-aggregated across a season window -- but
     // it's still meaningful for one: show its reading as of the window's
     // own last month (e.g. DJFM -> its March value, which for a 3-month
-    // index already reflects Jan-Mar).
+    // index already reflects Jan-Mar). Never has a detrend companion (a
+    // native index is never detrended), so useDetrend is a no-op here.
     const pairs = windowMonthYearPairs(windowKey, targetYear);
     const { month, year } = pairs[pairs.length - 1];
     const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -270,14 +274,15 @@ function computeWindowValue(data, region, windowKey, targetYear) {
       isNativeIndex: true, stressRank: null, n: null,
     };
   }
-  const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
+  const anomalyField = useDetrend ? "anomaly_detrend" : "anomaly";
+  const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, anomalyField);
   const targetRaw = aggregateWindow(region, windowKey, targetYear, data.aggregation, "value");
   if (targetAnomaly === null || targetRaw === null) return null;
 
   const baselineAnomalies = [];
   const baselineRaws = [];
   for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
-    const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
+    const a = aggregateWindow(region, windowKey, y, data.aggregation, anomalyField);
     const r = aggregateWindow(region, windowKey, y, data.aggregation, "value");
     if (a !== null) baselineAnomalies.push(a);
     if (r !== null) baselineRaws.push(r);
@@ -304,7 +309,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const firstRecordYear = parseInt(region.dates[0].slice(0, 4), 10);
   const lastRecordYear = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
   for (let y = firstRecordYear; y <= lastRecordYear; y++) {
-    const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
+    const a = aggregateWindow(region, windowKey, y, data.aggregation, anomalyField);
     if (a !== null) recordAnomalies.push(a);
   }
   recordAnomalies.sort((a, b) => a - b);
@@ -335,12 +340,13 @@ async function loadManifest() {
   return manifest;
 }
 
-// Shared across every consumer of data/timeseries/*.json on a page --
-// data.html loads js/summary.js and js/heatmaps.js together, and
-// explore.html's own single-product Explorer view and Compare view fetch the
-// same product's file whenever the product checked in Compare is also the
-// one selected in the Explorer picker. Each of those used to keep its own
-// separate cache for the exact same URLs. Caches the in-flight PROMISE, not
+// Shared across every consumer of data/timeseries/*.json -- js/summary.js
+// (data.html) and js/heatmaps.js (heatmaps.html, its own separate page) each
+// fetch this independently, and explore.html's own single-product Explorer
+// view and Compare view fetch the same product's file whenever the product
+// checked in Compare is also the one selected in the Explorer picker. Each
+// of those used to keep its own separate cache for the exact same URLs.
+// Caches the in-flight PROMISE, not
 // just the resolved value: two features' initial renders can call this for
 // the same key before either fetch has resolved, so caching only the
 // resolved value still let that first race double-fetch (confirmed 2026-09).

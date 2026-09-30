@@ -58,7 +58,7 @@ function repopulateGallerySelect(select, entries) {
 function populateGalleryPeriodSelect(entry) {
   const select = document.getElementById("gallery-period-select");
   const periods = sortedPeriods(Object.keys(entry.maps || {}));
-  repopulateGallerySelect(select, periods.map((p) => [p, SEASON_LABELS[p] || MONTH_NAMES[parseInt(p, 10) - 1]]));
+  repopulateGallerySelect(select, periods.map((p) => [p, periodLabel(p)]));
   return periods;
 }
 

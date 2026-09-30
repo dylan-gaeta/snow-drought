@@ -81,7 +81,7 @@
       of 1990 or that product's own record start, through 2024.
     </p>
     <p>
-      On the <a href="data.html">summary table</a>, four ways to display the
+      On the <a href="data.html">summary table</a>, five ways to display the
       same underlying anomaly are available:
     </p>
     <ul id="value-type-list"></ul>
@@ -105,10 +105,11 @@
         variable to add it to the chart. Vegetation responses are shown only
         during each product's own active growing season &mdash; a
         dormant-season baseline near zero would otherwise make a tiny
-        absolute anomaly explode when standardized. A handful of responses
-        (dead-fuel moisture, dewpoint, net carbon exchange) are sign-flipped
-        before overlay so every line in a group points the same direction
-        under stress.</li>
+        absolute anomaly explode when standardized. Every series is
+        sign-flipped by its own stress direction before overlay (the same
+        convention the Summary Table, Heatmap, and Map use), so positive
+        always reads as the stress direction regardless of a variable's raw
+        sign convention.</li>
       <li><strong>Heatmap</strong> (<a href="heatmaps.html">Heatmap</a>):
         every product's standardized anomaly, one row per product, for any
         month or season window back to 1990, as one color matrix per

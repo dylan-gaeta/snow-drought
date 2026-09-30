@@ -8,7 +8,17 @@
 // response_drier_is_high() -- the same function the canonical multi-product
 // heatmap uses -- not a locally invented sign convention.
 
-const summaryState = { window: "DJFM", year: 2026, valueType: "sigma", regionGroup: "summary" };
+const summaryState = {
+  window: "DJFM", year: 2026, valueType: "sigma", regionGroup: "summary",
+  // Set of "product|response" keys currently showing their OLS-detrended
+  // companion instead of the mean-centered default -- only ever populated
+  // for pairs where has_detrend_companion is true, same toggle idea as
+  // js/compare.js's compareState.detrendToggled, just one button per table
+  // row instead of per checked legend item (Dylan, 2026-09-29: has_detrend_
+  // companion/sigma_detrend was only reachable from Compare and the Map,
+  // not here).
+  detrendToggled: new Set(),
+};
 let summaryRegionColumns = []; // [{code, label}], rebuilt whenever regionGroup changes
 
 async function fetchSummaryData(product, response) {
@@ -89,6 +99,19 @@ function initSummaryTable() {
   });
   rebuildRegionColumns();
 
+  // Event delegation on the (persistent) tbody element, not a per-button
+  // listener -- renderSummaryTable() below replaces body.innerHTML wholesale
+  // on every render, which would silently drop any listener attached
+  // directly to a row button.
+  document.getElementById("summary-table-body").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-pair-key]");
+    if (!button) return;
+    const pairKey = button.dataset.pairKey;
+    if (summaryState.detrendToggled.has(pairKey)) summaryState.detrendToggled.delete(pairKey);
+    else summaryState.detrendToggled.add(pairKey);
+    renderSummaryTable();
+  });
+
   renderSummaryTable();
 }
 
@@ -136,14 +159,18 @@ async function renderSummaryTable() {
   const rowsByCategory = {};
   toFetch.forEach((item, i) => {
     const data = dataList[i];
+    const pairKey = `${item.product}|${item.response}`;
+    const hasDetrend = !!item.entry.has_detrend_companion;
+    const useDetrend = hasDetrend && summaryState.detrendToggled.has(pairKey);
     const cells = summaryRegionColumns.map((col) => {
       const region = data.regions[col.code];
       if (!region) return null;
-      return computeWindowValue(data, region, summaryState.window, summaryState.year);
+      return computeWindowValue(data, region, summaryState.window, summaryState.year, useDetrend);
     });
     if (cells.every((cell) => cell === null)) return;
     (rowsByCategory[item.category] = rowsByCategory[item.category] || []).push({
-      product: item.product, response: item.response, cells, detrendMethod: item.entry.detrend_method, data,
+      product: item.product, response: item.response, cells, detrendMethod: item.entry.detrend_method,
+      hasDetrend, pairKey, useDetrend, data,
     });
   });
 
@@ -179,7 +206,16 @@ async function renderSummaryTable() {
       const responseCell = data.glossary
         ? `<td title="${data.glossary.replace(/"/g, "&quot;")}">${row.response}${note}</td>`
         : `<td>${row.response}${note}</td>`;
-      const detrendCell = `<td>${detrendBadgeHtml(row.detrendMethod)}</td>`;
+      // A real toggle button for this row, not a static badge, whenever this
+      // response actually has an OLS-detrended companion to switch to --
+      // same idea as js/compare.js's per-row toggle (Dylan, 2026-09-29:
+      // has_detrend_companion/sigma_detrend used to be reachable only from
+      // Compare and the Map, not here). Reuses .compare-legend-detrend-toggle
+      // (css/style.css) rather than a near-duplicate rule for the same pill
+      // button shape.
+      const detrendCell = row.hasDetrend
+        ? `<td><button type="button" class="compare-legend-detrend-toggle" data-pair-key="${row.pairKey}" aria-pressed="${row.useDetrend}">${row.useDetrend ? "Detrended" : "Not detrended"}</button></td>`
+        : `<td>${detrendBadgeHtml(row.detrendMethod)}</td>`;
       tr.innerHTML = `${responseCell}<td>${row.product}</td>${detrendCell}${cellsHtml}`;
       body.appendChild(tr);
     });
