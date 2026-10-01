@@ -11,20 +11,28 @@
 // a finding.)
 
 // Snow-drought quadrant classification -- mirrors
-// code/11_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
+// code/94_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
 // classify() exactly (do not diverge). The regime itself always comes from
 // the pipeline's own precomputed classification (data/
 // snow_drought_classification.json's "regime" field), never recomputed here.
-// Labels are dataset-qualified, matching 11_context_SnowDroughtQuadrants_
+// Labels are dataset-qualified, matching 94_context_SnowDroughtQuadrants_
 // analyze.py's own VARIABLES dict verbatim (its "label" field, minus the
 // "DJFM Anomaly (unit)" suffix -- unit/window are shown separately here).
+// Expanded 2026-10-01 (Dylan: "we should be able to plot more temp/vpd/
+// precip/snow variables") with 5 more ERA5-Land/PRISM drivers already in the
+// same pipeline file, no new reducer needed.
 const QUADRANT_VARIABLES = {
   t_anom: { label: "ERA5-Land Temperature", unit: "°C", stress_high: true, stress: "warm", benign: "cold" },
   ppt_anom: { label: "PRISM Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
   swe_anom: { label: "SNOTEL Snowpack", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   vpd_anom: { label: "PRISM Max VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
+  vpdmin_anom: { label: "PRISM Min VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
   sca_terra_anom: { label: "MODIS-Terra Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
   sca_aqua_anom: { label: "MODIS-Aqua Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  era5_vpd_anom: { label: "ERA5-Land VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
+  era5_ppt_anom: { label: "ERA5-Land Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
+  era5_swe_anom: { label: "ERA5-Land SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
+  era5_sca_anom: { label: "ERA5-Land Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
 const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", none: "#92c5de" };
 const REGIME_LABELS = {
