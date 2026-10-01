@@ -178,8 +178,8 @@ function wireAddSeriesControls() {
 function plotlyLayout() {
   return {
     margin: { t: 20, r: 20, b: 45, l: 60 },
-    yaxis: { title: "Standardized anomaly (σ)", zeroline: true },
-    xaxis: { title: "Year" },
+    yaxis: { title: "Standardized anomaly (σ)", zeroline: true, ...PLOTLY_AXIS_LINE },
+    xaxis: { title: "Year", ...PLOTLY_AXIS_LINE },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes: [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }],
   };

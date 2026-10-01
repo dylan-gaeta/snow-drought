@@ -16,6 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// Solid black axis border on every Plotly chart (Compare, Time Series,
+// Seasonal Cycle) -- Plotly's own default draws no axis line at all, just
+// gridlines, which read as an unstyled/default chart (Dylan, 2026-09-30:
+// "this looks like an old Microsoft Excel plot"). mirror: true draws the
+// matching line on the opposite (top/right) side too, so the plot area
+// reads as a clean closed box, not just two bare edges.
+const PLOTLY_AXIS_LINE = { showline: true, linecolor: "#1b1b1b", linewidth: 1, mirror: true };
+
 // One glyph per category, everywhere a category label renders (category
 // tabs, category selects, table group rows, search results) -- Dylan,
 // 2026-09: "text icons for each of the variable groups, like a leaf for

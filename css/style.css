@@ -697,7 +697,13 @@ table.headline-table tr.group-row td {
    the wide open space to the right -- not a wide block filling the sidebar
    (confirmed live, 2026-09-28: a near-full-width bar read as visually
    heavier/worse than two consistent slim bars, not better). */
-.ol-legend-scale-wrap { position: relative; }
+/* Explicit width (not just the swatches' own) is required here: without it
+   this wrapper div stretches to the full sidebar width (default block
+   behavior), so .ol-legend-ticks' "left: 100%" below resolves against that
+   full sidebar width instead of the narrow colorbar -- pushing every tick
+   label off to the sidebar's right edge instead of next to its swatch
+   (confirmed 2026-09-30 against a real screenshot). */
+.ol-legend-scale-wrap { position: relative; width: var(--legend-bar-width); }
 .ol-legend-swatch { display: block; width: var(--legend-bar-width); height: 22px; }
 /* Ticks are a separate absolutely-positioned overlay, not a child of each
    swatch -- a tick marks the BREAK between two colors (Dylan, 2026-09-29:
