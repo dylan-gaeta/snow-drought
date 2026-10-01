@@ -1,11 +1,13 @@
 {
-  "CORSRules": [
+  "rules": [
     {
-      "AllowedOrigins": ["https://dylan-gaeta.github.io", "https://dylangaeta.com"],
-      "AllowedMethods": ["GET", "HEAD"],
-      "AllowedHeaders": ["Range"],
-      "ExposeHeaders": ["Content-Range", "Content-Length", "Accept-Ranges", "ETag"],
-      "MaxAgeSeconds": 3600
+      "allowed": {
+        "origins": ["https://dylan-gaeta.github.io", "https://dylangaeta.com"],
+        "methods": ["GET", "HEAD"],
+        "headers": ["Range"]
+      },
+      "exposeHeaders": ["Content-Range", "Content-Length", "Accept-Ranges", "ETag"],
+      "maxAgeSeconds": 3600
     }
   ]
 }

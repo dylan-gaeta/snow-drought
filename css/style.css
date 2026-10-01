@@ -322,43 +322,6 @@ table.headline-table tr.group-row td {
 }
 .home-nav-card span { display: block; font-size: 0.88rem; color: var(--text-muted); }
 
-/* Whether a response's anomaly had a real per-grid-cell trend removed (OLS)
-   vs. just a calendar-month mean subtracted (no trend removed) vs. is
-   already a standardized index where detrending doesn't apply -- three
-   genuinely different statistics, so always color-coded and spelled out,
-   never left to a "detrend method" line buried in smaller text. */
-.detrend-badge {
-  display: inline-block;
-  padding: 0.05em 0.5em;
-  border-radius: 3px;
-  font-weight: 700;
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-.detrend-badge.detrend-ols { background: #ede3fb; color: #4c2889; }
-.detrend-badge.detrend-mean_centered { background: #eef1f5; color: #3d4451; }
-.detrend-badge.detrend-native_index { background: #e3f3ea; color: #1f6b41; }
-
-/* Interactive counterpart of .detrend-badge above -- same rounded-pill
-   shape/weight so it reads as the same kind of information, but a real
-   button (border, hover/pressed states) since this one actually does
-   something when clicked, not just a label. */
-.compare-legend-detrend-toggle {
-  display: inline-block;
-  padding: 0.05em 0.5em;
-  border-radius: 3px;
-  font-weight: 700;
-  font-size: 0.78rem;
-  white-space: nowrap;
-  font-family: var(--font-body);
-  cursor: pointer;
-  border: 1px solid #4c2889;
-  background: #eef1f5;
-  color: #3d4451;
-}
-.compare-legend-detrend-toggle[aria-pressed="true"] { background: #ede3fb; color: #4c2889; }
-.compare-legend-detrend-toggle:hover { filter: brightness(0.95); }
-
 /* User-added seasonal-chart years (js/explore.js's explorerState.extraYears)
    -- each removable via its own x, same idea as a browser tab-group chip. */
 .year-chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }

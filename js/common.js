@@ -108,8 +108,8 @@ const PRODUCT_OBSERVATION_KIND = {
   "GRACE-JPL-L3": "observation", "NLDAS-Mosaic": "model", "NLDAS-Noah": "model",
   "NLDAS-VIC": "model", "PRISM": "observation", "SiB4": "model",
   "UA-SWE-Monthly": "observation", "IMS-Snow": "observation", "SMAP": "observation",
-  "SNODAS": "model", "GlobSnow": "observation",
-  "gridMET-Fire": "model", "MODIS-TerraAqua": "observation", "OCO-2": "observation",
+  "SNODAS": "model",
+  "gridMET-Fire": "model", "OCO-2": "observation",
   "PhenoCam": "observation", "SMOS": "observation", "CAMS": "model",
   "CarbonTracker": "model", "FluxSat": "model", "GOSIF": "model",
   "GOSIF-GPP": "model", "MiCASA": "model", "MODIS-Terra": "observation",
@@ -245,24 +245,13 @@ function meanStd(values) {
 // baseline year for this response's own drier_is_high direction) -- the
 // same baseline sample sigma/percentile already rank against, just reported
 // as a plain ordinal instead of a standardized score.
-// useDetrend: when true, reads anomaly_detrend/sigma_detrend instead of
-// anomaly/sigma throughout -- same per-region field swap js/compare.js's
-// standardizedSeries() and js/map-viewer.js's checkbox handler already use
-// for the same OLS-detrended-companion toggle, just funneled through this
-// one shared aggregation path instead of reimplemented per caller. Only
-// meaningful where the response actually has a companion (has_detrend_
-// companion); every region for such a response carries both fields (no
-// region-by-region gating needed, confirmed against ERA5-Land_T2m.json's
-// full 22-region set), so this trusts the caller to gate useDetrend on that
-// same flag before passing true, exactly as js/compare.js already does.
-function computeWindowValue(data, region, windowKey, targetYear, useDetrend = false) {
+function computeWindowValue(data, region, windowKey, targetYear) {
   if (data.aggregation === "native_index") {
     // A native index (e.g. SPI-03) is already its own trailing N-month
     // statistic, so it can't be re-aggregated across a season window -- but
     // it's still meaningful for one: show its reading as of the window's
     // own last month (e.g. DJFM -> its March value, which for a 3-month
-    // index already reflects Jan-Mar). Never has a detrend companion (a
-    // native index is never detrended), so useDetrend is a no-op here.
+    // index already reflects Jan-Mar).
     const pairs = windowMonthYearPairs(windowKey, targetYear);
     const { month, year } = pairs[pairs.length - 1];
     const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -274,15 +263,14 @@ function computeWindowValue(data, region, windowKey, targetYear, useDetrend = fa
       isNativeIndex: true, stressRank: null, n: null,
     };
   }
-  const anomalyField = useDetrend ? "anomaly_detrend" : "anomaly";
-  const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, anomalyField);
+  const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
   const targetRaw = aggregateWindow(region, windowKey, targetYear, data.aggregation, "value");
   if (targetAnomaly === null || targetRaw === null) return null;
 
   const baselineAnomalies = [];
   const baselineRaws = [];
   for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
-    const a = aggregateWindow(region, windowKey, y, data.aggregation, anomalyField);
+    const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
     const r = aggregateWindow(region, windowKey, y, data.aggregation, "value");
     if (a !== null) baselineAnomalies.push(a);
     if (r !== null) baselineRaws.push(r);
@@ -309,7 +297,7 @@ function computeWindowValue(data, region, windowKey, targetYear, useDetrend = fa
   const firstRecordYear = parseInt(region.dates[0].slice(0, 4), 10);
   const lastRecordYear = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
   for (let y = firstRecordYear; y <= lastRecordYear; y++) {
-    const a = aggregateWindow(region, windowKey, y, data.aggregation, anomalyField);
+    const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
     if (a !== null) recordAnomalies.push(a);
   }
   recordAnomalies.sort((a, b) => a - b);
@@ -458,36 +446,6 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const DETREND_METHOD_LABELS = {
-  ols: "grid-cell trend removed (OLS)",
-  mean_centered: "calendar-month mean removed, no trend",
-  native_index: "already a standardized index",
-};
-const DETREND_BADGE_TEXT = {
-  ols: "OLS-detrended",
-  mean_centered: "Not detrended",
-  native_index: "Native index",
-};
-
-// A visible, color-coded badge -- not just text buried in a facts line --
-// for whether this response's anomaly had a real per-grid-cell trend
-// removed (ols), only a calendar-month mean subtracted (mean_centered, no
-// trend removed), or is already a standardized index where detrending
-// doesn't apply (native_index). Used everywhere a response is shown: the
-// product-meta line, the summary table, the map legend, and chart
-// legends/hover text.
-function detrendBadgeHtml(detrendMethod) {
-  if (!detrendMethod || !(detrendMethod in DETREND_BADGE_TEXT)) return "";
-  return `<span class="detrend-badge detrend-${detrendMethod}" title="${DETREND_METHOD_LABELS[detrendMethod]}">${DETREND_BADGE_TEXT[detrendMethod]}</span>`;
-}
-
-// Short parenthetical for chart legends/axis labels where a full badge
-// doesn't fit -- "(OLS)" / "(no trend)" / "(native idx)".
-const DETREND_SHORT_SUFFIX = { ols: "OLS", mean_centered: "no trend", native_index: "native idx" };
-function detrendShortSuffix(detrendMethod) {
-  return detrendMethod in DETREND_SHORT_SUFFIX ? ` (${DETREND_SHORT_SUFFIX[detrendMethod]})` : "";
-}
-
 // Looks up a response's manifest entry without needing to already know its
 // category -- category is only known up front where a page's own picker
 // state tracks it (js/explore.js's explorerState, js/map-viewer.js's
@@ -501,9 +459,9 @@ function findResponseEntry(product, response) {
 }
 
 // Shared by explore.js and map-viewer.js's product-meta line -- a short
-// plain-language definition plus the same units/record/baseline/detrend
-// facts already in the exported JSON, never any interpretive claim about
-// current conditions.
+// plain-language definition plus the same units/record/baseline facts
+// already in the exported JSON, never any interpretive claim about current
+// conditions.
 function productMetaHtml(entry) {
   const recordRange = entry.record_start && entry.record_end
     ? `${entry.record_start.slice(0, 7)} – ${entry.record_end.slice(0, 7)}`
@@ -512,7 +470,7 @@ function productMetaHtml(entry) {
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}`
     : "n/a";
   const glossaryLine = entry.glossary ? `<p class="product-glossary">${entry.glossary}</p>` : "";
-  return `${glossaryLine}<p class="product-facts">${detrendBadgeHtml(entry.detrend_method)} Units: ${entry.units || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${entry.status}</p>`;
+  return `${glossaryLine}<p class="product-facts">Units: ${entry.units || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${entry.status}</p>`;
 }
 
 // Cross-page continuity for the Explore <-> Maps product picker: the last

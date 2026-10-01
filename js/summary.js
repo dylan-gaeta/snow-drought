@@ -1,8 +1,8 @@
 // Summary Table page (data.html). Computed entirely client-side from the
-// same monthly grid-cell-detrended anomaly arrays the Time Series page
-// uses -- no new statistics invented here. Each response's multi-month
-// aggregation rule (sum / mean / day_weighted_mean / native_index) comes
-// from code/dashboard_export.py's AGGREGATION_RULE, audited against each
+// same monthly mean-centered anomaly arrays the Time Series page uses -- no
+// new statistics invented here. Each response's multi-month aggregation
+// rule (sum / mean / day_weighted_mean / native_index) comes from
+// code/dashboard_export.py's AGGREGATION_RULE, audited against each
 // product's actual reducer/analyzer code, not guessed. "Stress vs relief"
 // coloring uses drier_is_high, straight from config.py's own
 // response_drier_is_high() -- the same function the canonical multi-product
@@ -10,14 +10,6 @@
 
 const summaryState = {
   window: "DJFM", year: 2026, valueType: "sigma", regionGroup: "summary",
-  // Set of "product|response" keys currently showing their OLS-detrended
-  // companion instead of the mean-centered default -- only ever populated
-  // for pairs where has_detrend_companion is true, same toggle idea as
-  // js/compare.js's compareState.detrendToggled, just one button per table
-  // row instead of per checked legend item (Dylan, 2026-09-29: has_detrend_
-  // companion/sigma_detrend was only reachable from Compare and the Map,
-  // not here).
-  detrendToggled: new Set(),
 };
 let summaryRegionColumns = []; // [{code, label}], rebuilt whenever regionGroup changes
 
@@ -34,7 +26,7 @@ function regionColumnsForGroup(group) {
 function rebuildRegionColumns() {
   summaryRegionColumns = regionColumnsForGroup(summaryState.regionGroup);
   const headerRow = document.getElementById("summary-table-header");
-  while (headerRow.children.length > 3) headerRow.removeChild(headerRow.lastChild); // keep Variable/Product/Detrended?
+  while (headerRow.children.length > 2) headerRow.removeChild(headerRow.lastChild); // keep Variable/Product
   summaryRegionColumns.forEach((col) => {
     const th = document.createElement("th");
     th.textContent = col.label;
@@ -99,19 +91,6 @@ function initSummaryTable() {
   });
   rebuildRegionColumns();
 
-  // Event delegation on the (persistent) tbody element, not a per-button
-  // listener -- renderSummaryTable() below replaces body.innerHTML wholesale
-  // on every render, which would silently drop any listener attached
-  // directly to a row button.
-  document.getElementById("summary-table-body").addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-pair-key]");
-    if (!button) return;
-    const pairKey = button.dataset.pairKey;
-    if (summaryState.detrendToggled.has(pairKey)) summaryState.detrendToggled.delete(pairKey);
-    else summaryState.detrendToggled.add(pairKey);
-    renderSummaryTable();
-  });
-
   renderSummaryTable();
 }
 
@@ -136,7 +115,7 @@ function formatSummaryValue(result, units, valueType) {
 
 async function renderSummaryTable() {
   const body = document.getElementById("summary-table-body");
-  const colCount = 3 + summaryRegionColumns.length;
+  const colCount = 2 + summaryRegionColumns.length;
   body.innerHTML = `<tr><td colspan="${colCount}">Computing&hellip;</td></tr>`;
 
   // Fetch every product's JSON concurrently instead of one at a time -- the
@@ -159,18 +138,14 @@ async function renderSummaryTable() {
   const rowsByCategory = {};
   toFetch.forEach((item, i) => {
     const data = dataList[i];
-    const pairKey = `${item.product}|${item.response}`;
-    const hasDetrend = !!item.entry.has_detrend_companion;
-    const useDetrend = hasDetrend && summaryState.detrendToggled.has(pairKey);
     const cells = summaryRegionColumns.map((col) => {
       const region = data.regions[col.code];
       if (!region) return null;
-      return computeWindowValue(data, region, summaryState.window, summaryState.year, useDetrend);
+      return computeWindowValue(data, region, summaryState.window, summaryState.year);
     });
     if (cells.every((cell) => cell === null)) return;
     (rowsByCategory[item.category] = rowsByCategory[item.category] || []).push({
-      product: item.product, response: item.response, cells, detrendMethod: item.entry.detrend_method,
-      hasDetrend, pairKey, useDetrend, data,
+      product: item.product, response: item.response, cells, data,
     });
   });
 
@@ -206,17 +181,7 @@ async function renderSummaryTable() {
       const responseCell = data.glossary
         ? `<td title="${data.glossary.replace(/"/g, "&quot;")}">${row.response}${note}</td>`
         : `<td>${row.response}${note}</td>`;
-      // A real toggle button for this row, not a static badge, whenever this
-      // response actually has an OLS-detrended companion to switch to --
-      // same idea as js/compare.js's per-row toggle (Dylan, 2026-09-29:
-      // has_detrend_companion/sigma_detrend used to be reachable only from
-      // Compare and the Map, not here). Reuses .compare-legend-detrend-toggle
-      // (css/style.css) rather than a near-duplicate rule for the same pill
-      // button shape.
-      const detrendCell = row.hasDetrend
-        ? `<td><button type="button" class="compare-legend-detrend-toggle" data-pair-key="${row.pairKey}" aria-pressed="${row.useDetrend}">${row.useDetrend ? "Detrended" : "Not detrended"}</button></td>`
-        : `<td>${detrendBadgeHtml(row.detrendMethod)}</td>`;
-      tr.innerHTML = `${responseCell}<td>${row.product}</td>${detrendCell}${cellsHtml}`;
+      tr.innerHTML = `${responseCell}<td>${row.product}</td>${cellsHtml}`;
       body.appendChild(tr);
     });
   });

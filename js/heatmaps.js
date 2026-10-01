@@ -16,14 +16,7 @@ MONTH_NAMES.forEach((name, i) => {
   HEATMAP_FAMILIES[`window_${key}`] = { label: `${name}, by year`, window: key };
 });
 
-// useDetrend: global, not per-row -- unlike the Summary Table's per-response
-// columns, a heatmap row IS a response, so there's no natural per-row control
-// surface here; one checkbox applies to every row that actually has a
-// companion (has_detrend_companion) and is a no-op for rows that don't, same
-// idea as js/map-viewer.js's single ol-detrend-toggle checkbox (Dylan,
-// 2026-09-29: has_detrend_companion/sigma_detrend used to be reachable only
-// from Compare and the Map, not here).
-const heatmapState = { family: "monthly", category: "all", region: "ALL", useDetrend: false };
+const heatmapState = { family: "monthly", category: "all", region: "ALL" };
 
 function initHeatmaps() {
   const familySelect = document.getElementById("heatmap-family-select");
@@ -43,11 +36,6 @@ function initHeatmaps() {
 
   document.getElementById("heatmap-region-select").addEventListener("change", (event) => {
     heatmapState.region = event.target.value;
-    renderHeatmap();
-  });
-
-  document.getElementById("heatmap-detrend-toggle").addEventListener("change", (event) => {
-    heatmapState.useDetrend = event.target.checked;
     renderHeatmap();
   });
 
@@ -175,12 +163,10 @@ async function renderHeatmapUnsafe(chart, pairs) {
       // -- same drier_is_high-driven flip the Compare view's "By category"
       // mode already applies for the same reason (see about.html).
       const sign = data.drier_is_high ? 1 : -1;
-      const useDetrend = heatmapState.useDetrend && !!data.has_detrend_companion;
-      const sigmaField = useDetrend ? "sigma_detrend" : "sigma";
       return months.map(({ year, month }) => {
         const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
         const idx = region.dates.indexOf(dateStr);
-        return idx === -1 ? null : sign * region[sigmaField][idx];
+        return idx === -1 ? null : sign * region.sigma[idx];
       });
     };
   } else {
@@ -194,9 +180,8 @@ async function renderHeatmapUnsafe(chart, pairs) {
       if (!region) return years.map(() => null);
       // Same stress-direction sign flip as the "monthly" branch above.
       const sign = data.drier_is_high ? 1 : -1;
-      const useDetrend = heatmapState.useDetrend && !!data.has_detrend_companion;
       return years.map((year) => {
-        const result = computeWindowValue(data, region, windowKey, year, useDetrend);
+        const result = computeWindowValue(data, region, windowKey, year);
         return result ? sign * result.sigma : null;
       });
     };
@@ -213,13 +198,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     const data = dataList[pairs.length - 1 - i];
     const row = computeRow(data);
     if (row.every((v) => v === null)) return;
-    // Same effectiveDetrendMethod pattern js/map-viewer.js's legend already
-    // uses for its own detrend checkbox: the row's label reflects whichever
-    // method actually produced the values just computed, not always this
-    // response's own static default.
-    const rowUsesDetrend = heatmapState.useDetrend && !!data.has_detrend_companion;
-    const detrendMethod = rowUsesDetrend ? "ols" : findResponseEntry(pair.product, pair.response)?.detrend_method;
-    yLabels.push(`${pair.product} ${pair.response}${detrendShortSuffix(detrendMethod)}`);
+    yLabels.push(`${pair.product} ${pair.response}`);
     z.push(row);
   });
   if (z.length === 0) {

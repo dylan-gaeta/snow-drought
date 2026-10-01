@@ -163,7 +163,6 @@ const olMapState = {
   period: null,
   mode: "climatology", // "climatology" | "raw" | "anomaly" -- one consistent control for every period
   year: null, // only meaningful when mode !== "climatology"
-  detrend: false, // only meaningful when mode === "anomaly" and the style has a detrend companion
   availableYears: [],
   styleCache: {},
   layerCache: {}, // COG url -> built ol.layer.WebGLTile, reused across mode/period/year revisits
@@ -297,10 +296,6 @@ function initInteractiveMap() {
   document.getElementById("ol-year-next-btn").addEventListener("click", () => stepYear(1));
   document.getElementById("ol-boundary-toggle").addEventListener("change", (event) => {
     olMapState.boundaryLayer.setVisible(event.target.checked);
-  });
-  document.getElementById("ol-detrend-toggle").addEventListener("change", (event) => {
-    olMapState.detrend = event.target.checked;
-    updateInteractiveMapLayer();
   });
   document.getElementById("ol-reset-view-btn").addEventListener("click", () => {
     olMapState.map.getView().fit(olMapState.homeExtent, { size: olMapState.map.getSize(), duration: 300 });
@@ -571,7 +566,6 @@ async function updateInteractiveMapLayer() {
       btn.title = "No data for this selection.";
     });
     document.getElementById("ol-year-control-wrap").style.display = "none";
-    document.getElementById("ol-detrend-toggle-wrap").style.display = "none";
     olMapState.currentCogUrl = null;
     const geotiffLink = document.getElementById("ol-geotiff-link");
     geotiffLink.removeAttribute("href");
@@ -581,21 +575,7 @@ async function updateInteractiveMapLayer() {
   const slot = style.periods[olMapState.period];
   updateModeToggleAvailability(slot);
   updateYearControlForPeriod(slot);
-  // Detrend-vs-mean-centered is only a meaningful choice for an Anomaly map
-  // whose product/response actually has a detrended companion exported
-  // (has_detrend_companion, set by dashboard_cog_export.py for the same 9
-  // DETREND_POLICY=True responses js/compare.js's toggle covers) -- hidden
-  // and force-unchecked otherwise, so a stale checked state from a prior
-  // product/mode can't silently apply to one that has no companion to show.
-  const detrendAvailable = olMapState.mode === "anomaly" && !!style.has_detrend_companion;
-  document.getElementById("ol-detrend-toggle-wrap").style.display = detrendAvailable ? "" : "none";
-  if (!detrendAvailable) {
-    olMapState.detrend = false;
-    document.getElementById("ol-detrend-toggle").checked = false;
-  }
-  const key = olMapState.mode === "climatology" ? "baseline"
-    : olMapState.mode === "anomaly" && olMapState.detrend ? `anomaly_detrend_${olMapState.year}`
-    : `${olMapState.mode}_${olMapState.year}`;
+  const key = olMapState.mode === "climatology" ? "baseline" : `${olMapState.mode}_${olMapState.year}`;
   const fileEntry = slot[key];
   if (!fileEntry) {
     wrap.style.display = "none";
@@ -683,24 +663,16 @@ async function updateInteractiveMapLayer() {
   const units = entry.units || "";
   const palette = olMapState.mode === "climatology" || olMapState.mode === "raw"
     ? style.baseline_colors : style.anomaly_colors;
-  // Detrend status only describes how the anomaly was computed -- not
-  // meaningful for the climatology/raw views, so the badge only shows there.
-  // entry.detrend_method is this response's own always-exported default
-  // (mean_centered for every DETREND_POLICY=True response now -- see
-  // dashboard_export.py's detrend_method() docstring), so it only describes
-  // what's on screen when the checkbox above isn't overriding it to the OLS
-  // companion.
-  const effectiveDetrendMethod = detrendAvailable && olMapState.detrend ? "ols" : entry.detrend_method;
   const label = olMapState.mode === "climatology" ? `Climatology (${units})`
     : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
-    : `${units} anomaly ${detrendBadgeHtml(effectiveDetrendMethod)}`;
+    : `${units} anomaly`;
   let boundaries = fileEntry.boundaries;
   let binColors = palette;
   let colorExpr = null;
   if (!boundaries) {
     // Native standardized indices (SPI/SPEI/EDDI/...): value IS the anomaly,
     // no boundaries computed yet -- show units only, no color scale.
-    legend.innerHTML = `<div class="ol-legend-label">${units} ${detrendBadgeHtml(effectiveDetrendMethod)}</div>`;
+    legend.innerHTML = `<div class="ol-legend-label">${units}</div>`;
   } else {
     // Climatology/Raw ships only [vmin, vmax] (a continuous ramp needs
     // nothing more), but every map now renders as discrete bins -- Anomaly

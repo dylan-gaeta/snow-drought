@@ -52,33 +52,12 @@
   <section id="methodology">
     <h2>How anomalies are computed</h2>
     <p>
-      Every anomaly on this site is computed the same two ways, chosen per
-      variable based on whether that variable has a demonstrable long-term
-      trend:
-    </p>
-    <ul>
-      <li><strong>Grid-cell, calendar-month OLS residual</strong> (labeled
-        "grid-cell trend removed (OLS)"): a linear trend is fit separately
-        for each grid cell and each calendar month over the baseline
-        period, and the anomaly is the residual from that fit. Used only
-        where a real secular trend has been found (e.g. temperature,
-        vapor pressure deficit).</li>
-      <li><strong>Calendar-month mean-centering</strong> (labeled "calendar-
-        month mean removed, no trend"): the anomaly is simply the departure
-        from that calendar month's baseline average, with no trend
-        removed. Used where no significant long-term trend has been found
-        &mdash; this is most variables, including precipitation, snow
-        cover, and most soil moisture and vegetation products.</li>
-      <li><strong>Native standardized index</strong> (labeled "already a
-        standardized index"): SPI, SPEI, EDDI, PDSI, ForDRI, and ESI are
-        already their own standardized departure statistic at the source
-        and are never re-detrended.</li>
-    </ul>
-    <p>
-      The method used for the currently selected variable is shown next to
-      its name on the <a href="explore.html">Time Series</a> and
-      <a href="map.html">Map</a> pages. The baseline period is the later
-      of 1990 or that product's own record start, through 2024.
+      Every anomaly on this site is the departure from that calendar
+      month's own baseline average &mdash; the baseline period is the
+      later of 1990 or that product's own record start, through 2024.
+      Native standardized indices (SPI, SPEI, EDDI, PDSI, ForDRI, and ESI)
+      are already their own standardized departure statistic at the source
+      and are shown directly rather than recomputed.
     </p>
     <p>
       On the <a href="data.html">summary table</a>, five ways to display the
