@@ -132,7 +132,7 @@ async function renderSeasonal() {
   const layout = {
     margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },
     yaxis: { title: isAnomaly ? `${data.response} anomaly (${data.units})` : `${data.response} (${data.units})`, zeroline: isAnomaly, ...PLOTLY_AXIS_LINE },
-    xaxis: { type: "category", tickvals: x, ticktext: tickText, ...PLOTLY_AXIS_LINE },
+    xaxis: { type: "category", tickvals: x, ticktext: tickText, showgrid: false, ...PLOTLY_AXIS_LINE },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     legend: isNarrow ? { orientation: "h", x: 0.5, xanchor: "center", y: -0.25, yanchor: "top" } : {},
   };

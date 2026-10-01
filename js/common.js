@@ -22,7 +22,19 @@ document.addEventListener("DOMContentLoaded", () => {
 // "this looks like an old Microsoft Excel plot"). mirror: true draws the
 // matching line on the opposite (top/right) side too, so the plot area
 // reads as a clean closed box, not just two bare edges.
-const PLOTLY_AXIS_LINE = { showline: true, linecolor: "#1b1b1b", linewidth: 1, mirror: true };
+const PLOTLY_AXIS_LINE = {
+  showline: true, linecolor: "#1b1b1b", linewidth: 1, mirror: true,
+  ticks: "outside", tickcolor: "#1b1b1b",
+};
+
+// A minor TICK MARK (not a gridline) at every calendar year, on top of
+// whatever major ticks Plotly's own autotick picks for the labeled years
+// (Dylan, 2026-09-30: "minor breaks are absolutely every calendar year",
+// then "this is how it should look" against a reference matplotlib figure
+// with no vertical gridlines at all, just a tick at every year) -- spread
+// into any continuous (non-category) date xaxis alongside showgrid: false
+// and PLOTLY_AXIS_LINE.
+const PLOTLY_YEARLY_MINOR_TICKS = { minor: { dtick: "M12", ticks: "outside", ticklen: 4, showgrid: false } };
 
 // One glyph per category, everywhere a category label renders (category
 // tabs, category selects, table group rows, search results) -- Dylan,
