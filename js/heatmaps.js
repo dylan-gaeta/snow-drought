@@ -16,7 +16,45 @@ MONTH_NAMES.forEach((name, i) => {
   HEATMAP_FAMILIES[`window_${key}`] = { label: `${name}, by year`, window: key };
 });
 
-const heatmapState = { family: "monthly", category: "all", region: "ALL" };
+// null = full record (every "by year" heatmap already scrolls horizontally
+// for a wide column count -- see .heatmap-chart-scroll -- so unlike Time
+// Series' single continuous line, there's no "solid smear" problem with
+// defaulting to the full history here). Only meaningful for the "by year"
+// families; "monthly" is always a fixed most-recent-12-months window
+// (Dylan, 2026-10-01: "you should be able to specify the start year from a
+// dropdown menu for these heatmaps").
+const heatmapState = { family: "monthly", category: "all", region: "ALL", startYear: null };
+
+function initHeatmapStartYearControl() {
+  const select = document.getElementById("heatmap-start-year-select");
+  if (!select) return;
+  const { minYear, maxYear } = fullRecordYearRange();
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = `All years (from ${minYear})`;
+  select.appendChild(allOption);
+  for (let y = minYear; y <= maxYear; y++) {
+    const option = document.createElement("option");
+    option.value = String(y);
+    option.textContent = String(y);
+    select.appendChild(option);
+  }
+  select.value = heatmapState.startYear !== null ? String(heatmapState.startYear) : "";
+  select.addEventListener("change", (event) => {
+    heatmapState.startYear = event.target.value ? parseInt(event.target.value, 10) : null;
+    renderHeatmap();
+  });
+}
+
+// "monthly" is always a fixed most-recent-12-months window -- startYear has
+// no effect on it, so disable the control rather than leave it silently
+// inert (picking a year and seeing nothing change reads as broken).
+function updateStartYearAvailability() {
+  const select = document.getElementById("heatmap-start-year-select");
+  if (!select) return;
+  select.disabled = heatmapState.family === "monthly";
+}
 
 function initHeatmaps() {
   const familySelect = document.getElementById("heatmap-family-select");
@@ -29,8 +67,10 @@ function initHeatmaps() {
     familySelect.appendChild(option);
   });
   familySelect.value = heatmapState.family;
+  updateStartYearAvailability();
   familySelect.addEventListener("change", (event) => {
     heatmapState.family = event.target.value;
+    updateStartYearAvailability();
     renderHeatmap();
   });
 
@@ -38,6 +78,7 @@ function initHeatmaps() {
     heatmapState.region = event.target.value;
     renderHeatmap();
   });
+  initHeatmapStartYearControl();
 
   renderHeatmapCategoryTabs();
   renderHeatmap();
@@ -172,8 +213,9 @@ async function renderHeatmapUnsafe(chart, pairs) {
   } else {
     const windowKey = HEATMAP_FAMILIES[heatmapState.family].window;
     const { minYear, maxYear } = fullRecordYearRange(); // already floored at DASHBOARD_MIN_YEAR
+    const startYear = Math.max(minYear, heatmapState.startYear || minYear);
     const years = [];
-    for (let y = minYear; y <= maxYear; y++) years.push(y);
+    for (let y = startYear; y <= maxYear; y++) years.push(y);
     xLabels = years.map(String);
     computeRow = (data) => {
       const region = data.regions[heatmapState.region];
