@@ -114,30 +114,33 @@ const SEASON_MONTHS = {
   MAMJJAS: [3, 4, 5, 6, 7, 8, 9], ANNUAL: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
 };
 
-// Mirrors config.py's PRODUCT_OBSERVATION_KIND -- do not diverge, with one
-// known exception: "VIIRS-NDVI" (audited 2026-09, live in manifest.json) is
-// missing from config.py's own dict there too, a pipeline-side gap flagged
-// to Dylan separately. Added here so the Compare view doesn't render it
-// dashed/"model" in the meantime -- satellite NDVI, same observation basis
-// as MODIS-Terra/Aqua NDVI/EVI directly above.
+// Mirrors config.py's PRODUCT_OBSERVATION_KIND exactly -- do not diverge.
+// Re-synced 2026-10-01 after this copy drifted from the Python source: 6
+// real observation products (GBBEPx, SNOTEL, MODIS-Terra-SCA,
+// MODIS-Aqua-SCA, VIIRS-LST, AmeriFlux) were missing entirely, which made
+// their Compare-view lines render dashed/"model" by default (a bare-object
+// lookup miss is undefined, not "observation") -- confirmed live,
+// 2026-09-30/10-01: "a whole bunch of these are not labeled right." Also
+// dropped a stale "VHP" entry that isn't a real product in either dict.
 // Drives solid (observation) vs dashed (model) line styling in the
 // category-grouped overlay view, same convention as
 // 11_combined_GroupOverlays_analyze.py's line_style().
 const PRODUCT_OBSERVATION_KIND = {
-  "ERA5-Land": "model", "GFED5": "observation", "GPCP": "observation",
-  "GRACE-JPL-L3": "observation", "NLDAS-Mosaic": "model", "NLDAS-Noah": "model",
-  "NLDAS-VIC": "model", "PRISM": "observation", "SiB4": "model",
-  "UA-SWE-Monthly": "observation", "IMS-Snow": "observation", "SMAP": "observation",
-  "SNODAS": "model",
-  "gridMET-Fire": "model", "OCO-2": "observation",
-  "PhenoCam": "observation", "SMOS": "observation", "CAMS": "model",
-  "CarbonTracker": "model", "FluxSat": "model", "GOSIF": "model",
-  "GOSIF-GPP": "model", "MiCASA": "model", "MODIS-Terra": "observation",
-  "MODIS-Aqua": "observation", "VIIRS-NDVI": "observation", "TROPOSIF": "observation", "SPI": "observation",
-  "SPEI": "observation", "EDDI": "model", "PDSI": "model", "ForDRI": "model",
-  "ESI": "observation", "VHP": "observation", "VegDRI": "observation",
-  "USDM": "observation", "VIIRS": "observation", "GRACE-L4": "model",
-  "NEON": "observation",
+  "ERA5-Land": "model", "GFED5": "observation", "GBBEPx": "observation",
+  "GPCP": "observation", "GRACE-JPL-L3": "observation", "NLDAS-Mosaic": "model",
+  "NLDAS-Noah": "model", "NLDAS-VIC": "model", "PRISM": "observation",
+  "SiB4": "model", "UA-SWE-Monthly": "observation", "IMS-Snow": "observation",
+  "SNOTEL": "observation", "SMAP": "observation", "SNODAS": "model",
+  "gridMET-Fire": "model", "OCO-2": "observation", "PhenoCam": "observation",
+  "SMOS": "observation", "CAMS": "model", "CarbonTracker": "model",
+  "FluxSat": "model", "GOSIF": "model", "GOSIF-GPP": "model", "MiCASA": "model",
+  "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
+  "MODIS-Terra-SCA": "observation", "MODIS-Aqua-SCA": "observation",
+  "TROPOSIF": "observation", "SPI": "observation", "SPEI": "observation",
+  "EDDI": "model", "PDSI": "model", "ForDRI": "model", "ESI": "observation",
+  "VegDRI": "observation", "USDM": "observation", "VIIRS": "observation",
+  "VIIRS-LST": "observation", "VIIRS-NDVI": "observation", "GRACE-L4": "model",
+  "NEON": "observation", "AmeriFlux": "observation",
 };
 
 // Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION exactly.
