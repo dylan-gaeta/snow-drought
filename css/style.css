@@ -670,7 +670,7 @@ table.headline-table tr.group-row td {
      using the column's actual width. max-content sizes it to its real
      content -- the buttons' own text -- with .ol-sidebar's min-width below
      as the floor. */
-  grid-template-columns: 1fr max-content;
+  grid-template-columns: max-content max-content;
   gap: 1.25rem;
   align-items: start;
 }
@@ -685,11 +685,11 @@ table.headline-table tr.group-row td {
    (initInteractiveMap) -- height stays fixed and width follows from it, so
    the grid column above sizes to the map's own real proportions rather than
    stretching. This height is also the fallback before that JS runs. */
-/* Map fills the full width of its column; aspect-ratio (overridden by the
-   real domain extent in js/map-viewer.js) drives the height so it stays
-   undistorted. The legend is the only thing to its right now -- readout and
-   action buttons sit below the map. */
-#ol-map { width: 100%; aspect-ratio: 1.35; border-radius: var(--radius-sm); overflow: hidden; }
+/* Height is bounded to the viewport so the map + its controls fit on screen
+   (full-width made it taller than the screen); aspect-ratio (overridden by the
+   real domain extent in js/map-viewer.js) drives the width from that height so
+   it stays undistorted. Readout + action buttons sit below the map. */
+#ol-map { height: clamp(380px, 62vh, 620px); aspect-ratio: 1.35; width: auto; max-width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
 @media (max-width: 820px) {
   #ol-map { width: 100%; height: auto; }
 }
