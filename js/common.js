@@ -431,14 +431,18 @@ function populateRegionToggle(container, defaultCode = "ALL") {
   });
 }
 
-// COGs (cogs/) are large binary assets served from external object storage
-// (a Cloudflare R2 bucket, wus-snowdrought), not committed to this repo. On
-// localhost, always fall back to the local relative cogs/ path instead --
-// local dev/testing shouldn't depend on the R2 bucket being populated (and
-// this account's DNS resolver blackholes *.r2.dev to 127.0.0.1, so pointing
-// local testing at R2 doesn't even fail gracefully, it just hangs/refuses).
+// COGs (cogs/) and the data/ JSON are large/binary assets served from
+// external object storage (the Cloudflare R2 bucket wus-snowdrought), not
+// committed to this repo. They're exposed through a custom domain on
+// Cloudflare (data.snowdrought.org) rather than the bucket's raw
+// pub-*.r2.dev URL: enterprise/government DNS filters -- NOAA's included --
+// sinkhole the entire r2.dev domain as an abused free-bucket host, which
+// blackholed the live dashboard for every NOAA machine. A custom domain
+// rides Cloudflare's normal CDN hostnames, which those filters don't block.
+// On localhost, fall back to the local relative data/ and cogs/ paths so
+// local dev/testing doesn't depend on the R2 bucket being populated.
 const IS_LOCALHOST = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const R2_BASE_URL = IS_LOCALHOST ? "" : "https://pub-0bea8387645a493dbf0dddd3045e4ae4.r2.dev";
+const R2_BASE_URL = IS_LOCALHOST ? "" : "https://data.snowdrought.org";
 
 function assetUrl(relativePath) {
   return R2_BASE_URL ? `${R2_BASE_URL.replace(/\/$/, "")}/${relativePath}` : relativePath;
