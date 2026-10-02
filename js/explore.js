@@ -72,7 +72,8 @@ async function renderTimeseries() {
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   }];
   const layout = {
-    margin: { t: 20, r: 20, b: 45, l: 60 },
+    title: { text: `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`, font: { size: 15, color: "#023858" } },
+    margin: { t: 48, r: 20, b: 45, l: 60 },
     yaxis: { title: isSigma ? sigmaLabel : `${data.response} (${data.units})`, zeroline: isSigma, ...PLOTLY_AXIS_LINE },
     xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },

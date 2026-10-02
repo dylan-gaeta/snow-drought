@@ -409,6 +409,12 @@ function allRegionEntries() {
   return [...named, ...states, ...huc2];
 }
 
+// Display label for any region code, across the three region sets (named
+// multi-state regions, states, HUC2 basins). Used in dynamic figure titles.
+function regionLabelFor(code) {
+  return manifest.region_labels[code] || manifest.state_labels[code] || manifest.huc2_labels[code] || code;
+}
+
 function populateRegionSelect(select, defaultCode = "ALL") {
   select.innerHTML = "";
   allRegionEntries().forEach(({ code, label }) => {

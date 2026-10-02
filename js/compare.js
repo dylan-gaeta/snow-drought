@@ -177,7 +177,8 @@ function wireAddSeriesControls() {
 
 function plotlyLayout() {
   return {
-    margin: { t: 20, r: 20, b: 45, l: 60 },
+    title: { text: `${categoryLabelWithIcon(compareState.category)} — ${regionLabelFor(compareState.region)}`, font: { size: 15, color: "#023858" } },
+    margin: { t: 48, r: 20, b: 45, l: 60 },
     yaxis: { title: "Standardized anomaly (σ)", zeroline: true, ...PLOTLY_AXIS_LINE },
     xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
