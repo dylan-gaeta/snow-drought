@@ -532,28 +532,23 @@ table.headline-table tr.group-row td {
 .region-type-tab:last-child { border-right: none; }
 .region-type-tab:hover:not(.active) { background: #eef1f5; color: var(--text); }
 .region-type-tab.active { background: var(--gold); color: #fff; }
-.region-buttons {
-  display: inline-flex;
-  flex-wrap: wrap;
+/* Individual rounded pills with gaps -- a shared-border segmented bar wraps
+   raggedly once there are 11+ buttons (the States tab). */
+.region-buttons { display: flex; flex-wrap: wrap; gap: 0.35rem; max-width: 100%; }
+.region-buttons button {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-}
-.region-buttons button {
-  border: none;
   background: #fff;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.85rem;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-muted);
-  border-right: 1px solid var(--border);
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
-.region-buttons button:last-child { border-right: none; }
 .region-buttons button:hover:not(.active) { background: #eef1f5; color: var(--text); }
-.region-buttons button.active { background: var(--blue-dark); color: #fff; }
+.region-buttons button.active { background: var(--blue-dark); color: #fff; border-color: var(--blue-dark); }
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
 .map-image-wrap {
@@ -690,7 +685,7 @@ table.headline-table tr.group-row td {
    sits under this map's own "Reset view"/"Full screen" buttons there --
    bottom-left is clear on every product's domain extent. */
 #ol-map .ol-attribution { right: auto; left: 0.5em; }
-.ol-sidebar { min-width: 200px; }
+.ol-sidebar { min-width: 140px; }
 #ol-legend {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -725,7 +720,7 @@ table.headline-table tr.group-row td {
    label off to the sidebar's right edge instead of next to its swatch
    (confirmed 2026-09-30 against a real screenshot). */
 .ol-legend-scale-wrap { position: relative; width: var(--legend-bar-width); }
-.ol-legend-swatch { display: block; width: var(--legend-bar-width); height: 22px; }
+.ol-legend-swatch { display: block; width: var(--legend-bar-width); height: 34px; }
 /* Ticks are a separate absolutely-positioned overlay, not a child of each
    swatch -- a tick marks the BREAK between two colors (Dylan, 2026-09-29:
    "the colorbar ticks should be the color breaks, not a single point label
@@ -742,9 +737,9 @@ table.headline-table tr.group-row td {
   color: var(--text-muted);
 }
 #ol-query-readout { margin-top: 0.6rem; font-size: 0.9rem; color: var(--text); min-height: 1.2em; }
-/* Vertical, not the horizontal wrapping row this used when it sat in the
-   full-width space below the map -- the sidebar column is narrow. */
-.ol-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
+/* Horizontal wrapping row below the map -- the map + colorbar now take the
+   full width above, so the action buttons sit on their own line underneath. */
+.ol-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
 .ol-actions button, .ol-actions a {
   font-family: var(--font-body);
   font-size: 0.85rem;

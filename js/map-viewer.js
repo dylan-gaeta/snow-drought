@@ -198,7 +198,7 @@ const DISCRETE_BINS = 11;
 // Must match .ol-legend-swatch's own CSS height exactly -- ticks are
 // absolutely positioned against this same pixel value so a label lands
 // precisely on the line between two color swatches, not floating loose.
-const LEGEND_SWATCH_HEIGHT_PX = 22;
+const LEGEND_SWATCH_HEIGHT_PX = 34;
 
 function buildBinnedColorExpression(boundaries, colors, scale) {
   const band = ["band", 1];
