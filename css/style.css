@@ -510,6 +510,11 @@ table.headline-table tr.group-row td {
    regions (vs. the grouped Regions/States/HUC2 dropdown the Summary Table
    already uses for the same data) is a separate, bigger question, not
    decided here. */
+/* A dropdown with a small uppercase caption above it, so Region/X/Y/Color and
+   Dataset/Variable selectors are self-explanatory rather than bare value boxes. */
+.select-field { display: inline-flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.select-field select { text-transform: none; font-weight: 400; letter-spacing: normal; color: var(--text); }
+
 .region-toggle { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
 .region-type-tabs {
   display: inline-flex;
