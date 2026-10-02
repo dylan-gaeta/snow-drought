@@ -297,10 +297,12 @@ table.headline-table tr.group-row td {
    text links a bullet list would give -- the whole card is clickable. */
 .home-nav-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
   margin: 1.5rem 0;
 }
+@media (max-width: 860px) { .home-nav-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .home-nav-grid { grid-template-columns: 1fr; } }
 .home-nav-card {
   display: block;
   background: var(--bg-panel);
