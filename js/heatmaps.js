@@ -160,6 +160,11 @@ function latestRecordEndMonth() {
 
 async function renderHeatmap() {
   const chart = document.getElementById("heatmap-chart");
+  const titleEl = document.getElementById("heatmap-title");
+  if (titleEl) {
+    const cat = heatmapState.category === "all" ? "All products" : categoryLabelWithIcon(heatmapState.category);
+    titleEl.textContent = `${cat} — ${regionLabelFor(heatmapState.region)}`;
+  }
   const pairs = heatmapPairs(heatmapState.category, heatmapState.family);
   if (pairs.length === 0) {
     chart.innerHTML = '<p class="chart-empty">No products in this category.</p>';

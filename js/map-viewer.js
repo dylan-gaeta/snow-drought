@@ -532,6 +532,14 @@ async function renderRegionValuesTable(entry) {
 
 async function updateInteractiveMapLayer() {
   const entry = currentResponseEntry();
+  const titleEl = document.getElementById("ol-map-title");
+  if (titleEl) {
+    const modeLabel = olMapState.mode === "climatology" ? "Climatology" : olMapState.mode === "raw" ? "Raw units" : "Anomaly";
+    const when = olMapState.mode === "climatology"
+      ? periodLabel(olMapState.period)
+      : `${periodLabel(olMapState.period)} ${olMapState.year}`;
+    titleEl.textContent = `${mapPickerState.product} · ${mapPickerState.response} — ${when} (${modeLabel})`;
+  }
   // Reads the same timeseries JSON every other page uses, not the map image
   // -- so a failure to load/render the actual raster tile below never
   // affects this table. NOT fully independent of COG/style availability
