@@ -133,7 +133,7 @@ function renderQuadrantChart() {
     // many of the two axes point toward drought stress.
     const sx = xMeta.stress_high ? 1 : -1;
     const sy = yMeta.stress_high ? 1 : -1;
-    const tint = { 2: "#bf812d", 1: "#f4e0c5", 0: "#55aea5" };
+    const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
     [1, -1].forEach((xs) => {
       const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
       [1, -1].forEach((ys) => {
@@ -151,7 +151,7 @@ function renderQuadrantChart() {
     });
     annotations.push({
       x: -sxp * 0.96, y: -syp * 0.96, text: `${yMeta.benign} + ${xMeta.benign}`, showarrow: false,
-      font: { size: 12, color: "#0e726a", weight: 700 },
+      font: { size: 12, color: "#0570b0", weight: 700 },
       xanchor: sx > 0 ? "left" : "right", yanchor: sy > 0 ? "bottom" : "top",
     });
   }

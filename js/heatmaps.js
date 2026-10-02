@@ -250,14 +250,18 @@ async function renderHeatmapUnsafe(chart, pairs) {
 
   const trace = {
     x: xLabels, y: yLabels, z, type: "heatmap",
-    // NCL/ColorBrewer BrBG (via the cmaps package), matching the site's
-    // stress=gold/relief=teal convention (data.html, css/style.css) instead
-    // of red/blue -- freeing red exclusively for the "no data" state
-    // (Dylan, 2026-09). Stops spelled out explicitly, same as before, so
-    // zero (dry/wet-neutral) renders pure white rather than BrBG's natural
-    // pale-tan midpoint. Order: teal (relief) low -> gold (stress) high.
+    // NCL precip_diff_12lev / ColorBrewer BrBG, the full 13-stop spectrum (via
+    // the cmaps package) -- the same ramp the map anomaly layers and the
+    // snowdrought.org welcome border use, so the whole site reads one palette
+    // rather than just the two teal/brown extremes. Red stays reserved for the
+    // "no data" state. White is pinned exactly at zero via zmid, so the
+    // midpoint is neutral rather than BrBG's natural pale-tan. Order: blue
+    // (relief) low -> white (neutral) -> brown (stress) high.
     colorscale: [
-      [0, "#0e726a"], [0.25, "#84cfc3"], [0.5, "#ffffff"], [0.75, "#dfc37e"], [1, "#955910"],
+      [0, "#023858"], [0.0833, "#0570b0"], [0.1667, "#6eaac8"], [0.25, "#53bd9f"],
+      [0.3333, "#99f0b2"], [0.4167, "#cdffcd"], [0.5, "#ffffff"], [0.5833, "#fff5ba"],
+      [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"],
+      [1, "#b66a28"],
     ],
     zmid: 0,
     // Stress/relief key is the legend above the chart (data.html) -- this
