@@ -269,15 +269,24 @@ async function renderHeatmapUnsafe(chart, pairs) {
     // color convention, since squeezing accurate wording ("stress" one end,
     // "relief" the other, not "more/less" of the same thing) into a narrow
     // vertical colorbar title reads worse than a real legend does.
-    colorbar: { title: "σ" },
+    // Horizontal colorbar ABOVE the heatmap: the matrix can be tall (many
+    // product rows), and a right-side vertical bar forced the user to scroll
+    // to the bottom to see its low end. Sitting above, it's always visible.
+    colorbar: {
+      title: { text: "σ", side: "right" },
+      orientation: "h",
+      x: 0.5, xanchor: "center",
+      y: 1.015, yanchor: "bottom",
+      len: 0.5, thickness: 14,
+    },
     hoverongaps: false,
   };
   const layout = {
-    margin: { t: 20, r: 20, b: 60, l: 180 },
+    margin: { t: 70, r: 20, b: 60, l: 180 },
     xaxis: { side: "bottom", tickangle: 0 },
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
-    height: Math.max(360, yLabels.length * 22 + 100),
+    height: Math.max(410, yLabels.length * 22 + 150),
   };
   // Column count ranges from 12 (monthly) to 35+ (a full-record yearly
   // window) -- Plotly's own responsive:true would otherwise shrink every
