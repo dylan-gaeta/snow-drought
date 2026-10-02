@@ -80,6 +80,8 @@ function initHeatmaps() {
   });
   initHeatmapStartYearControl();
 
+  // Default to the first category (Snow), not the full "all products" matrix.
+  heatmapState.category = manifest.category_order[0];
   renderHeatmapCategoryTabs();
   renderHeatmap();
 }
@@ -87,22 +89,25 @@ function initHeatmaps() {
 function renderHeatmapCategoryTabs() {
   const nav = document.getElementById("heatmap-category-tabs");
   nav.innerHTML = "";
-  const allButton = document.createElement("button");
-  allButton.className = "category-tab active";
-  allButton.textContent = "All products";
-  allButton.dataset.category = "all";
-  allButton.addEventListener("click", () => selectHeatmapCategory("all"));
-  nav.appendChild(allButton);
-
   manifest.category_order.forEach((category) => {
     const button = document.createElement("button");
     button.className = "category-tab";
+    if (category === heatmapState.category) button.classList.add("active");
     button.textContent = categoryLabelWithIcon(category);
     button.style.setProperty("--cat", manifest.category_colors[category]);
     button.dataset.category = category;
     button.addEventListener("click", () => selectHeatmapCategory(category));
     nav.appendChild(button);
   });
+  // "All products" (the full cross-category super-heatmap) is an explicit
+  // opt-in at the bottom of the list, not the default -- one category loads first.
+  const allButton = document.createElement("button");
+  allButton.className = "category-tab";
+  if (heatmapState.category === "all") allButton.classList.add("active");
+  allButton.textContent = "All products";
+  allButton.dataset.category = "all";
+  allButton.addEventListener("click", () => selectHeatmapCategory("all"));
+  nav.appendChild(allButton);
 }
 
 function selectHeatmapCategory(category) {
@@ -248,6 +253,11 @@ async function renderHeatmapUnsafe(chart, pairs) {
     return;
   }
 
+  // Symmetric diverging range so 0 sits dead-center (white) and the two ends
+  // are equal-magnitude; the colorbar ends are then labeled by direction.
+  const finite = z.flat().filter((v) => Number.isFinite(v));
+  const zAbs = finite.length ? Math.max(...finite.map((v) => Math.abs(v))) : 1;
+
   const trace = {
     x: xLabels, y: yLabels, z, type: "heatmap",
     // NCL precip_diff_12lev / ColorBrewer BrBG, the full 13-stop spectrum (via
@@ -263,30 +273,30 @@ async function renderHeatmapUnsafe(chart, pairs) {
       [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"],
       [1, "#b66a28"],
     ],
-    zmid: 0,
-    // Stress/relief key is the legend above the chart (data.html) -- this
-    // colorbar just shows the numeric sigma scale, not a repeat of the
-    // color convention, since squeezing accurate wording ("stress" one end,
-    // "relief" the other, not "more/less" of the same thing) into a narrow
-    // vertical colorbar title reads worse than a real legend does.
-    // Horizontal colorbar ABOVE the heatmap: the matrix can be tall (many
-    // product rows), and a right-side vertical bar forced the user to scroll
-    // to the bottom to see its low end. Sitting above, it's always visible.
+    zmin: -zAbs, zmax: zAbs, zmid: 0,
+    // Horizontal colorbar ABOVE the heatmap (the matrix can be tall, and a
+    // right-side vertical bar forced scrolling to see its low end). The two
+    // ends are labeled by direction -- less stress / more stress -- since
+    // bare sigma numbers read as cryptic; exact values are in the hover.
     colorbar: {
-      title: { text: "σ", side: "right" },
       orientation: "h",
       x: 0.5, xanchor: "center",
-      y: 1.015, yanchor: "bottom",
-      len: 0.5, thickness: 14,
+      y: 1.04, yanchor: "bottom",
+      len: 0.55, thickness: 16,
+      tickmode: "array",
+      tickvals: [-zAbs, 0, zAbs],
+      ticktext: ["Stress ↓", "0", "Stress ↑"],
+      tickfont: { size: 12 },
+      title: { text: "Standardized anomaly (σ)", side: "top", font: { size: 13 } },
     },
     hoverongaps: false,
   };
   const layout = {
-    margin: { t: 70, r: 20, b: 60, l: 180 },
+    margin: { t: 90, r: 20, b: 60, l: 180 },
     xaxis: { side: "bottom", tickangle: 0 },
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
-    height: Math.max(410, yLabels.length * 22 + 150),
+    height: Math.max(430, yLabels.length * 22 + 170),
   };
   // Column count ranges from 12 (monthly) to 35+ (a full-record yearly
   // window) -- Plotly's own responsive:true would otherwise shrink every
