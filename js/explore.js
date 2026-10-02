@@ -48,14 +48,14 @@ async function renderTimeseries() {
     return;
   }
   const isSigma = timeseriesSeries === "sigma";
-  // Sign-flipped by drier_is_high so positive always reads as the stress
-  // direction, same convention js/summary.js, js/heatmaps.js, and
-  // js/map-viewer.js already use -- this page used to plot sigma in each
-  // variable's own native sign with no flip at all (Dylan, 2026-09-29).
-  // Raw values are never flipped -- they're a physical quantity, not a
-  // stress-signed statistic.
-  const sign = data.drier_is_high ? 1 : -1;
-  const fullY = isSigma ? region.sigma.map((v) => (v === null || v === undefined ? null : sign * v)) : region.value;
+  // Native-direction sigma here: +sigma = above-normal value, -sigma = below,
+  // so SCA/SWE/precip depletion reads as NEGATIVE -- the intuitive direction
+  // for a single-variable time series. The stress-direction sign flip
+  // (positive = drought stress) stays on the cross-variable views (Compare,
+  // Heatmap, Map), where unifying every product's stress direction aids
+  // comparison, but it misleads here (Dylan, 2026-10-02: SCA depletion was
+  // showing as +sigma). Raw values are unaffected either way.
+  const fullY = isSigma ? region.sigma.map((v) => (v === null || v === undefined ? null : v)) : region.value;
   // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
   // a standardized departure -- their sigma series is identical to raw, not
   // a re-standardization (see common/canonical.py::_load_drought_index).
