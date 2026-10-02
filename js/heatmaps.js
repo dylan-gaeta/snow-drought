@@ -137,7 +137,7 @@ function heatmapPairs(category, family) {
         // products here too, for the same reason summary.js does (see its
         // own "no established aggregation rule" comment).
         if (family !== "monthly" && !entry.aggregation) continue;
-        pairs.push({ product, response });
+        pairs.push({ product, response, category: cat });
       }
     }
   });
@@ -236,6 +236,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
 
   const yLabels = [];
   const z = [];
+  const rowCategories = [];
   // Plotly's categorical y-axis renders array index 0 at the BOTTOM, so
   // pushing category_order's own top-to-bottom sequence (snow/climate first,
   // drought last) unreversed put drought at the top and snow at the bottom
@@ -247,6 +248,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     if (row.every((v) => v === null)) return;
     yLabels.push(`${pair.product} ${pair.response}`);
     z.push(row);
+    rowCategories.push(pair.category);
   });
   if (z.length === 0) {
     chart.innerHTML = '<p class="chart-empty">No data for this selection.</p>';
@@ -257,6 +259,30 @@ async function renderHeatmapUnsafe(chart, pairs) {
   // are equal-magnitude; the colorbar ends are then labeled by direction.
   const finite = z.flat().filter((v) => Number.isFinite(v));
   const zAbs = finite.length ? Math.max(...finite.map((v) => Math.abs(v))) : 1;
+
+  // In the combined "all products" view, separate the stacked category groups
+  // with a black rule and label each section (rotated) on the right.
+  const sepShapes = [];
+  const catLabels = [];
+  if (heatmapState.category === "all") {
+    let runStart = 0;
+    for (let i = 1; i <= rowCategories.length; i++) {
+      if (i === rowCategories.length || rowCategories[i] !== rowCategories[runStart]) {
+        catLabels.push({
+          xref: "paper", x: 1.015, xanchor: "left", yref: "y", y: (runStart + i - 1) / 2, yanchor: "middle",
+          text: categoryLabelWithIcon(rowCategories[runStart]), textangle: -90, showarrow: false,
+          font: { size: 12, color: "#333", weight: 700 },
+        });
+        if (i < rowCategories.length) {
+          sepShapes.push({
+            type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: i - 0.5, y1: i - 0.5,
+            line: { color: "#1b1b1b", width: 1.5 },
+          });
+        }
+        runStart = i;
+      }
+    }
+  }
 
   const trace = {
     x: xLabels, y: yLabels, z, type: "heatmap",
@@ -292,11 +318,13 @@ async function renderHeatmapUnsafe(chart, pairs) {
     hoverongaps: false,
   };
   const layout = {
-    margin: { t: 90, r: 20, b: 60, l: 180 },
+    margin: { t: 90, r: heatmapState.category === "all" ? 48 : 20, b: 60, l: 180 },
     xaxis: { side: "bottom", tickangle: 0 },
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
     height: Math.max(430, yLabels.length * 22 + 170),
+    shapes: sepShapes,
+    annotations: catLabels,
   };
   // Column count ranges from 12 (monthly) to 35+ (a full-record yearly
   // window) -- Plotly's own responsive:true would otherwise shrink every
