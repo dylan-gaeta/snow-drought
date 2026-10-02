@@ -7,8 +7,8 @@
 // multi-product overlay dynamically instead of as a static PNG: every
 // product/response the manifest already groups under one category
 // (manifest.categories[category], the same figure_category() grouping the
-// Python script's COMBINED_GROUPS is built from), styled solid
-// (observation) / dashed (model) per PRODUCT_OBSERVATION_KIND, sign-flipped
+// Python script's COMBINED_GROUPS is built from), styled with a
+// distinct solid color per variable, sign-flipped
 // by drier_is_high so a positive value always reads as the stress direction
 // (the same convention js/summary.js, js/heatmaps.js, and js/map-viewer.js
 // already use), and -- for vegetation -- limited to each product's own
@@ -205,7 +205,7 @@ async function renderCategoryOverlay() {
     document.getElementById("compare-category-legend").innerHTML = "";
     return;
   }
-  note.textContent = "Solid = observation, dashed = model. Check a variable below to add it to the chart.";
+  note.textContent = "Each color is one variable. Check a variable below to add it to the chart.";
 
   // First time this category is shown, default to the first N visible;
   // after that, keep whatever the user has checked/unchecked -- switching
@@ -291,14 +291,13 @@ async function renderCategoryOverlay() {
     const seasonalRegion = seasonal && seasonal.regions[compareState.region];
     const sigma = standardizedSeries(product, response, region, seasonalRegion, category, data.drier_is_high);
 
-    const isObservation = PRODUCT_OBSERVATION_KIND[product] === "observation";
     const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
     const name = `${product} ${response}`;
     const visible = checkedKey.has(pairKey);
     const { dates, values } = filterFromStartYear(region.dates, sigma);
     traces.push({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
-      line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },
+      line: { color, width: 2.5 },
       name, visible,
     });
     legendItems.push({ name, color, visible, pairKey });
@@ -315,13 +314,12 @@ async function renderCategoryOverlay() {
     const seasonalRegion = seasonal && seasonal.regions[compareState.region];
     const sigma = standardizedSeries(entry.product, entry.response, region, seasonalRegion, entry.category, data.drier_is_high);
 
-    const isObservation = PRODUCT_OBSERVATION_KIND[entry.product] === "observation";
     const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
     const name = `${entry.product} ${entry.response}`;
     const { dates, values } = filterFromStartYear(region.dates, sigma);
     traces.push({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
-      line: { color, width: 1.6, dash: isObservation ? "solid" : "dash" },
+      line: { color, width: 2.5 },
       name, visible: true,
     });
     extraChipColors.push(color);
