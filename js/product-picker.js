@@ -111,9 +111,7 @@ function populatePickerResponseSelect(onSelectionChanged) {
   if (pendingPickerView) {
     if (pendingPickerView.region) {
       pickerState.region = pendingPickerView.region;
-      document.querySelectorAll("#region-toggle button").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.region === pendingPickerView.region);
-      });
+      activateRegionButton(document.getElementById("region-toggle"), pendingPickerView.region);
     }
     pendingPickerView = null; // restore only on initial load, never again
   }
@@ -141,7 +139,7 @@ function wirePickerControls(onSelectionChanged) {
     const button = event.target.closest("button[data-region]");
     if (!button) return;
     pickerState.region = button.dataset.region;
-    document.querySelectorAll("#region-toggle button").forEach((btn) => btn.classList.toggle("active", btn === button));
+    document.querySelectorAll("#region-toggle button[data-region]").forEach((btn) => btn.classList.toggle("active", btn === button));
     onSelectionChanged(currentPickerEntry());
   });
 }

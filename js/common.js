@@ -420,15 +420,62 @@ function populateRegionSelect(select, defaultCode = "ALL") {
   });
 }
 
+// Region picker as a "region type" segmented control (Multi-state / States /
+// HUC basins) that swaps which region buttons show -- the three groups map
+// exactly to the manifest's own region_labels / western_states / huc2_regions
+// sets, so the flat 22-button wall becomes ~6-11 buttons at a time, and the
+// two "California" entries (state vs HUC basin) land in separate tabs.
 function populateRegionToggle(container, defaultCode = "ALL") {
   container.innerHTML = "";
-  allRegionEntries().forEach(({ code, label }) => {
-    const button = document.createElement("button");
-    button.dataset.region = code;
-    button.textContent = label;
-    if (code === defaultCode) button.classList.add("active");
-    container.appendChild(button);
+  const groups = [
+    { key: "multistate", label: "Multi-state", entries: regionEntries() },
+    { key: "states", label: "States", entries: manifest.western_states.map((c) => ({ code: c, label: manifest.state_labels[c] })) },
+    { key: "huc", label: "HUC basins", entries: manifest.huc2_regions.map((c) => ({ code: c, label: manifest.huc2_labels[c] })) },
+  ];
+  const activeType = (groups.find((g) => g.entries.some((e) => e.code === defaultCode)) || groups[0]).key;
+
+  const typeTabs = document.createElement("div");
+  typeTabs.className = "region-type-tabs";
+  groups.forEach((g) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "region-type-tab" + (g.key === activeType ? " active" : "");
+    tab.textContent = g.label;
+    tab.dataset.regionType = g.key;
+    tab.addEventListener("click", () => {
+      container.querySelectorAll(".region-type-tab").forEach((t) => t.classList.toggle("active", t === tab));
+      container.querySelectorAll(".region-buttons").forEach((bg) => { bg.style.display = bg.dataset.regionType === g.key ? "" : "none"; });
+    });
+    typeTabs.appendChild(tab);
   });
+  container.appendChild(typeTabs);
+
+  groups.forEach((g) => {
+    const bg = document.createElement("div");
+    bg.className = "region-buttons";
+    bg.dataset.regionType = g.key;
+    bg.style.display = g.key === activeType ? "" : "none";
+    g.entries.forEach(({ code, label }) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.region = code;
+      button.textContent = label;
+      if (code === defaultCode) button.classList.add("active");
+      bg.appendChild(button);
+    });
+    container.appendChild(bg);
+  });
+}
+
+// Highlight a region button by code and reveal the type group it belongs to
+// (used when a URL-restored view selects a region in a non-default group).
+function activateRegionButton(container, code) {
+  const btn = container.querySelector(`.region-buttons button[data-region="${code}"]`);
+  if (!btn) return;
+  container.querySelectorAll(".region-buttons button[data-region]").forEach((b) => b.classList.toggle("active", b === btn));
+  const type = btn.closest(".region-buttons").dataset.regionType;
+  container.querySelectorAll(".region-type-tab").forEach((t) => t.classList.toggle("active", t.dataset.regionType === type));
+  container.querySelectorAll(".region-buttons").forEach((g) => { g.style.display = g.dataset.regionType === type ? "" : "none"; });
 }
 
 // COGs (cogs/) and the data/ JSON are large/binary assets served from

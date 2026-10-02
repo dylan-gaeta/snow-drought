@@ -510,14 +510,36 @@ table.headline-table tr.group-row td {
    regions (vs. the grouped Regions/States/HUC2 dropdown the Summary Table
    already uses for the same data) is a separate, bigger question, not
    decided here. */
-.region-toggle {
+.region-toggle { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+.region-type-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.region-type-tab {
+  border: none;
+  background: #fff;
+  padding: 0.35rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+  transition: background var(--transition), color var(--transition);
+}
+.region-type-tab:last-child { border-right: none; }
+.region-type-tab:hover:not(.active) { background: #eef1f5; color: var(--text); }
+.region-type-tab.active { background: var(--gold); color: #fff; }
+.region-buttons {
   display: inline-flex;
   flex-wrap: wrap;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
 }
-.region-toggle button {
+.region-buttons button {
   border: none;
   background: #fff;
   padding: 0.5rem 1rem;
@@ -529,9 +551,9 @@ table.headline-table tr.group-row td {
   border-right: 1px solid var(--border);
   transition: background var(--transition), color var(--transition);
 }
-.region-toggle button:last-child { border-right: none; }
-.region-toggle button:hover:not(.active) { background: #eef1f5; color: var(--text); }
-.region-toggle button.active { background: var(--blue-dark); color: #fff; }
+.region-buttons button:last-child { border-right: none; }
+.region-buttons button:hover:not(.active) { background: #eef1f5; color: var(--text); }
+.region-buttons button.active { background: var(--blue-dark); color: #fff; }
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
 .map-image-wrap {
