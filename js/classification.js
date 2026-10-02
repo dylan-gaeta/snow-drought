@@ -39,8 +39,15 @@ const REGIME_LABELS = {
   dry: "Dry snow drought", warm_dry: "Warm & dry snow drought",
   warm: "Warm snow drought", none: "No snow drought",
 };
+// NCL precip_diff_12lev diverging ramp -- used when points are colored by a
+// driver variable's anomaly (centered at 0), matching the rest of the site.
+const PRECIP_DIFF = [
+  [0, "#023858"], [0.0833, "#0570b0"], [0.1667, "#6eaac8"], [0.25, "#53bd9f"],
+  [0.3333, "#99f0b2"], [0.4167, "#cdffcd"], [0.5, "#ffffff"], [0.5833, "#fff5ba"],
+  [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"], [1, "#b66a28"],
+];
 
-const quadrantState = { region: "ALL", x: "t_anom", y: "ppt_anom", rows: [] };
+const quadrantState = { region: "ALL", x: "t_anom", y: "ppt_anom", color: "year", rows: [] };
 
 async function initQuadrantView() {
   const xSelect = document.getElementById("quadrant-x-select");
@@ -81,8 +88,21 @@ async function initQuadrantView() {
   xSelect.value = quadrantState.x;
   ySelect.value = quadrantState.y;
 
+  const colorSelect = document.getElementById("quadrant-color-select");
+  const colorOptions = [["year", "Winter year"],
+    ...Object.entries(QUADRANT_VARIABLES).map(([key, meta]) => [key, meta.label]),
+    ["regime", "Classification regime"]];
+  colorOptions.forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    colorSelect.appendChild(option);
+  });
+  colorSelect.value = quadrantState.color;
+
   xSelect.addEventListener("change", (e) => { quadrantState.x = e.target.value; renderQuadrantChart(); });
   ySelect.addEventListener("change", (e) => { quadrantState.y = e.target.value; renderQuadrantChart(); });
+  colorSelect.addEventListener("change", (e) => { quadrantState.color = e.target.value; renderQuadrantChart(); });
   regionSelect.addEventListener("change", (e) => {
     quadrantState.region = e.target.value;
     renderQuadrantChart();
@@ -156,23 +176,51 @@ function renderQuadrantChart() {
     });
   }
 
+  // Year labels on every point with a short leader line, matching the static
+  // classification figures (Dylan, #3); 2026 is bold and larger.
+  const sizes = points.map((p) => (p.winter_year === 2026 ? 16 : 9));
+  points.forEach((p) => {
+    annotations.push({
+      x: p[x], y: p[y], text: String(p.winter_year),
+      showarrow: true, arrowhead: 0, arrowwidth: 0.7, arrowcolor: "#bbb", ax: 10, ay: -11,
+      font: {
+        size: p.winter_year === 2026 ? 14 : 12,
+        color: p.winter_year === 2026 ? "#111" : "#555",
+        weight: p.winter_year === 2026 ? 700 : 400,
+      },
+    });
+  });
+
+  // Color encoding (3rd axis): by winter year (default, sequential), by any
+  // driver variable's anomaly (diverging, centered at 0), or by regime.
+  const colorBy = quadrantState.color;
+  let marker;
+  if (colorBy === "regime") {
+    marker = { size: sizes, color: points.map((p) => REGIME_COLORS[p.regime]), line: { color: "#333", width: 0.8 } };
+  } else if (colorBy === "year") {
+    marker = {
+      size: sizes, color: points.map((p) => p.winter_year), colorscale: "Viridis",
+      colorbar: { title: { text: "Winter year", side: "right" }, thickness: 14 },
+      line: { color: "#333", width: 0.8 },
+    };
+  } else {
+    const cMeta = QUADRANT_VARIABLES[colorBy];
+    marker = {
+      size: sizes, color: points.map((p) => p[colorBy]), colorscale: PRECIP_DIFF, cmid: 0,
+      colorbar: { title: { text: `${cMeta.label} (${cMeta.unit})`, side: "right" }, thickness: 14 },
+      line: { color: "#333", width: 0.8 },
+    };
+  }
+
   const trace = {
     x: points.map((p) => p[x]), y: points.map((p) => p[y]),
-    // Always-on year labels overlapped illegibly wherever points cluster --
-    // hover already shows "YYYY: regime" (hovertext below), so the year
-    // isn't lost, just no longer forced onto the chart itself.
-    mode: "markers", type: "scatter",
-    marker: {
-      size: points.map((p) => (p.winter_year === 2026 ? 16 : 9)),
-      color: points.map((p) => REGIME_COLORS[p.regime]),
-      line: { color: "#333", width: 0.8 },
-    },
+    mode: "markers", type: "scatter", marker,
     hovertext: points.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),
     hoverinfo: "text",
   };
 
   const layout = {
-    margin: { t: 20, r: 20, b: 55, l: 65 },
+    margin: { t: 20, r: 80, b: 55, l: 65 },
     xaxis: { title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
     yaxis: { title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
