@@ -59,13 +59,15 @@ function renderCoverageChart() {
   // computed from the data's own latest end date, not a hardcoded year.
   const latestEnd = rows.reduce((max, r) => (r.end > max ? r.end : max), rows[0].end);
   const layout = {
-    margin: { t: 20, r: 20, b: 45, l: 180 },
+    margin: { t: 55, r: 20, b: 45, l: 180 },
     barmode: "stack",
     xaxis: { type: "date", title: "Record coverage", range: [`${DASHBOARD_MIN_YEAR}-01-01`, latestEnd] },
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
     height: Math.max(400, rows.length * 16 + 100),
-    legend: { orientation: "h", y: 1.08 },
+    // Anchor the legend flush above the plot top; a fractional y (e.g. 1.08)
+    // floats it ~140px up on this very tall chart, leaving a big empty band.
+    legend: { orientation: "h", y: 1, yanchor: "bottom" },
   };
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }

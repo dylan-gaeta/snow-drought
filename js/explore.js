@@ -6,12 +6,12 @@
 let timeseriesSeries = "value";
 let timeseriesStartYear = null; // null = default recent window, see populateStartYearControl
 
-// Default view shows a readable recent window, not the full 1990-2026
-// record -- ~430 monthly points crammed into one chart rendered as a solid
-// black smear on any but a very wide screen (confirmed live, 2026-09-28:
-// Dylan's mobile screenshot showed exactly this). Full history is one
-// dropdown selection away, never removed, just no longer the default.
-const DEFAULT_RECENT_YEARS = 15;
+// Default view starts at 2000, or the product's own first year if that's
+// later -- the full 1990-2026 record crams ~430 monthly points into a solid
+// black smear on any but a very wide screen, and short-record products (SMAP,
+// SMOS, GRACE) shouldn't open on a long empty pre-record span. Full history
+// stays one dropdown selection away, never removed, just not the default.
+const DASHBOARD_DEFAULT_START_YEAR = 2000;
 
 function populateStartYearControl(entry) {
   const recordStartYear = entry.record_start
@@ -33,7 +33,7 @@ function populateStartYearControl(entry) {
       option.textContent = String(y);
       select.appendChild(option);
     }
-    defaultStartYear = Math.max(recordStartYear, recordEndYear - DEFAULT_RECENT_YEARS + 1);
+    defaultStartYear = Math.min(Math.max(recordStartYear, DASHBOARD_DEFAULT_START_YEAR), recordEndYear);
   }
   timeseriesStartYear = defaultStartYear;
   select.value = defaultStartYear !== null ? String(defaultStartYear) : "";
