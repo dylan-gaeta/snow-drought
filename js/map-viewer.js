@@ -485,7 +485,9 @@ async function renderRegionValuesTable(entry) {
   if (olMapState.year === null) {
     heading.textContent = "Regional values";
     body.innerHTML = "";
-    note.textContent = "No years available for this selection.";
+    note.textContent = olMapState.mode === "climatology"
+      ? "Regional values are year-specific — switch to Raw units or Anomaly (and pick a year) to see them."
+      : "No years available for this selection.";
     return;
   }
   if (!entry.aggregation) {
