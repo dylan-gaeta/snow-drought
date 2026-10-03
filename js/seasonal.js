@@ -129,9 +129,9 @@ async function renderSeasonal() {
   // labels (confirmed live, 375px). Below the chart, horizontal, instead --
   // same breakpoint map.html's own side-panel-to-stacked layout already uses.
   const isNarrow = window.innerWidth < 820;
+  document.getElementById("seasonal-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
   const layout = {
-    title: { text: `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`, font: { size: 15, color: "#023858" } },
-    margin: { t: 48, r: 20, b: isNarrow ? 90 : 55, l: 60 },
+    margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },
     yaxis: { title: isAnomaly ? `${data.response} anomaly (${data.units})` : `${data.response} (${data.units})`, zeroline: isAnomaly, ...PLOTLY_AXIS_LINE },
     xaxis: { type: "category", tickvals: x, ticktext: tickText, showgrid: false, ...PLOTLY_AXIS_LINE },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
