@@ -107,8 +107,8 @@ function formatSummaryValue(result, units, valueType) {
     return `${pctSign}${result.percentOfNormal.toFixed(0)}%`;
   }
   if (valueType === "rank") {
-    if (result.stressRank === null || result.n === null) return "&mdash;";
-    return `${result.stressRank}/${result.n}`;
+    if (result.stressRank === null || result.nRecord === null) return "&mdash;";
+    return `${result.stressRank}/${result.nRecord}`;
   }
   return `${sign}${result.sigma.toFixed(1)}`; // "sigma" default
 }

@@ -337,9 +337,15 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     // of normal" numerically unstable (small denominator), not meaningful.
     if (Math.abs(meanRaw) > stdRaw) percentOfNormal = ((targetRaw - meanRaw) / meanRaw) * 100;
   }
+  // The rank badge is "stressRank of nRecord": stressRank is ranked against
+  // the FULL record (recordAnomalies / nRecord above), so its denominator must
+  // be nRecord, NOT the smaller baseline sample n -- pairing them gave
+  // impossible badges like "36/34" (rank out of a 37-year record over a
+  // 34-year baseline count) (Dylan, 2026-10). `n` stays for sigma/percentile,
+  // which ARE baseline-relative.
   return {
     sigma, percentile, rawValue: targetRaw, percentOfNormal,
-    isNativeIndex: false, stressRank, n,
+    isNativeIndex: false, stressRank, n, nRecord,
   };
 }
 

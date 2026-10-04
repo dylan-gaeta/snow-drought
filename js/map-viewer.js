@@ -496,9 +496,9 @@ function regionTableCellClass(result, drierIsHigh) {
 }
 
 function formatRankBadge(result, cls) {
-  if (result.stressRank === null || result.n === null) return "&mdash;";
+  if (result.stressRank === null || result.nRecord === null) return "&mdash;";
   const badgeCls = cls === "stress" || cls === "relief" ? cls : "";
-  return `<span class="rank-badge ${badgeCls}">${result.stressRank}/${result.n}</span>`;
+  return `<span class="rank-badge ${badgeCls}">${result.stressRank}/${result.nRecord}</span>`;
 }
 
 async function renderRegionValuesTable(entry) {
