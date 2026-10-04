@@ -314,6 +314,15 @@ function initInteractiveMap() {
   });
   document.getElementById("ol-year-prev-btn").addEventListener("click", () => stepYear(-1));
   document.getElementById("ol-year-next-btn").addEventListener("click", () => stepYear(1));
+  document.getElementById("ol-year-slider").addEventListener("input", (event) => {
+    const years = olMapState.availableYears || [];
+    const year = years[parseInt(event.target.value, 10)];
+    if (year === undefined || year === olMapState.year) return;
+    olMapState.year = year;
+    document.getElementById("ol-year-select").value = String(year);
+    updateYearStepperButtons();
+    updateInteractiveMapLayer();
+  });
   document.getElementById("ol-huc-toggle").addEventListener("change", (event) => {
     olMapState.hucLayer.setVisible(event.target.checked);
   });
@@ -451,6 +460,12 @@ function updateYearControlForPeriod(slot) {
     select.appendChild(option);
   });
   select.value = String(olMapState.year);
+  // The scrubber ranges over availableYears by INDEX (years aren't always
+  // contiguous), so dragging it steps through exactly the years that have a COG.
+  const slider = document.getElementById("ol-year-slider");
+  slider.min = "0";
+  slider.max = String(years.length - 1);
+  slider.value = String(Math.max(0, years.indexOf(olMapState.year)));
   updateYearStepperButtons();
 }
 
@@ -459,6 +474,8 @@ function updateYearStepperButtons() {
   const currentIndex = years.indexOf(olMapState.year);
   document.getElementById("ol-year-prev-btn").disabled = currentIndex <= 0;
   document.getElementById("ol-year-next-btn").disabled = currentIndex === -1 || currentIndex >= years.length - 1;
+  const slider = document.getElementById("ol-year-slider");
+  if (slider && currentIndex !== -1) slider.value = String(currentIndex);
 }
 
 function stepYear(delta) {

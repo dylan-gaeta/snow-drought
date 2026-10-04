@@ -878,3 +878,7 @@ table.headline-table tr.group-row td {
 .sib4-pft-checks { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0.5rem 0 0.8rem; }
 .sib4-pft-checks .compare-legend-item { font-size: 0.88rem; }
 .ol-period-group#sib4-limitation-factors, #sib4-limitation-factors { display: inline-flex; flex-wrap: wrap; }
+
+/* Horizontal year scrubber in the map's year control: drag across the record
+   to step through the years that have a COG (indices into availableYears). */
+.ol-year-slider { width: clamp(120px, 22vw, 240px); accent-color: var(--blue-dark); cursor: pointer; vertical-align: middle; }
