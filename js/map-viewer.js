@@ -102,10 +102,20 @@ function selectMapCategory(category) {
   populateMapProductSelect();
 }
 
+// A response gets a spatial map unless its manifest entry is flagged
+// no_spatial_maps -- site/point products (e.g. PhenoCam camera sites) whose
+// gridded field is interpolated from sparse points, misleading as a map
+// (Dylan, 2026-10). Such products still appear on Time Series/Seasonal/etc.
+function responseHasSpatialMap(product, response) {
+  const entry = manifest.categories[mapPickerState.category]?.[product]?.[response];
+  return !(entry && entry.no_spatial_maps);
+}
+
 function populateMapProductSelect() {
   const select = document.getElementById("product-select");
   select.innerHTML = "";
-  const products = Object.keys(manifest.categories[mapPickerState.category]);
+  const products = Object.keys(manifest.categories[mapPickerState.category]).filter((product) =>
+    Object.keys(manifest.categories[mapPickerState.category][product]).some((r) => responseHasSpatialMap(product, r)));
   products.forEach((product) => {
     const option = document.createElement("option");
     option.value = product;
@@ -122,7 +132,8 @@ function populateMapProductSelect() {
 function populateMapResponseSelect() {
   const select = document.getElementById("response-select");
   select.innerHTML = "";
-  const responses = Object.keys(manifest.categories[mapPickerState.category][mapPickerState.product]);
+  const responses = Object.keys(manifest.categories[mapPickerState.category][mapPickerState.product])
+    .filter((response) => responseHasSpatialMap(mapPickerState.product, response));
   responses.forEach((response) => {
     const option = document.createElement("option");
     option.value = response;
