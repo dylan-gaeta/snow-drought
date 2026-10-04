@@ -282,8 +282,8 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     if (idx === -1) return null;
     const v = region.value[idx];
     return {
-      sigma: v, percentile: null, rawValue: v, percentOfNormal: null,
-      isNativeIndex: true, stressRank: null, n: null,
+      sigma: v, percentile: null, rawValue: v, anomaly: null, percentOfNormal: null,
+      isNativeIndex: true, stressRank: null, n: null, nRecord: null,
     };
   }
   const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
@@ -344,7 +344,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // 34-year baseline count) (Dylan, 2026-10). `n` stays for sigma/percentile,
   // which ARE baseline-relative.
   return {
-    sigma, percentile, rawValue: targetRaw, percentOfNormal,
+    sigma, percentile, rawValue: targetRaw, anomaly: targetAnomaly, percentOfNormal,
     isNativeIndex: false, stressRank, n, nRecord,
   };
 }

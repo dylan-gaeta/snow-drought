@@ -73,9 +73,12 @@ function initSummaryTable() {
   });
 
   const valueSelect = document.getElementById("summary-value-select");
+  const localGlossary = {
+    anomaly_raw: "The departure from the baseline mean in the variable's own physical units (not standardized) -- the window value minus its baseline-mean normal.",
+  };
   const updateValueGlossary = () => {
     document.getElementById("summary-value-glossary").textContent =
-      (manifest.value_type_glossary || {})[valueSelect.value] || "";
+      (manifest.value_type_glossary || {})[valueSelect.value] || localGlossary[valueSelect.value] || "";
   };
   valueSelect.addEventListener("change", (event) => {
     summaryState.valueType = event.target.value;
@@ -97,6 +100,10 @@ function initSummaryTable() {
 function formatSummaryValue(result, units, valueType) {
   const sign = result.sigma >= 0 ? "+" : "";
   if (valueType === "raw") return `${result.rawValue.toFixed(2)} ${units}`;
+  if (valueType === "anomaly_raw") {
+    if (result.anomaly === null || result.isNativeIndex) return "&mdash;";
+    return `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${units}`;
+  }
   if (valueType === "percentile") {
     const percentile = result.isNativeIndex ? nativeIndexPercentile(result.sigma) : result.percentile;
     return sigmaToPercentileLabel(percentile);

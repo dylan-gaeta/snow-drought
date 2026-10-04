@@ -73,6 +73,7 @@
             <button type="button" data-mode="raw">Raw units</button>
             <button type="button" data-mode="anomaly">Anomaly</button>
           </div>
+          <label class="select-field select-field-inline">Color theme <select id="ol-colormap-select" aria-label="Color theme"></select></label>
           <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
             <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
             <div class="ol-year-slider-wrap">
@@ -106,7 +107,7 @@
           <h3 id="ol-region-table-heading">Regional values</h3>
           <p id="ol-region-table-note" class="value-glossary"></p>
           <table class="headline-table" id="ol-region-table">
-            <thead><tr><th>Region</th><th>Raw value</th><th>Anomaly (σ)</th><th>Rank on record</th></tr></thead>
+            <thead><tr><th>Region</th><th id="ol-region-rawval-th">Raw value</th><th>Anomaly (raw)</th><th>Anomaly (σ)</th><th>Rank on record</th></tr></thead>
             <tbody id="ol-region-table-body"></tbody>
           </table>
         </div>
@@ -131,6 +132,7 @@
 </footer>
 
 <script src="js/common.js"></script>
+<script src="js/ncl-colormaps.js"></script>
 <script src="js/map-viewer.js"></script>
 </body>
 </html>

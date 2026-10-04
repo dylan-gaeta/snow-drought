@@ -679,7 +679,7 @@ table.headline-table tr.group-row td {
 /* Dropdown + prev/next steppers, not a drag slider -- exact, one click/tap,
    a native picker on mobile, no fine-motor precision needed (Dylan,
    2026-09: "these sliders are not the optimal way to select the year"). */
-.year-control-wrap { display: inline-flex; align-items: center; gap: 0.4rem; }
+.year-control-wrap { display: flex; align-items: center; gap: 0.4rem; flex-basis: 100%; width: 100%; }
 .year-control-wrap select {
   padding: 0.5rem 1.9rem 0.5rem 0.7rem;
   border: 1px solid var(--border);
@@ -764,6 +764,7 @@ table.headline-table tr.group-row td {
    left-to-right, lowest value on the left, spanning the full map width. The
    wrap reserves space below for the absolutely-positioned break ticks. */
 .ol-legend-scale-wrap { position: relative; width: 100%; margin-bottom: 1.5rem; }
+.ol-legend-gradient { width: 100%; height: 16px; box-shadow: 0 0 0 1px #1b1b1b; border-radius: 2px; }
 .ol-legend-scale {
   display: flex;
   flex-direction: row;
@@ -896,7 +897,7 @@ table.headline-table tr.group-row td {
 
 /* Horizontal year scrubber in the map's year control: drag across the record
    to step through the years that have a COG (indices into availableYears). */
-.ol-year-slider-wrap { display: inline-block; width: clamp(140px, 24vw, 260px); vertical-align: middle; }
+.ol-year-slider-wrap { flex: 1 1 auto; min-width: 0; }
 .ol-year-slider { width: 100%; accent-color: var(--blue-dark); cursor: pointer; display: block; }
 .ol-year-axis { position: relative; height: 1em; margin-top: 1px; }
 .ol-year-tick { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--text-muted); white-space: nowrap; }
@@ -940,3 +941,6 @@ table.headline-table tr.group-row td {
 .snotel-axis-tick { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .snotel-axis-tick::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: 3px; border-left: 1px solid var(--border); }
 .snotel-day-label { font-weight: 600; color: var(--navy); min-width: 7.5em; }
+
+/* Compact inline label+select (Map "Color theme" in the controls row). */
+.select-field-inline { flex-direction: row; align-items: center; gap: 0.4rem; }

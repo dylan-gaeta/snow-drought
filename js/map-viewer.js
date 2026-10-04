@@ -180,7 +180,34 @@ const olMapState = {
   currentStyle: null,
   currentCogUrl: null,
   currentScale: null,
+  colormap: null, // null = the product's own NCL palette; else an NCL_COLORMAPS key
 };
+
+// The Color theme dropdown offers the NCL tables appropriate to the current
+// mode -- diverging for Anomaly, sequential for Climatology/Raw -- plus the
+// product's own default. Repopulated when the mode changes; an override that
+// no longer fits the new mode's group resets to Default.
+function populateColormapSelect() {
+  const sel = document.getElementById("ol-colormap-select");
+  if (!sel || typeof NCL_COLORMAPS === "undefined") return;
+  const group = olMapState.mode === "anomaly" ? "diverging" : "sequential";
+  sel.innerHTML = '<option value="">Default (product)</option>' +
+    Object.entries(NCL_COLORMAPS[group]).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+  if (olMapState.colormap && NCL_COLORMAPS[group][olMapState.colormap]) sel.value = olMapState.colormap;
+  else { olMapState.colormap = null; sel.value = ""; }
+}
+
+// The palette for the current mode: an NCL override if chosen, else the
+// product's own style palette (256-stop sequential / diverging anomaly).
+function currentPalette(style) {
+  const isDiverging = olMapState.mode === "anomaly";
+  const defaultPalette = isDiverging ? style.anomaly_colors : style.baseline_colors;
+  if (olMapState.colormap && typeof NCL_COLORMAPS !== "undefined") {
+    const group = isDiverging ? "diverging" : "sequential";
+    if (NCL_COLORMAPS[group][olMapState.colormap]) return NCL_COLORMAPS[group][olMapState.colormap].colors;
+  }
+  return defaultPalette;
+}
 
 const COG_NODATA = -32768;
 
@@ -204,24 +231,31 @@ const COG_NODATA = -32768;
 // not assumed) so a Climatology/Raw legend (built client-side from just
 // [vmin, vmax], see updateInteractiveMapLayer) looks identical in shape to
 // an Anomaly one, not just similar.
-const DISCRETE_BINS = 11;
+function hexToRgbTriple(hex) {
+  const v = hex.replace("#", "");
+  return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)];
+}
 
-function buildBinnedColorExpression(boundaries, colors, scale) {
-  const band = ["band", 1];
-  const value = ["/", band, scale];
-  // ol.source.GeoTIFF's `nodata` option auto-generates a second (alpha)
-  // band -- 1 where valid, 0 where nodata -- rather than preserving the
-  // sentinel value in band 1 (confirmed directly via getData() in a real
-  // browser: a known-ocean pixel read back as [0, 0], a known-land pixel as
-  // [realValue, 255/1]). Without this explicit check every nodata pixel's
-  // band-1 value of 0 fell into whatever bin straddles zero, rendering
-  // ocean as an opaque "near-normal" color instead of transparent.
-  const expr = ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0]];
-  for (let i = 0; i < boundaries.length - 1; i++) {
-    expr.push(["<", value, boundaries[i + 1]], colors[i]);
+// Continuous color ramp (Dylan, 2026-10: "use continuous colorbars for all
+// these maps... good continuous versions at NCL"). The palette's hex stops
+// (256 for climatology/raw, fewer but still smooth for anomaly) are spread
+// evenly across [vmin, vmax] and interpolated linearly; OL clamps values
+// outside that range to the end colors. Replaces the old discrete-bin scheme,
+// whose break ticks/extend arrows were hard to format on the dynamic maps.
+function buildContinuousColorExpression(vmin, vmax, colors, scale) {
+  const value = ["/", ["band", 1], scale];
+  const stops = [];
+  const n = colors.length;
+  for (let i = 0; i < n; i++) {
+    const v = vmin + (i / (n - 1)) * (vmax - vmin);
+    const [r, g, b] = hexToRgbTriple(colors[i]);
+    stops.push(v, ["color", r, g, b]);
   }
-  expr.push(colors[colors.length - 1]);
-  return expr;
+  // ol.source.GeoTIFF's `nodata` option adds an alpha band (0 at nodata); gate
+  // on it so ocean/out-of-domain stays transparent instead of taking vmin's
+  // color (confirmed via getData(): nodata reads back as [0, 0]).
+  return ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0],
+    ["interpolate", ["linear"], value, ...stops]];
 }
 
 // Smallest number of decimal places at which every boundary in a
@@ -316,8 +350,18 @@ function initInteractiveMap() {
     if (!button || button.disabled) return;
     olMapState.mode = button.dataset.mode;
     document.querySelectorAll("#ol-mode-toggle button").forEach((btn) => btn.classList.toggle("active", btn === button));
+    populateColormapSelect(); // diverging vs sequential list follows the mode
     updateInteractiveMapLayer();
   });
+  document.getElementById("ol-colormap-select").addEventListener("change", (event) => {
+    olMapState.colormap = event.target.value || null;
+    // Rebuild every cached layer with the new palette (WebGLTile's color style
+    // is fixed at construction); the COG bytes stay HTTP-cached so this is fast.
+    if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
+    olMapState.layerCache = {};
+    updateInteractiveMapLayer();
+  });
+  populateColormapSelect();
   document.getElementById("ol-year-select").addEventListener("change", (event) => {
     olMapState.year = parseInt(event.target.value, 10);
     updateYearStepperButtons();
@@ -459,7 +503,7 @@ function updateYearControlForPeriod(slot) {
     olMapState.year = null;
     return;
   }
-  wrap.style.display = "inline-flex";
+  wrap.style.display = "flex";
   if (!years.includes(olMapState.year)) {
     olMapState.year = years[years.length - 1];
   }
@@ -481,15 +525,17 @@ function updateYearControlForPeriod(slot) {
   updateYearStepperButtons();
 }
 
-// Sparse year ticks under the scrubber: the first and last year, plus any
-// decade year (…2000, 2010, 2020) in between -- labeling all ~37 would overlap.
+// Year ticks under the scrubber: pick a step (1/2/3/5/10 years) giving a dozen
+// or so evenly-spaced labels -- dense enough to read a year off the slider, not
+// so dense the 4-digit labels overlap. Always include the first and last year.
 function buildYearAxis(years) {
   const axis = document.getElementById("ol-year-axis");
   if (!axis) return;
   if (years.length < 2) { axis.innerHTML = ""; return; }
   const last = years.length - 1;
+  const step = [1, 2, 3, 5, 10, 20].find((s) => years.length / s <= 16) || 20;
   const show = new Set([0, last]);
-  years.forEach((y, i) => { if (y % 10 === 0) show.add(i); });
+  years.forEach((y, i) => { if ((y - years[0]) % step === 0) show.add(i); });
   axis.innerHTML = [...show].sort((a, b) => a - b).map((i) =>
     `<span class="ol-year-tick" style="left:${(i / last) * 100}%">${years[i]}</span>`
   ).join("");
@@ -566,6 +612,14 @@ async function renderRegionValuesTable(entry) {
   const year = olMapState.year;
   heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
+  // Clarify what "Raw value" is: a single month is that month's value; a
+  // multi-month window is the day-weighted MEAN (mean-type variables) or the
+  // SUM (accumulation variables like precip/runoff) over the window.
+  const rawHeader = document.getElementById("ol-region-rawval-th");
+  if (rawHeader) {
+    rawHeader.textContent = /^\d{2}$/.test(period) ? "Raw value"
+      : data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
+  }
   // Named regions + all 11 western states + all 5 HUC2 basins -- the same
   // full region set data.html's Summary Table exposes (as three separate
   // group tabs there; here as one list with group-row dividers, since rows
@@ -578,16 +632,18 @@ async function renderRegionValuesTable(entry) {
     { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
   ];
   const rows = regionGroups.flatMap(({ label: groupLabel, entries }) => {
-    const groupRow = `<tr class="group-row"><td colspan="4">${groupLabel}</td></tr>`;
+    const groupRow = `<tr class="group-row"><td colspan="5">${groupLabel}</td></tr>`;
     const dataRows = entries.map(({ code, label }) => {
       const region = data.regions[code];
       const result = region ? computeWindowValue(data, region, period, year) : null;
-      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
       const cls = regionTableCellClass(result, data.drier_is_high);
       const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+      const rawAnomText = (result.anomaly === null || result.isNativeIndex)
+        ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;
       const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
       const rankText = formatRankBadge(result, cls);
-      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
     });
     return [groupRow, ...dataRows];
   });
@@ -739,8 +795,7 @@ async function updateInteractiveMapLayer() {
 
   const legend = document.getElementById("ol-legend");
   const units = entry.units || "";
-  const palette = olMapState.mode === "climatology" || olMapState.mode === "raw"
-    ? style.baseline_colors : style.anomaly_colors;
+  const palette = currentPalette(style);
   const label = olMapState.mode === "climatology" ? `Climatology (${units})`
     : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
     : `${units} anomaly`;
@@ -752,63 +807,24 @@ async function updateInteractiveMapLayer() {
     // no boundaries computed yet -- show units only, no color scale.
     legend.innerHTML = `<div class="ol-legend-label">${units}</div>`;
   } else {
-    // Climatology/Raw ships only [vmin, vmax] (a continuous ramp needs
-    // nothing more), but every map now renders as discrete bins -- Anomaly
-    // included, no exceptions (Dylan, 2026-09: "all the maps should use
-    // discrete color bins... there is absolutely no reason the climatology
-    // maps and anomaly maps aren't 100% identical, including the colorbar
-    // style"). Expand [vmin, vmax] into DISCRETE_BINS evenly-spaced edges
-    // and downsample the 256-stop continuous palette to match -- Anomaly's
-    // own boundaries/anomaly_colors are already exactly DISCRETE_BINS bins
-    // from the server (_diverging_bins), so only Climatology/Raw needs this.
-    if (boundaries.length === 2) {
-      const [vmin, vmax] = boundaries;
-      boundaries = Array.from({ length: DISCRETE_BINS + 1 }, (_, i) => vmin + (i / DISCRETE_BINS) * (vmax - vmin));
-      binColors = Array.from(
-        { length: DISCRETE_BINS },
-        (_, i) => palette[Math.round((i / (DISCRETE_BINS - 1)) * (palette.length - 1))],
-      );
-    }
-    const nBins = boundaries.length - 1;
-    // Ticks sit AT the color breaks (the line between two swatches), not
-    // floating at a single point inside one bin -- nBins+1 boundary values,
-    // not nBins bin-center values (Dylan, 2026-09-29: "the colorbar ticks
-    // should be the color BREAKS, not a single point label for a whole
-    // bin"). Vertical, highest value at top -- the sidebar this lives in is
-    // narrow and tall, not wide.
-    const decimals = pickTickDecimals(boundaries);
-    // Colorbar "extend" arrows (Dylan, 2026-10): a percentile-capped scale is
-    // open-ended, so its end bins render as outward triangles (matplotlib
-    // extend='both') to show values continue beyond the cap -- the honest read
-    // for a p95/p99 cap, where ~5%/1% of cells sit past the last finite edge.
-    // Anomaly is always a capped departure, so it always extends. A physically
-    // bounded raw/climatology scale (0-1, 0-100) covers its full range with
-    // nothing beyond, so the export marks it raw_full_range and it gets no
-    // arrow. The outer edge tick is dropped on an extended end (an open end has
-    // no finite boundary value).
-    const extend = olMapState.mode === "anomaly" || !style.raw_full_range;
-    // Horizontal colorbar above the map: bins ascend left-to-right (lowest
-    // value on the left, the standard horizontal-colorbar convention), so no
-    // reverse.
-    const swatches = binColors.map((color, i) => {
-      const lo = boundaries[i].toFixed(decimals);
-      const hi = boundaries[i + 1].toFixed(decimals);
-      const arrowClass = extend && i === 0 ? " ol-legend-extend-low"
-        : extend && i === binColors.length - 1 ? " ol-legend-extend-high" : "";
-      return `<span class="ol-legend-swatch${arrowClass}" style="background:${color}" title="${lo} to ${hi}"></span>`;
-    }).join("");
-    // One tick per boundary (nBins+1 total), each on the seam between the two
-    // swatches it separates: break i sits at i/nBins of the bar's width. The
-    // outermost edge is dropped on an extended (open) end.
-    const ticks = Array.from({ length: nBins + 1 }, (_, i) => {
-      if (extend && (i === 0 || i === nBins)) return "";
-      const left = (i / nBins) * 100;
-      return `<span class="ol-legend-tick" style="left:${left}%">${boundaries[i].toFixed(decimals)}</span>`;
-    }).join("");
+    // Continuous color ramp over [vmin, vmax] (Climatology/Raw ship exactly
+    // that pair; Anomaly's symmetric diverging boundaries give it as [first,
+    // last]). The palette renders as a smooth CSS gradient with a few evenly-
+    // spaced axis labels -- no discrete bins, break ticks, or extend arrows to
+    // align (Dylan, 2026-10). Values outside the range clamp to the end colors.
+    const vmin = boundaries[0];
+    const vmax = boundaries[boundaries.length - 1];
+    const nTicks = 5;
+    const tickValues = Array.from({ length: nTicks }, (_, i) => vmin + (i / (nTicks - 1)) * (vmax - vmin));
+    const decimals = pickTickDecimals(tickValues);
+    const gradient = `linear-gradient(to right, ${palette.join(", ")})`;
+    const ticks = tickValues.map((v, i) =>
+      `<span class="ol-legend-tick" style="left:${(i / (nTicks - 1)) * 100}%">${v.toFixed(decimals)}</span>`
+    ).join("");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
-      `<div class="ol-legend-scale-wrap"><div class="ol-legend-scale">${swatches}</div>` +
+      `<div class="ol-legend-scale-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +
       `<div class="ol-legend-ticks">${ticks}</div></div>`;
-    colorExpr = buildBinnedColorExpression(boundaries, binColors, fileEntry.scale);
+    colorExpr = buildContinuousColorExpression(vmin, vmax, palette, fileEntry.scale);
   }
 
   if (!layer) {
