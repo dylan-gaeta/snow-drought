@@ -44,6 +44,9 @@
 
     <div class="selector-row">
       <div class="region-toggle" id="region-toggle"></div>
+      <label class="boundary-toggle" for="sib4-start-year">From year
+        <select id="sib4-start-year" aria-label="Start year"></select>
+      </label>
     </div>
 
     <!-- 1. PFT land-cover composition -->
@@ -70,7 +73,12 @@
         <label class="select-field">Variable <select id="sib4-ts-variable" aria-label="Variable"></select></label>
         <div class="series-toggle" id="sib4-ts-toggle">
           <button data-series="raw" class="active">Raw units</button>
-          <button data-series="anomaly">Anomaly</button>
+          <button data-series="sigma">Anomaly (&sigma;)</button>
+          <button data-series="anomaly">Anomaly (raw)</button>
+        </div>
+        <div class="series-toggle" id="sib4-ts-view">
+          <button data-view="series" class="active">Time series</button>
+          <button data-view="seasonal">Seasonal cycle</button>
         </div>
         <label class="boundary-toggle"><input type="checkbox" id="sib4-ts-aggregate" checked> Region mean (AGG)</label>
       </div>
