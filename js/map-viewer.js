@@ -195,11 +195,6 @@ const COG_NODATA = -32768;
 // an Anomaly one, not just similar.
 const DISCRETE_BINS = 11;
 
-// Must match .ol-legend-swatch's own CSS height exactly -- ticks are
-// absolutely positioned against this same pixel value so a label lands
-// precisely on the line between two color swatches, not floating loose.
-const LEGEND_SWATCH_HEIGHT_PX = 34;
-
 function buildBinnedColorExpression(boundaries, colors, scale) {
   const band = ["band", 1];
   const value = ["/", band, scale];
@@ -717,19 +712,19 @@ async function updateInteractiveMapLayer() {
     // bin"). Vertical, highest value at top -- the sidebar this lives in is
     // narrow and tall, not wide.
     const decimals = pickTickDecimals(boundaries);
+    // Horizontal colorbar above the map: bins ascend left-to-right (lowest
+    // value on the left, the standard horizontal-colorbar convention), so no
+    // reverse.
     const swatches = binColors.map((color, i) => {
       const lo = boundaries[i].toFixed(decimals);
       const hi = boundaries[i + 1].toFixed(decimals);
       return `<span class="ol-legend-swatch" style="background:${color}" title="${lo} to ${hi}"></span>`;
-    }).reverse().join("");
-    // One tick per boundary (nBins+1 total), each centered exactly on the
-    // seam between the two swatches it separates -- boundaries[nBins] at the
-    // very top (above the highest-value swatch) down to boundaries[0] at the
-    // very bottom, matching the swatches' own reversed (highest-first) order.
+    }).join("");
+    // One tick per boundary (nBins+1 total), each on the seam between the two
+    // swatches it separates: break i sits at i/nBins of the bar's width.
     const ticks = Array.from({ length: nBins + 1 }, (_, i) => {
-      const value = boundaries[nBins - i];
-      const top = i * LEGEND_SWATCH_HEIGHT_PX;
-      return `<span class="ol-legend-tick" style="top:${top}px">${value.toFixed(decimals)}</span>`;
+      const left = (i / nBins) * 100;
+      return `<span class="ol-legend-tick" style="left:${left}%">${boundaries[i].toFixed(decimals)}</span>`;
     }).join("");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
       `<div class="ol-legend-scale-wrap"><div class="ol-legend-scale">${swatches}</div>` +
