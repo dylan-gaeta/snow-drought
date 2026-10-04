@@ -557,6 +557,7 @@ async function updateInteractiveMapLayer() {
   // (!style) ... return" branch.
   renderRegionValuesTable(entry);
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
+  olMapState.currentStyle = style; // for playableMonths() -- which months have a COG for this mode+year
   const emptyMsg = document.getElementById("ol-map-empty");
   // Reset to the default "no data expected" wording every call -- only the
   // load-failure branch below overrides it, and without this reset a prior
@@ -591,6 +592,7 @@ async function updateInteractiveMapLayer() {
   const slot = style.periods[olMapState.period];
   updateModeToggleAvailability(slot);
   updateYearControlForPeriod(slot);
+  updatePeriodAvailability();
   const key = olMapState.mode === "climatology" ? "baseline" : `${olMapState.mode}_${olMapState.year}`;
   const fileEntry = slot[key];
   if (!fileEntry) {
@@ -800,6 +802,17 @@ function updatePeriodSliderActive() {
     b.classList.toggle("active", b.dataset.period === olMapState.period));
 }
 
+// Dim the month stops that have no COG for the current mode + year, so it's
+// clear which months are actually viewable (e.g. the current year ends mid-
+// year). Seasons are left alone. No-op in Climatology mode (all months exist).
+function updatePeriodAvailability() {
+  const months = new Set(playableMonths());
+  const dimInRaw = olMapState.mode !== "climatology";
+  document.querySelectorAll("#ol-period-track .ol-period-month").forEach((b) => {
+    b.classList.toggle("unavailable", dimInRaw && !months.has(b.dataset.period));
+  });
+}
+
 function setMapPeriod(period) {
   olMapState.period = period;
   updatePeriodSliderActive();
@@ -819,12 +832,26 @@ function stopPeriodPlayback() {
   }
 }
 
-// Animate through the 12 months only (not the seasonal windows). Starting from
-// a season jumps to January; reaching December loops back to January.
+// The month stops that actually have a COG for the current mode + year. In
+// Climatology mode every month has a baseline COG; in Raw/Anomaly mode a month
+// only counts if style.periods[month] carries this year's file -- otherwise
+// playing a short year (e.g. 2026 ends July) would step onto Aug-Dec, find no
+// file, and reset the year to the last fully-covered one (Dylan, 2026-10: "the
+// loop goes from 2026 to 2025-august when the data runs out").
+function playableMonths() {
+  const allMonths = Array.from(document.querySelectorAll("#ol-period-track .ol-period-month"))
+    .map((b) => b.dataset.period);
+  const style = olMapState.currentStyle;
+  if (!style || olMapState.mode === "climatology") return allMonths;
+  const fileKey = `${olMapState.mode}_${olMapState.year}`;
+  return allMonths.filter((m) => style.periods[m] && style.periods[m][fileKey]);
+}
+
+// Animate through the playable months only. Starting outside that set jumps to
+// its first month; reaching the last loops back to the first.
 function togglePeriodPlayback() {
   if (olMapState.playTimer) { stopPeriodPlayback(); return; }
-  const months = Array.from(document.querySelectorAll("#ol-period-track .ol-period-month"))
-    .map((b) => b.dataset.period);
+  const months = playableMonths();
   if (!months.length) return;
   let idx = months.indexOf(olMapState.period);
   if (idx === -1) { idx = 0; setMapPeriod(months[0]); }

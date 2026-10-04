@@ -605,6 +605,9 @@ table.headline-table tr.group-row td {
 .ol-period-stop.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 /* Months: compact fixed-width single-letter stops forming the slider track. */
 .ol-period-month { width: 1.5rem; padding: 0.25rem 0; text-align: center; border-radius: var(--radius-sm); }
+/* A month with no COG for the current year/mode (e.g. the current year ends
+   mid-year) -- still clickable, but visibly not part of the viewable range. */
+.ol-period-month.unavailable { opacity: 0.3; }
 /* Keep the Dataset/Variable + period/mode/year controls in view while scrolling
    the map and the regional table below -- they sit just under the sticky site
    header (~120px tall). On mobile the header wraps taller and a sticky bar would
