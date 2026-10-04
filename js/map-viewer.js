@@ -279,10 +279,13 @@ function initInteractiveMap() {
   olMapState.map.getView().fit(extent, { size: olMapState.map.getSize() || [600, 500] });
   olMapState.homeExtent = extent; // "Reset view" button re-fits to this after a user pans/zooms away
 
-  document.getElementById("ol-period-select").addEventListener("change", (event) => {
-    olMapState.period = event.target.value;
-    updateInteractiveMapLayer();
+  document.getElementById("ol-period-track").addEventListener("click", (event) => {
+    const stop = event.target.closest("button[data-period]");
+    if (!stop) return;
+    stopPeriodPlayback();
+    setMapPeriod(stop.dataset.period);
   });
+  document.getElementById("ol-period-play").addEventListener("click", togglePeriodPlayback);
   document.getElementById("ol-mode-toggle").addEventListener("click", (event) => {
     const button = event.target.closest("button[data-mode]");
     if (!button || button.disabled) return;
@@ -756,6 +759,76 @@ async function updateInteractiveMapLayer() {
   }
 }
 
+// ---- Period slider + play -------------------------------------------------
+// The period picker is a horizontal slider instead of a dropdown: the longer
+// seasonal windows that have map coverage sit first in their own shaded band
+// (so they read as seasons, not months), then the 12 calendar months follow
+// as compact single-letter stops that the play button animates through.
+const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+const PERIOD_PLAY_INTERVAL_MS = 850;
+
+function buildPeriodSlider(periods) {
+  const track = document.getElementById("ol-period-track");
+  const seasons = periods.filter((p) => !/^\d{2}$/.test(p));
+  const months = periods.filter((p) => /^\d{2}$/.test(p));
+  const stopHtml = (period, label, extraClass) =>
+    `<button type="button" class="ol-period-stop${extraClass}" data-period="${period}" title="${olPeriodLabel(period)}">${label}</button>`;
+  let html = "";
+  if (seasons.length) {
+    html += `<div class="ol-period-group ol-period-seasons">` +
+      seasons.map((p) => stopHtml(p, olPeriodLabel(p), "")).join("") +
+      `</div><div class="ol-period-sep" aria-hidden="true"></div>`;
+  }
+  html += `<div class="ol-period-group ol-period-months">` +
+    months.map((p) => stopHtml(p, MONTH_LETTERS[parseInt(p, 10) - 1], " ol-period-month")).join("") +
+    `</div>`;
+  track.innerHTML = html;
+  updatePeriodSliderActive();
+}
+
+function updatePeriodSliderActive() {
+  document.querySelectorAll("#ol-period-track .ol-period-stop").forEach((b) =>
+    b.classList.toggle("active", b.dataset.period === olMapState.period));
+}
+
+function setMapPeriod(period) {
+  olMapState.period = period;
+  updatePeriodSliderActive();
+  updateInteractiveMapLayer();
+}
+
+function stopPeriodPlayback() {
+  if (olMapState.playTimer) {
+    clearInterval(olMapState.playTimer);
+    olMapState.playTimer = null;
+  }
+  const btn = document.getElementById("ol-period-play");
+  if (btn) {
+    btn.innerHTML = "&#9654;"; // play triangle
+    btn.classList.remove("playing");
+    btn.title = "Play through the months";
+  }
+}
+
+// Animate through the 12 months only (not the seasonal windows). Starting from
+// a season jumps to January; reaching December loops back to January.
+function togglePeriodPlayback() {
+  if (olMapState.playTimer) { stopPeriodPlayback(); return; }
+  const months = Array.from(document.querySelectorAll("#ol-period-track .ol-period-month"))
+    .map((b) => b.dataset.period);
+  if (!months.length) return;
+  let idx = months.indexOf(olMapState.period);
+  if (idx === -1) { idx = 0; setMapPeriod(months[0]); }
+  const btn = document.getElementById("ol-period-play");
+  btn.innerHTML = "&#10073;&#10073;"; // pause bars
+  btn.classList.add("playing");
+  btn.title = "Pause";
+  olMapState.playTimer = setInterval(() => {
+    idx = (idx + 1) % months.length;
+    setMapPeriod(months[idx]);
+  }, PERIOD_PLAY_INTERVAL_MS);
+}
+
 async function renderInteractiveMap() {
   initInteractiveMap();
   if (!olMapState.map) {
@@ -765,11 +838,10 @@ async function renderInteractiveMap() {
     return;
   }
   const style = await fetchMapStyle(mapPickerState.product, mapPickerState.response);
-  const select = document.getElementById("ol-period-select");
-  select.innerHTML = "";
+  stopPeriodPlayback();
   if (!style) {
-    // Without this, the period select/year toggle/boundary checkbox stay
-    // visible with nothing to control -- an empty dropdown next to a map
+    // Without this, the period slider/year toggle/boundary checkbox stay
+    // visible with nothing to control -- an empty control bar next to a map
     // that isn't there.
     document.querySelector(".map-controls").style.display = "none";
     document.getElementById("ol-map-wrap").style.display = "none";
@@ -781,16 +853,10 @@ async function renderInteractiveMap() {
   document.getElementById("ol-region-table-wrap").style.display = "";
   document.querySelector(".map-controls").style.display = "";
   const periods = sortedPeriods(Object.keys(style.periods));
-  periods.forEach((period) => {
-    const option = document.createElement("option");
-    option.value = period;
-    option.textContent = olPeriodLabel(period);
-    select.appendChild(option);
-  });
   if (!olMapState.period || !periods.includes(olMapState.period)) {
     olMapState.period = periods.includes("DJFM") ? "DJFM" : periods[0];
   }
-  select.value = olMapState.period;
+  buildPeriodSlider(periods);
   setTimeout(() => olMapState.map.updateSize(), 0);
   updateInteractiveMapLayer();
 }

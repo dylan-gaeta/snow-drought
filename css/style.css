@@ -558,7 +558,53 @@ table.headline-table tr.group-row td {
 .region-buttons button:hover:not(.active) { background: #eef1f5; color: var(--text); }
 .region-buttons button.active { background: var(--blue-dark); color: #fff; border-color: var(--blue-dark); }
 
-.map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; }
+.map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; align-items: center; }
+
+/* Period picker as a slider (Dylan, 2026-10): a play button + a track of
+   discrete stops. The longer seasonal windows sit first in their own shaded,
+   rounded band so they read as seasons, not months; the 12 months follow as
+   compact single-letter stops that the play button animates through. */
+.ol-period-slider { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ol-period-play {
+  flex: none;
+  width: 2rem; height: 2rem;
+  border: 1px solid var(--navy);
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ol-period-play:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
+.ol-period-play.playing { background: var(--gold); border-color: var(--gold); }
+.ol-period-track { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ol-period-group { display: inline-flex; gap: 2px; }
+/* Seasons: a shaded, rounded band visually distinct from the month stops. */
+.ol-period-seasons {
+  background: rgba(58, 134, 188, 0.12);
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  padding: 2px;
+}
+.ol-period-sep { width: 1px; background: var(--border); align-self: stretch; margin: 3px 0; }
+.ol-period-months { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px; }
+.ol-period-stop {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ol-period-stop:hover { color: var(--text); background: rgba(2, 56, 88, 0.06); }
+.ol-period-stop.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+/* Months: compact fixed-width single-letter stops forming the slider track. */
+.ol-period-month { width: 1.5rem; padding: 0.25rem 0; text-align: center; border-radius: var(--radius-sm); }
 /* Keep the Dataset/Variable + period/mode/year controls in view while scrolling
    the map and the regional table below -- they sit just under the sticky site
    header (~120px tall). On mobile the header wraps taller and a sticky bar would

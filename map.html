@@ -62,7 +62,10 @@
           <label class="select-field">Variable <select id="response-select" aria-label="Variable"></select></label>
         </div>
         <div class="map-controls">
-          <select id="ol-period-select" aria-label="Month or season"></select>
+          <div class="ol-period-slider" id="ol-period-slider">
+            <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
+            <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
+          </div>
           <div class="series-toggle" id="ol-mode-toggle">
             <button type="button" data-mode="climatology" class="active">Climatology</button>
             <button type="button" data-mode="raw">Raw units</button>
