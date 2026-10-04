@@ -896,7 +896,11 @@ table.headline-table tr.group-row td {
 
 /* Horizontal year scrubber in the map's year control: drag across the record
    to step through the years that have a COG (indices into availableYears). */
-.ol-year-slider { width: clamp(120px, 22vw, 240px); accent-color: var(--blue-dark); cursor: pointer; vertical-align: middle; }
+.ol-year-slider-wrap { display: inline-block; width: clamp(140px, 24vw, 260px); vertical-align: middle; }
+.ol-year-slider { width: 100%; accent-color: var(--blue-dark); cursor: pointer; display: block; }
+.ol-year-axis { position: relative; height: 1em; margin-top: 1px; }
+.ol-year-tick { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.ol-year-tick::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: 3px; border-left: 1px solid var(--border); }
 
 /* Sites page: a station map (same WUS framing as the Map page) + a per-site
    time-series card below it. */

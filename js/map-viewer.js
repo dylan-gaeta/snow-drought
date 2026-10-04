@@ -477,7 +477,22 @@ function updateYearControlForPeriod(slot) {
   slider.min = "0";
   slider.max = String(years.length - 1);
   slider.value = String(Math.max(0, years.indexOf(olMapState.year)));
+  buildYearAxis(years);
   updateYearStepperButtons();
+}
+
+// Sparse year ticks under the scrubber: the first and last year, plus any
+// decade year (…2000, 2010, 2020) in between -- labeling all ~37 would overlap.
+function buildYearAxis(years) {
+  const axis = document.getElementById("ol-year-axis");
+  if (!axis) return;
+  if (years.length < 2) { axis.innerHTML = ""; return; }
+  const last = years.length - 1;
+  const show = new Set([0, last]);
+  years.forEach((y, i) => { if (y % 10 === 0) show.add(i); });
+  axis.innerHTML = [...show].sort((a, b) => a - b).map((i) =>
+    `<span class="ol-year-tick" style="left:${(i / last) * 100}%">${years[i]}</span>`
+  ).join("");
 }
 
 function updateYearStepperButtons() {

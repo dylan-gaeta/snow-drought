@@ -75,7 +75,10 @@
           </div>
           <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
             <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
-            <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
+            <div class="ol-year-slider-wrap">
+              <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
+              <div class="ol-year-axis" id="ol-year-axis" aria-hidden="true"></div>
+            </div>
             <select id="ol-year-select" aria-label="Year"></select>
             <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
           </div>
