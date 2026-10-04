@@ -897,3 +897,20 @@ table.headline-table tr.group-row td {
 /* Horizontal year scrubber in the map's year control: drag across the record
    to step through the years that have a COG (indices into availableYears). */
 .ol-year-slider { width: clamp(120px, 22vw, 240px); accent-color: var(--blue-dark); cursor: pointer; vertical-align: middle; }
+
+/* Sites page: a station map (same WUS framing as the Map page) + a per-site
+   time-series card below it. */
+#sites-map-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem;
+  width: 100%;
+  max-width: 620px;
+}
+#sites-map { width: 100%; aspect-ratio: 1.35; max-width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
+#sites-map .ol-attribution { right: auto; left: 0.5em; }
+.sites-network-toggle { gap: 0.4rem; }
+.sites-network-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 0 1px var(--border); }
+.sites-detail { margin-top: 1.5rem; }

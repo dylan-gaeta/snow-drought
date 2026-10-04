@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Cross-product standardized-anomaly heatmaps, by month or season/year, for the Western US snow drought dashboard.">
-<title>Heatmap &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="Individual observation stations behind the Western US snow drought dashboard: AmeriFlux and NEON flux towers. Click a station to see its own time series.">
+<title>Sites &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.5.0/ol.css">
+<script src="https://cdn.jsdelivr.net/npm/ol@10.5.0/dist/ol.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
 <body>
@@ -23,12 +25,12 @@
     <nav class="site-nav" id="site-nav">
       <a href="home.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="sites.html">Sites</a>
+      <a href="sites.html" class="active">Sites</a>
       <a href="explore.html">Time Series</a>
       <a href="seasonal.html">Seasonal Cycle</a>
       <a href="sib4.html">SiB4</a>
       <a href="data.html">Summary Table</a>
-      <a href="heatmaps.html" class="active">Heatmap</a>
+      <a href="heatmaps.html">Heatmap</a>
       <a href="classification.html">Classification</a>
       <a href="gallery.html">Figure Gallery</a>
       <a href="about.html">About</a>
@@ -38,32 +40,28 @@
 
 <main>
 
-  <section id="heatmaps">
-    <h2>Anomaly heatmaps by product and time</h2>
-    <p class="finding-note">Standardized anomaly (&sigma;) per product: one
-      row per product/response, one column per month or year. Each row is
-      sign-flipped to its own variable's stress direction (e.g. low
-      snowpack is the stress direction, not high), so gold is always stress
-      and teal is always relief, regardless of the variable's raw sign
-      convention.</p>
-    <div class="heatmap-legend-key">
-      <span><span class="heatmap-legend-swatch" style="background:#955910;"></span> Stress</span>
-      <span><span class="heatmap-legend-swatch" style="background:#0570b0;"></span> Relief</span>
-    </div>
-    <div class="explorer-layout">
-      <nav class="category-tabs" id="heatmap-category-tabs" aria-label="Category"></nav>
+  <section id="sites">
+    <h2>Observation Sites</h2>
+    <p class="finding-note">The individual stations behind the site-based
+      products. Click a station to see its own monthly record. Marker color is
+      the network.</p>
 
-      <div>
-        <div class="selector-row">
-          <select id="heatmap-family-select" aria-label="Heatmap family"></select>
-          <select id="heatmap-region-select" aria-label="Region"></select>
-          <label class="boundary-toggle" for="heatmap-start-year-select">Start year
-            <select id="heatmap-start-year-select" aria-label="Start year"></select>
-          </label>
+    <div class="selector-row" id="sites-network-toggles"></div>
+
+    <div id="sites-map-wrap">
+      <div id="sites-map" aria-label="Station map"></div>
+    </div>
+
+    <div class="sites-detail" id="sites-detail">
+      <div class="selector-row">
+        <label class="select-field">Variable <select id="sites-response-select" aria-label="Variable"></select></label>
+        <div class="series-toggle" id="sites-series-toggle">
+          <button data-series="value" class="active">Raw units</button>
+          <button data-series="anomaly">Anomaly (raw)</button>
         </div>
-        <h3 id="heatmap-title" class="figure-title"></h3>
-        <div class="heatmap-chart-scroll"><div id="heatmap-chart"></div></div>
       </div>
+      <h3 class="figure-title" id="sites-chart-title">Click a station on the map</h3>
+      <div id="sites-chart" style="height:420px;"></div>
     </div>
   </section>
 
@@ -84,6 +82,6 @@
 </footer>
 
 <script src="js/common.js"></script>
-<script src="js/heatmaps.js"></script>
+<script src="js/sites.js"></script>
 </body>
 </html>
