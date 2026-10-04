@@ -251,12 +251,26 @@ function initInteractiveMap() {
     }),
     zIndex: 10,
   });
+  // HUC2 basin outlines, off by default -- a thicker teal stroke so they read
+  // as a distinct overlay from the thin black state lines when both are shown.
+  olMapState.hucLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      url: assetUrl("data/huc2_west.geojson"),
+      format: new ol.format.GeoJSON(),
+    }),
+    style: new ol.style.Style({
+      stroke: new ol.style.Stroke({ color: "#0570b0", width: 2 }),
+    }),
+    zIndex: 11,
+    visible: false,
+  });
 
   olMapState.map = new ol.Map({
     target: "ol-map",
     layers: [
       new ol.layer.Tile({ source: new ol.source.OSM({ opaque: false }), opacity: 0.5 }),
       olMapState.boundaryLayer,
+      olMapState.hucLayer,
     ],
     view: new ol.View({
       center: ol.proj.fromLonLat([-113, 40]), // overridden by view.fit() below to the real domain extent
@@ -300,6 +314,9 @@ function initInteractiveMap() {
   });
   document.getElementById("ol-year-prev-btn").addEventListener("click", () => stepYear(-1));
   document.getElementById("ol-year-next-btn").addEventListener("click", () => stepYear(1));
+  document.getElementById("ol-huc-toggle").addEventListener("change", (event) => {
+    olMapState.hucLayer.setVisible(event.target.checked);
+  });
   document.getElementById("ol-boundary-toggle").addEventListener("change", (event) => {
     olMapState.boundaryLayer.setVisible(event.target.checked);
   });
