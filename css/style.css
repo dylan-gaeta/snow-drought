@@ -871,3 +871,10 @@ table.headline-table tr.group-row td {
 /* SiB4 page: each analysis panel is a spaced card. */
 .sib4-panel { margin: 1.5rem 0; padding-top: 0.5rem; border-top: 1px solid var(--border); }
 .sib4-panel:first-of-type { border-top: none; }
+
+/* SiB4 per-PFT checkbox row: a wrapping grid of small checkbox+swatch labels
+   (reuses .compare-legend-item styling) so the user picks which PFTs overlay
+   instead of all 14 at once. */
+.sib4-pft-checks { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0.5rem 0 0.8rem; }
+.sib4-pft-checks .compare-legend-item { font-size: 0.88rem; }
+.ol-period-group#sib4-limitation-factors, #sib4-limitation-factors { display: inline-flex; flex-wrap: wrap; }

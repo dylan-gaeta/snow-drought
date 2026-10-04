@@ -11,7 +11,9 @@ const sib4State = {
   tsView: "series",      // series | seasonal
   startYear: null,       // time-axis window floor
   tsAggregate: true,
+  tsPfts: {},            // { [region]: Set of checked PFT codes } (per region, since PFT sets differ)
   limitationSeries: "raw",
+  stressFactors: new Set(["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"]),
   diurnalVariable: "GPP",
   diurnalMonth: 7,
   diurnalPft: "AGG",
@@ -74,33 +76,43 @@ async function renderComposition() {
     hovertemplate: `${pftLabel(code)}: %{x:.1f}%<extra></extra>`,
   }));
   Plotly.newPlot(el, traces, {
-    barmode: "stack", showlegend: true, legend: { orientation: "h", y: -0.4, font: { size: 12 } },
-    margin: { t: 6, r: 12, b: 10, l: 12 }, xaxis: { title: "share of land (%)", range: [0, 100], ...PLOTLY_AXIS_LINE },
+    barmode: "stack", showlegend: true,
+    legend: { orientation: "h", y: -0.55, yanchor: "top", font: { size: 12 } },
+    margin: { t: 6, r: 12, b: 48, l: 12 },
+    xaxis: { title: "share of land (%)", range: [0, 100], ...PLOTLY_AXIS_LINE },
     yaxis: { showticklabels: false }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
 }
 
-// --------------------------------------------------- 2. soil/air/heat limitation
+// --------------------------------------------------- 2. SiB4 stress factors
+const STRESS_KEYS = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"];
+const STRESS_LABELS = { ROOT_STRESS: "Rootzone water (rstfac2)", LEAF_STRESS: "Leaf/humidity water (rstfac1)", TEMP_STRESS: "Temperature (rstfac3)" };
+
+function renderStressFactorButtons() {
+  const box = document.getElementById("sib4-limitation-factors");
+  box.innerHTML = STRESS_KEYS.map((k) =>
+    `<button type="button" data-factor="${k}" class="${sib4State.stressFactors.has(k) ? "active" : ""}">${STRESS_LABELS[k]}</button>`
+  ).join("");
+}
+
 async function renderLimitation() {
   const el = document.getElementById("sib4-limitation");
-  document.getElementById("sib4-limitation-title").textContent = `Soil, air & heat limitation — ${regionLabelFor(sib4State.region)}`;
-  const keys = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"];
-  const labels = { ROOT_STRESS: "Dry soil (rootzone)", LEAF_STRESS: "Dry air (leaf/humidity)", TEMP_STRESS: "Heat (temperature)" };
-  const data = await Promise.all(keys.map((k) => fetchSib4("timeseries", k)));
+  document.getElementById("sib4-limitation-title").textContent = `Stress factors — ${regionLabelFor(sib4State.region)}`;
   const isAnom = sib4State.limitationSeries === "anomaly";
+  const shown = STRESS_KEYS.filter((k) => sib4State.stressFactors.has(k));
+  const data = await Promise.all(shown.map((k) => fetchSib4("timeseries", k)));
   const traces = [];
-  keys.forEach((k, i) => {
-    const r = data[i] && data[i].regions[sib4State.region];
-    const agg = r && r.AGG;
+  shown.forEach((k, i) => {
+    const agg = data[i] && data[i].regions[sib4State.region] && data[i].regions[sib4State.region].AGG;
     if (!agg) return;
-    // stress intensity = 1 - factor (higher = more limiting); anomaly = departure
-    const raw = isAnom ? agg.anomaly.map((v) => (v == null ? null : -v)) : agg.value.map((v) => (v == null ? null : 1 - v));
+    // Plot the actual rstfac factor (0-1, 1 = unstressed); anomaly = raw departure.
+    const raw = isAnom ? agg.anomaly : agg.value;
     const { dates, values } = afterStart(data[i].dates, raw);
-    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: labels[k], line: { color: STRESS_COLORS[k], width: 2 } });
+    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: STRESS_LABELS[k], line: { color: STRESS_COLORS[k], width: 2 } });
   });
   Plotly.newPlot(el, traces, {
     margin: { t: 8, r: 16, b: 40, l: 56 },
-    yaxis: { title: isAnom ? "stress departure" : "stress intensity (1 − factor)", zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: isAnom ? "stress-factor anomaly" : "stress factor (0 = limiting, 1 = unstressed)", range: isAnom ? undefined : [0, 1], zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     legend: { orientation: "h", y: -0.18 }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
@@ -112,6 +124,37 @@ function afterStart(dates, values) {
   if (!y0) return { dates, values };
   const keep = dates.map((d) => parseInt(d.slice(0, 4), 10) >= y0);
   return { dates: dates.filter((_, i) => keep[i]), values: values.filter((_, i) => keep[i]) };
+}
+
+// Which PFTs are checked for the current region. Default: the 4 most dominant
+// (pfts arrives pre-ordered by WUS cover), so a region doesn't open with 14
+// lines overlaid (Dylan, 2026-10). Persists per region.
+const SIB4_DEFAULT_PFT_COUNT = 4;
+function checkedPfts(orderedPfts) {
+  const region = sib4State.region;
+  if (!sib4State.tsPfts[region]) {
+    sib4State.tsPfts[region] = new Set(orderedPfts.slice(0, SIB4_DEFAULT_PFT_COUNT));
+  }
+  return sib4State.tsPfts[region];
+}
+
+function renderPftCheckboxes(orderedPfts, checked) {
+  const box = document.getElementById("sib4-pft-checkboxes");
+  box.innerHTML = "";
+  orderedPfts.forEach((code) => {
+    const label = document.createElement("label");
+    label.className = "compare-legend-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = checked.has(code);
+    cb.addEventListener("change", (e) => {
+      if (e.target.checked) checked.add(code); else checked.delete(code);
+      renderPftTimeseries();
+    });
+    const sw = document.createElement("span");
+    sw.className = "compare-legend-swatch"; sw.style.background = pftFillColor(code);
+    label.appendChild(cb); label.appendChild(sw); label.appendChild(document.createTextNode(pftLabel(code)));
+    box.appendChild(label);
+  });
 }
 
 async function renderPftTimeseries() {
@@ -133,10 +176,12 @@ async function renderPftTimeseries() {
   if (!region) { el.innerHTML = '<p class="chart-empty">No data for this region.</p>'; return; }
   const pick = (s) => isSigma ? (info.bounded ? s.anomaly : s.sigma) : isAnom ? s.anomaly : s.value;
   const pfts = orderPfts(Object.keys(region).filter((p) => p !== "AGG"));
+  const checked = checkedPfts(pfts);
+  renderPftCheckboxes(pfts, checked);
   const traces = [];
-  pfts.forEach((code) => {
+  pfts.filter((code) => checked.has(code)).forEach((code) => {
     const { dates, values } = afterStart(data.dates, pick(region[code]));
-    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: pftLabel(code), line: { color: pftColor(code), width: 1.5 }, opacity: 0.9, connectgaps: false });
+    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: pftLabel(code), line: { color: pftColor(code), width: 1.8 }, connectgaps: false });
   });
   if (sib4State.tsAggregate && region.AGG) {
     const { dates, values } = afterStart(data.dates, pick(region.AGG));
@@ -170,8 +215,10 @@ async function renderPftSeasonal() {
   const x = manifest.water_year_month_names;
   const isAnom = sib4State.tsSeries !== "raw"; // raw climatology vs anomaly band
   const pfts = orderPfts(Object.keys(region).filter((p) => p !== "AGG"));
+  const checked = checkedPfts(pfts);
+  renderPftCheckboxes(pfts, checked);
   const traces = [];
-  pfts.forEach((code) => {
+  pfts.filter((code) => checked.has(code)).forEach((code) => {
     const c = region[code];
     if (!c) return;
     const y = isAnom ? (c.anomaly_upper ? c.anomaly_upper.map(() => 0) : null) : c.climatology_mean;
@@ -379,6 +426,16 @@ async function init() {
   document.getElementById("sib4-ts-view").addEventListener("click", (e) => { const b = e.target.closest("button[data-view]"); if (!b) return; sib4State.tsView = b.dataset.view; document.querySelectorAll("#sib4-ts-view button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
   document.getElementById("sib4-ts-aggregate").addEventListener("change", (e) => { sib4State.tsAggregate = e.target.checked; renderPftTimeseries(); });
   document.getElementById("sib4-limitation-toggle").addEventListener("click", (e) => { const b = e.target.closest("button[data-series]"); if (!b) return; sib4State.limitationSeries = b.dataset.series; document.querySelectorAll("#sib4-limitation-toggle button").forEach((x) => x.classList.toggle("active", x === b)); renderLimitation(); });
+  renderStressFactorButtons();
+  document.getElementById("sib4-limitation-factors").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-factor]");
+    if (!b) return;
+    const k = b.dataset.factor;
+    if (sib4State.stressFactors.has(k)) { if (sib4State.stressFactors.size > 1) sib4State.stressFactors.delete(k); }
+    else sib4State.stressFactors.add(k);
+    renderStressFactorButtons();
+    renderLimitation();
+  });
   document.getElementById("sib4-diurnal-variable").addEventListener("change", (e) => { sib4State.diurnalVariable = e.target.value; populateDiurnalPftSelect().then(renderDiurnal); });
   document.getElementById("sib4-diurnal-month").addEventListener("change", (e) => { sib4State.diurnalMonth = parseInt(e.target.value, 10); renderDiurnal(); });
   document.getElementById("sib4-diurnal-pft").addEventListener("change", (e) => { sib4State.diurnalPft = e.target.value; renderDiurnal(); });
