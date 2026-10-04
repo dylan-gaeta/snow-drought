@@ -236,6 +236,16 @@ function olPeriodLabel(period) {
 function initInteractiveMap() {
   if (olMapState.map || typeof ol === "undefined") return;
 
+  // Western-US data domain (matches c.WEST/EAST_PLOT/SOUTH/NORTH in the
+  // pipeline's own config.py): `extent` frames the initial view, while
+  // `panExtent` (the same domain padded by 0.5deg on every side) is the hard
+  // pan/zoom constraint on the View -- so the map can be nudged a little past
+  // the data but no further onto empty ocean/continent (Dylan, 2026-10: "we
+  // shouldn't be able to pan outside of the western US bbox", "a little 0.5deg
+  // wiggle room but no more").
+  const extent = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
+  const panExtent = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
+
   olMapState.boundaryLayer = new ol.layer.Vector({
     source: new ol.source.Vector({
       url: assetUrl("data/western_states.geojson"),
@@ -256,12 +266,10 @@ function initInteractiveMap() {
     view: new ol.View({
       center: ol.proj.fromLonLat([-113, 40]), // overridden by view.fit() below to the real domain extent
       zoom: 5,
+      extent: panExtent, // hard pan constraint: WUS domain + 0.5deg slack, no further
+      showFullExtent: true, // let the user zoom out to exactly the full extent, no further
     }),
   });
-  // Fixed Western-US extent (matches c.WEST/EAST_PLOT/SOUTH/NORTH in the
-  // pipeline's own config.py) -- set directly rather than relying on a
-  // guessed center, since the manifest doesn't carry domain bounds.
-  const extent = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
   // ol.View.fit() preserves the container's own aspect ratio, padding
   // symmetrically outside the extent wherever the container's shape doesn't
   // match the domain's -- the fixed 520px-tall container was much wider than
