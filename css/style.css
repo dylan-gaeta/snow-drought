@@ -927,3 +927,12 @@ table.headline-table tr.group-row td {
 .snotel-legend-label { font-weight: 600; color: var(--text); margin-right: 0.3rem; flex-basis: 100%; }
 .snotel-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; }
 .snotel-legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
+
+/* SNOTEL day slider: scrub through the snow season (Oct 1 -> Sep 30). */
+.snotel-day-row { align-items: center; gap: 0.6rem; }
+.snotel-slider-wrap { flex: 1 1 320px; max-width: 480px; }
+.snotel-day-slider { width: 100%; accent-color: var(--blue-dark); cursor: pointer; display: block; }
+.snotel-slider-axis { position: relative; height: 1.1em; margin-top: 2px; }
+.snotel-axis-tick { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.snotel-axis-tick::before { content: ""; position: absolute; left: 50%; bottom: 100%; height: 3px; border-left: 1px solid var(--border); }
+.snotel-day-label { font-weight: 600; color: var(--navy); min-width: 7.5em; }

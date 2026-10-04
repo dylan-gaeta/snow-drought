@@ -46,8 +46,9 @@
     <p class="finding-note">The NRCS SNOTEL network &mdash; 800+ automated
       stations measuring mountain snow water equivalent (SWE). Each station is
       colored by its SWE relative to the 1990&ndash;2024 normal for the selected
-      month; click a station for its own record. Percent of normal is only
-      meaningful in the snow season.</p>
+      day &mdash; scrub or play through the snow season, and click a station for
+      its own daily record. Percent of normal is only meaningful in the snow
+      season. The current water year's data is provisional (NRCS).</p>
 
     <div class="selector-row">
       <label class="select-field">Metric <select id="snotel-metric-select" aria-label="Metric">
@@ -55,8 +56,15 @@
         <option value="percentile">SWE percentile</option>
         <option value="swe">SWE (mm)</option>
       </select></label>
-      <label class="select-field">Year <select id="snotel-year-select" aria-label="Year"></select></label>
-      <label class="select-field">Month <select id="snotel-month-select" aria-label="Month"></select></label>
+      <label class="select-field">Water year <select id="snotel-wy-select" aria-label="Water year"></select></label>
+    </div>
+    <div class="selector-row snotel-day-row">
+      <button type="button" id="snotel-play" class="ol-period-play" aria-label="Play through the snow season" title="Play through the snow season">&#9654;</button>
+      <div class="snotel-slider-wrap">
+        <input type="range" id="snotel-day-slider" class="snotel-day-slider" min="0" max="364" step="1" value="182" aria-label="Day of water year">
+        <div class="snotel-slider-axis" id="snotel-slider-axis" aria-hidden="true"></div>
+      </div>
+      <span id="snotel-day-label" class="snotel-day-label"></span>
     </div>
 
     <div id="snotel-map-wrap">
