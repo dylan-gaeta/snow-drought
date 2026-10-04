@@ -751,17 +751,31 @@ async function updateInteractiveMapLayer() {
     // bin"). Vertical, highest value at top -- the sidebar this lives in is
     // narrow and tall, not wide.
     const decimals = pickTickDecimals(boundaries);
+    // Colorbar "extend" arrows (Dylan, 2026-10): a percentile-capped scale is
+    // open-ended, so its end bins render as outward triangles (matplotlib
+    // extend='both') to show values continue beyond the cap -- the honest read
+    // for a p95/p99 cap, where ~5%/1% of cells sit past the last finite edge.
+    // Anomaly is always a capped departure, so it always extends. A physically
+    // bounded raw/climatology scale (0-1, 0-100) covers its full range with
+    // nothing beyond, so the export marks it raw_full_range and it gets no
+    // arrow. The outer edge tick is dropped on an extended end (an open end has
+    // no finite boundary value).
+    const extend = olMapState.mode === "anomaly" || !style.raw_full_range;
     // Horizontal colorbar above the map: bins ascend left-to-right (lowest
     // value on the left, the standard horizontal-colorbar convention), so no
     // reverse.
     const swatches = binColors.map((color, i) => {
       const lo = boundaries[i].toFixed(decimals);
       const hi = boundaries[i + 1].toFixed(decimals);
-      return `<span class="ol-legend-swatch" style="background:${color}" title="${lo} to ${hi}"></span>`;
+      const arrowClass = extend && i === 0 ? " ol-legend-extend-low"
+        : extend && i === binColors.length - 1 ? " ol-legend-extend-high" : "";
+      return `<span class="ol-legend-swatch${arrowClass}" style="background:${color}" title="${lo} to ${hi}"></span>`;
     }).join("");
     // One tick per boundary (nBins+1 total), each on the seam between the two
-    // swatches it separates: break i sits at i/nBins of the bar's width.
+    // swatches it separates: break i sits at i/nBins of the bar's width. The
+    // outermost edge is dropped on an extended (open) end.
     const ticks = Array.from({ length: nBins + 1 }, (_, i) => {
+      if (extend && (i === 0 || i === nBins)) return "";
       const left = (i / nBins) * 100;
       return `<span class="ol-legend-tick" style="left:${left}%">${boundaries[i].toFixed(decimals)}</span>`;
     }).join("");

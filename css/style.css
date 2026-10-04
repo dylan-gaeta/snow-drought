@@ -773,6 +773,21 @@ table.headline-table tr.group-row td {
   box-shadow: 0 0 0 1px #1b1b1b;
 }
 .ol-legend-swatch { flex: 1 1 0; min-width: 0; height: 100%; }
+/* Extend arrows: the end bins of a percentile-capped scale become outward
+   triangles (matplotlib extend='both'), signalling values beyond the cap.
+   The triangle widens the cell so the pointed tip clears the box edge. */
+.ol-legend-swatch.ol-legend-extend-low {
+  flex: 0 0 14px;
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+  box-shadow: none;
+  margin-right: 1px;
+}
+.ol-legend-swatch.ol-legend-extend-high {
+  flex: 0 0 14px;
+  clip-path: polygon(0 0, 0 100%, 100% 50%);
+  box-shadow: none;
+  margin-left: 1px;
+}
 /* Ticks are a separate absolutely-positioned overlay below the bar -- a tick
    marks the BREAK between two colors (Dylan, 2026-09-29: "the colorbar ticks
    should be the color breaks, not a single point label for a whole bin"), so
