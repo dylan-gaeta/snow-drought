@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Individual observation stations behind the Western US snow drought dashboard: AmeriFlux and NEON flux towers. Click a station to see its own time series.">
-<title>Sites &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<meta name="description" content="SNOTEL snowpack dashboard for the Western US: 800+ automated snow stations, mapped by snow water equivalent percent of normal, with per-station records and the elevation dependence of snow drought.">
+<title>SNOTEL &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
@@ -25,8 +25,8 @@
     <nav class="site-nav" id="site-nav">
       <a href="home.html">Home</a>
       <a href="map.html">Map</a>
-      <a href="sites.html" class="active">Sites</a>
-      <a href="snotel.html">SNOTEL</a>
+      <a href="sites.html">Sites</a>
+      <a href="snotel.html" class="active">SNOTEL</a>
       <a href="explore.html">Time Series</a>
       <a href="seasonal.html">Seasonal Cycle</a>
       <a href="sib4.html">SiB4</a>
@@ -41,28 +41,43 @@
 
 <main>
 
-  <section id="sites">
-    <h2>Observation Sites</h2>
-    <p class="finding-note">The individual stations behind the site-based
-      products. Click a station to see its own monthly record. Marker color is
-      the network.</p>
+  <section id="snotel">
+    <h2>SNOTEL Snowpack</h2>
+    <p class="finding-note">The NRCS SNOTEL network &mdash; 800+ automated
+      stations measuring mountain snow water equivalent (SWE). Each station is
+      colored by its SWE relative to the 1990&ndash;2024 normal for the selected
+      month; click a station for its own record. Percent of normal is only
+      meaningful in the snow season.</p>
 
-    <div class="selector-row" id="sites-network-toggles"></div>
-
-    <div id="sites-map-wrap">
-      <div id="sites-map" aria-label="Station map"></div>
+    <div class="selector-row">
+      <label class="select-field">Metric <select id="snotel-metric-select" aria-label="Metric">
+        <option value="pct_of_median" selected>SWE % of normal</option>
+        <option value="percentile">SWE percentile</option>
+        <option value="swe">SWE (mm)</option>
+      </select></label>
+      <label class="select-field">Year <select id="snotel-year-select" aria-label="Year"></select></label>
+      <label class="select-field">Month <select id="snotel-month-select" aria-label="Month"></select></label>
     </div>
 
-    <div class="sites-detail" id="sites-detail">
-      <div class="selector-row">
-        <label class="select-field">Variable <select id="sites-response-select" aria-label="Variable"></select></label>
-        <div class="series-toggle" id="sites-series-toggle">
-          <button data-series="value" class="active">Raw units</button>
-          <button data-series="anomaly">Anomaly (raw)</button>
-        </div>
-      </div>
-      <h3 class="figure-title" id="sites-chart-title">Click a station on the map</h3>
-      <div id="sites-chart" style="height:420px;"></div>
+    <div id="snotel-map-wrap">
+      <div id="snotel-legend"></div>
+      <div id="snotel-map" aria-label="SNOTEL station map"></div>
+    </div>
+
+    <div class="sites-detail">
+      <h3 class="figure-title" id="snotel-detail-title">Click a station for its snowpack record</h3>
+      <p class="finding-note" id="snotel-detail-note"></p>
+      <div id="snotel-detail-chart" style="height:420px;"></div>
+      <div id="snotel-history-chart" style="height:300px;"></div>
+    </div>
+
+    <div class="sites-detail">
+      <h3 class="figure-title" id="snotel-elev-title"></h3>
+      <p class="finding-note">Snow water equivalent % of normal versus station
+        elevation for the selected month. A downward tilt (lower elevations
+        drier) is the signature of a warm snow drought &mdash; snow lost
+        preferentially at lower, warmer sites.</p>
+      <div id="snotel-elev-chart" style="height:380px;"></div>
     </div>
   </section>
 
@@ -73,7 +88,8 @@
     <p>
       Source: snowdrought-carbon (private research codebase, NOAA
       Global Monitoring Laboratory &middot; Cooperative Institute for
-      Research in Environmental Sciences).
+      Research in Environmental Sciences). SNOTEL data: USDA NRCS National
+      Water and Climate Center.
     </p>
     <p>
       See <a href="about.html">About</a> for methodology, references, and
@@ -83,6 +99,6 @@
 </footer>
 
 <script src="js/common.js"></script>
-<script src="js/sites.js"></script>
+<script src="js/snotel.js"></script>
 </body>
 </html>

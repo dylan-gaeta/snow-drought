@@ -914,3 +914,16 @@ table.headline-table tr.group-row td {
 .sites-network-toggle { gap: 0.4rem; }
 .sites-network-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #fff; box-shadow: 0 0 0 1px var(--border); }
 .sites-detail { margin-top: 1.5rem; }
+
+/* SNOTEL page: station map (WUS framing) + a discrete metric legend above it. */
+#snotel-map-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm); padding: 0.75rem; width: 100%; max-width: 680px;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+#snotel-map { width: 100%; aspect-ratio: 1.35; max-width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
+#snotel-map .ol-attribution { right: auto; left: 0.5em; }
+#snotel-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; font-size: 0.82rem; color: var(--text-muted); }
+.snotel-legend-label { font-weight: 600; color: var(--text); margin-right: 0.3rem; flex-basis: 100%; }
+.snotel-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; }
+.snotel-legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
