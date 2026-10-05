@@ -6,6 +6,7 @@
 
 const sib4State = {
   region: "ALL",
+  excludeDBG: false,
   tsVariable: "GPP",
   tsSeries: "raw",       // raw | sigma | anomaly
   tsView: "series",      // series | seasonal
@@ -73,7 +74,12 @@ async function renderComposition() {
   const region = comp.regions[sib4State.region];
   document.getElementById("sib4-composition-title").textContent = `PFT land cover — ${regionLabelFor(sib4State.region)}`;
   if (!region) { el.innerHTML = '<p class="chart-empty">No composition for this region.</p>'; return; }
-  const traces = region.pft_order.map((code) => ({
+  // Desert & Bare Ground (dbg) is ~40% of the Western US and dwarfs every
+  // vegetated PFT; excluding it lets the plant types be read. The remaining
+  // segments keep their true land-share %, so the axis just autoscales to their
+  // sum rather than renormalizing (which would misstate each fraction).
+  const codes = sib4State.excludeDBG ? region.pft_order.filter((c) => c !== "dbg") : region.pft_order;
+  const traces = codes.map((code) => ({
     x: [region.pft[code].area_fraction * 100], y: ["land cover"], name: pftLabel(code),
     type: "bar", orientation: "h", marker: { color: pftFillColor(code), line: { color: "#fff", width: 0.5 } },
     hovertemplate: `${pftLabel(code)}: %{x:.1f}%<extra></extra>`,
@@ -82,7 +88,7 @@ async function renderComposition() {
     barmode: "stack", showlegend: true,
     legend: { orientation: "h", y: -0.55, yanchor: "top", font: { size: 12 } },
     margin: { t: 6, r: 12, b: 48, l: 12 },
-    xaxis: { title: "share of land (%)", range: [0, 100], ...PLOTLY_AXIS_LINE },
+    xaxis: { title: "share of land (%)", range: sib4State.excludeDBG ? undefined : [0, 100], ...PLOTLY_AXIS_LINE },
     yaxis: { showticklabels: false }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
 }
@@ -428,6 +434,7 @@ async function init() {
   const monthSel = document.getElementById("sib4-diurnal-month");
   MONTH_NAMES.forEach((name, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; if (i + 1 === sib4State.diurnalMonth) o.selected = true; monthSel.appendChild(o); });
 
+  document.getElementById("sib4-exclude-dbg").addEventListener("change", (e) => { sib4State.excludeDBG = e.target.checked; renderComposition(); });
   document.getElementById("sib4-ts-variable").addEventListener("change", (e) => { sib4State.tsVariable = e.target.value; renderPftTimeseries(); });
   document.getElementById("sib4-ts-toggle").addEventListener("click", (e) => { const b = e.target.closest("button[data-series]"); if (!b) return; sib4State.tsSeries = b.dataset.series; document.querySelectorAll("#sib4-ts-toggle button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
   document.getElementById("sib4-ts-view").addEventListener("click", (e) => { const b = e.target.closest("button[data-view]"); if (!b) return; sib4State.tsView = b.dataset.view; document.querySelectorAll("#sib4-ts-view button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });

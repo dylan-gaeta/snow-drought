@@ -34,12 +34,17 @@ function parseSharedPickerViewFromUrl() {
 
 let lastPickerSelection = null;
 
+// First-ever visit (no shared-view hash, no remembered selection) opens on 2m
+// air temperature -- the most immediately legible variable, matching the Map
+// page's own default -- rather than whatever product happens to sort first.
+const DEFAULT_PICKER_VIEW = { category: "climate", product: "ERA5-Land", response: "T2m" };
+
 function initProductPicker(onSelectionChanged) {
   if (!document.getElementById("category-tabs")) return;
   populateRegionToggle(document.getElementById("region-toggle"), pickerState.region);
   renderPickerCategoryTabs(onSelectionChanged);
   pendingPickerView = parseSharedPickerViewFromUrl();
-  lastPickerSelection = pendingPickerView ? null : loadLastSelection();
+  lastPickerSelection = pendingPickerView ? null : (loadLastSelection() || DEFAULT_PICKER_VIEW);
   const preferredCategory = pendingPickerView?.category || lastPickerSelection?.category;
   const initialCategory = (preferredCategory && manifest.categories[preferredCategory])
     ? preferredCategory
