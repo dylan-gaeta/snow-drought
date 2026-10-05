@@ -473,6 +473,20 @@ table.headline-table tr.group-row td {
 .selector-row select:hover, .map-controls > select:hover { border-color: var(--blue); }
 .selector-row select:focus-visible, .map-controls > select:focus-visible { border-color: var(--blue); box-shadow: var(--shadow-focus); outline: none; }
 
+.compare-slot-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--blue-dark);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
 .value-glossary { font-size: 0.85rem; color: var(--text-muted); margin: -0.4rem 0 1rem; font-style: italic; }
 
 /* "By category" Compare mode: real checkboxes next to each variable instead

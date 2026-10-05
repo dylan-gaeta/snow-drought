@@ -1,59 +1,88 @@
-// Compare page: standardized anomalies (sigma removes each variable's own
-// physical units) overlaid across every product in a category, on one
-// shared axis -- no new statistic, no interpretation of what the
-// co-movement means.
-//
-// Reproduces code/11_combined_GroupOverlays_analyze.py's canonical
-// multi-product overlay dynamically instead of as a static PNG: every
-// product/response the manifest already groups under one category
-// (manifest.categories[category], the same figure_category() grouping the
-// Python script's COMBINED_GROUPS is built from), styled with a
-// distinct solid color per variable, sign-flipped
-// by drier_is_high so a positive value always reads as the stress direction
-// (the same convention js/summary.js, js/heatmaps.js, and js/map-viewer.js
-// already use), and -- for vegetation -- limited to each product's own
-// growing-season months via COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION
-// so a near-zero dormant-season baseline spread doesn't explode the
-// standardized value. Both constants mirror 00_config.py exactly (see
-// js/common.js).
+// Compare page: any two variables, side by side, each on its own panel in its
+// own physical units, sharing one time axis. Pick a variable for panel A (top)
+// and one for panel B (bottom); each is a raw-value monthly series read
+// straight from the JSON exported by code/dashboard_export.py -- no
+// standardization and no cross-variable statistic, so each keeps its real
+// units. Deliberately limited to exactly two variables: the earlier
+// category-checklist + add-series version grew cluttered (Dylan, 2026-10).
 
 const compareState = {
   region: "ALL",
-  category: null,
-  // { [category]: Set of "product|response" keys currently checked }. Set
-  // once per category the first time it's shown (defaulting to the first
-  // CATEGORY_OVERLAY_DEFAULT_VISIBLE) and then persists across region
-  // changes -- previously every re-render (including a plain region change)
-  // rebuilt the legend from the hardcoded default, silently discarding
-  // whatever the user had checked/unchecked (Dylan, 2026-09).
-  checkedByCategory: {},
-  // User-added { category, product, response } triplets from ANY category,
-  // overlaid on top of whatever the currently-browsed category shows below.
-  // Persists across category/region switches -- unlike checkedByCategory,
-  // there's only one list, not one per category (Dylan, 2026-09: "you can't
-  // compare different products from different variable classes").
-  customSeries: [],
+  startYear: null,
+  a: { category: null, product: null, response: null },
+  b: { category: null, product: null, response: null },
 };
-// NCL StepSeq25 (via the cmaps package), reordered hue-first-then-shade so
-// the first 5 entries alone span 5 distinct hues -- the biggest category
-// (vegetation) has 27 product/response pairs, so a 12-color palette put
-// items 12 apart in identical colors with nothing else to distinguish them
-// (Dylan, 2026-09). 25 colors leaves only one collision in the worst case,
-// and none in the common case of a handful of checked series.
-const CATEGORY_OVERLAY_COLORS = [
-  "#990f0f", "#99540f", "#6b990f", "#0f6b99", "#260f99",
-  "#b22c2c", "#b26f2c", "#85b22c", "#2c85b2", "#422cb2",
-  "#cc5151", "#cc8e51", "#a3cc51", "#51a3cc", "#6551cc",
-  "#e57e7e", "#e5b17e", "#c3e57e", "#7ec3e5", "#8f7ee5",
-  "#ffb2b2", "#ffd8b2", "#e5ffb2", "#b2e5ff", "#bfb2ff",
-];
 
-// null = default recent window, see populateStartYearSelect. Same rationale
-// as js/explore.js's timeseriesStartYear: the full 1990-2026 record crammed
-// into one chart is a solid smear, worse here than on Explore since Compare
-// overlays several lines at once, not one.
-let compareStartYear = null;
-const DEFAULT_RECENT_YEARS = 15;
+// Opens on the modern era rather than the full 1990-2026 record, matching
+// js/explore.js -- the whole record crams ~430 monthly points into a smear.
+const COMPARE_DEFAULT_START_YEAR = 2000;
+
+function nonEmptyCategories() {
+  return manifest.category_order.filter((cat) => Object.keys(manifest.categories[cat]).length > 0);
+}
+
+function populateCategorySelect(slot) {
+  const select = document.getElementById(`compare-${slot}-category`);
+  select.innerHTML = "";
+  nonEmptyCategories().forEach((cat) => {
+    const option = document.createElement("option");
+    option.value = cat;
+    option.textContent = categoryLabelWithIcon(cat);
+    select.appendChild(option);
+  });
+  compareState[slot].category = select.value;
+  populateProductSelect(slot);
+}
+
+function populateProductSelect(slot) {
+  const select = document.getElementById(`compare-${slot}-product`);
+  select.innerHTML = "";
+  Object.keys(manifest.categories[compareState[slot].category]).forEach((product) => {
+    const option = document.createElement("option");
+    option.value = product;
+    option.textContent = product;
+    select.appendChild(option);
+  });
+  compareState[slot].product = select.value;
+  populateResponseSelect(slot);
+}
+
+function populateResponseSelect(slot) {
+  const select = document.getElementById(`compare-${slot}-response`);
+  select.innerHTML = "";
+  const { category, product } = compareState[slot];
+  Object.keys(manifest.categories[category][product]).forEach((response) => {
+    const option = document.createElement("option");
+    option.value = response;
+    option.textContent = response;
+    select.appendChild(option);
+  });
+  compareState[slot].response = select.value;
+}
+
+function setSlotCategory(slot, category) {
+  document.getElementById(`compare-${slot}-category`).value = category;
+  compareState[slot].category = category;
+  populateProductSelect(slot);
+}
+
+function setupSlot(slot) {
+  populateCategorySelect(slot);
+  document.getElementById(`compare-${slot}-category`).addEventListener("change", (event) => {
+    compareState[slot].category = event.target.value;
+    populateProductSelect(slot);
+    renderCompare();
+  });
+  document.getElementById(`compare-${slot}-product`).addEventListener("change", (event) => {
+    compareState[slot].product = event.target.value;
+    populateResponseSelect(slot);
+    renderCompare();
+  });
+  document.getElementById(`compare-${slot}-response`).addEventListener("change", (event) => {
+    compareState[slot].response = event.target.value;
+    renderCompare();
+  });
+}
 
 function populateStartYearSelect() {
   const { minYear, maxYear } = fullRecordYearRange();
@@ -69,16 +98,8 @@ function populateStartYearSelect() {
     option.textContent = String(y);
     select.appendChild(option);
   }
-  compareStartYear = Math.max(minYear, maxYear - DEFAULT_RECENT_YEARS + 1);
-  select.value = String(compareStartYear);
-}
-
-function filterFromStartYear(dates, values) {
-  const startYear = Math.max(DASHBOARD_MIN_YEAR, compareStartYear || DASHBOARD_MIN_YEAR);
-  return {
-    dates: dates.filter((d) => parseInt(d.slice(0, 4), 10) >= startYear),
-    values: values.filter((_, i) => parseInt(dates[i].slice(0, 4), 10) >= startYear),
-  };
+  compareState.startYear = Math.max(minYear, COMPARE_DEFAULT_START_YEAR);
+  select.value = String(compareState.startYear);
 }
 
 function initCompareView() {
@@ -86,299 +107,103 @@ function initCompareView() {
   if (!chart) return;
 
   populateRegionSelect(document.getElementById("compare-region-select"), compareState.region);
+  populateStartYearSelect();
+  setupSlot("a");
+  setupSlot("b");
 
-  const categorySelect = document.getElementById("compare-category-select");
-  manifest.category_order.forEach((cat) => {
-    const option = document.createElement("option");
-    option.value = cat;
-    option.textContent = categoryLabelWithIcon(cat);
-    categorySelect.appendChild(option);
-  });
-  compareState.category = manifest.category_order[0];
-  categorySelect.addEventListener("change", (event) => {
-    compareState.category = event.target.value;
-    renderCategoryOverlay();
-  });
+  // Default B to a different category than A so the page opens on an actual
+  // cross-variable comparison, not two snow products.
+  const cats = nonEmptyCategories();
+  if (cats.length > 1) setSlotCategory("b", cats[1]);
 
   document.getElementById("compare-region-select").addEventListener("change", (event) => {
     compareState.region = event.target.value;
-    renderCategoryOverlay();
+    renderCompare();
   });
-
-  populateStartYearSelect();
   document.getElementById("compare-start-year-select").addEventListener("change", (event) => {
-    compareStartYear = event.target.value ? parseInt(event.target.value, 10) : null;
-    renderCategoryOverlay();
+    compareState.startYear = event.target.value ? parseInt(event.target.value, 10) : null;
+    renderCompare();
   });
 
-  wireAddSeriesControls();
-  renderCategoryOverlay();
+  renderCompare();
 }
 
-// Category/product/response cascade for adding an arbitrary extra series
-// from ANY category -- separate from the main category-select above, which
-// only browses one category's own checklist at a time.
-function populateAddCategorySelect() {
-  const select = document.getElementById("compare-add-category");
-  select.innerHTML = "";
-  manifest.category_order
-    .filter((cat) => Object.keys(manifest.categories[cat]).length > 0)
-    .forEach((cat) => {
-      const option = document.createElement("option");
-      option.value = cat;
-      option.textContent = categoryLabelWithIcon(cat);
-      select.appendChild(option);
-    });
-  populateAddProductSelect();
-}
-
-function populateAddProductSelect() {
-  const select = document.getElementById("compare-add-product");
-  select.innerHTML = "";
-  const category = document.getElementById("compare-add-category").value;
-  Object.keys(manifest.categories[category]).forEach((product) => {
-    const option = document.createElement("option");
-    option.value = product;
-    option.textContent = product;
-    select.appendChild(option);
-  });
-  populateAddResponseSelect();
-}
-
-function populateAddResponseSelect() {
-  const select = document.getElementById("compare-add-response");
-  select.innerHTML = "";
-  const category = document.getElementById("compare-add-category").value;
-  const product = document.getElementById("compare-add-product").value;
-  Object.keys(manifest.categories[category][product]).forEach((response) => {
-    const option = document.createElement("option");
-    option.value = response;
-    option.textContent = response;
-    select.appendChild(option);
-  });
-}
-
-function wireAddSeriesControls() {
-  populateAddCategorySelect();
-  document.getElementById("compare-add-category").addEventListener("change", populateAddProductSelect);
-  document.getElementById("compare-add-product").addEventListener("change", populateAddResponseSelect);
-  document.getElementById("compare-add-button").addEventListener("click", () => {
-    const category = document.getElementById("compare-add-category").value;
-    const product = document.getElementById("compare-add-product").value;
-    const response = document.getElementById("compare-add-response").value;
-    const alreadyAdded = compareState.customSeries.some(
-      (s) => s.category === category && s.product === product && s.response === response
-    );
-    if (alreadyAdded) return;
-    compareState.customSeries.push({ category, product, response });
-    renderCategoryOverlay();
-  });
-}
-
-function plotlyLayout() {
+function slotSeries(slot, data) {
+  const region = data.regions[compareState.region];
+  if (!region) return null;
+  const startYear = Math.max(DASHBOARD_MIN_YEAR, compareState.startYear || DASHBOARD_MIN_YEAR);
+  const keep = (d) => parseInt(d.slice(0, 4), 10) >= startYear;
   return {
-    title: { text: `${categoryLabelWithIcon(compareState.category)} — ${regionLabelFor(compareState.region)}`, font: { size: 15, color: "#023858" } },
-    margin: { t: 48, r: 20, b: 45, l: 60 },
-    yaxis: { title: "Standardized anomaly (σ)", zeroline: true, ...PLOTLY_AXIS_LINE },
-    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
-    font: { family: "Source Sans Pro, sans-serif", size: 13 },
-    shapes: [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }],
+    dates: region.dates.filter(keep),
+    values: region.value.filter((_, i) => keep(region.dates[i])),
+    color: manifest.category_colors[compareState[slot].category],
+    name: `${compareState[slot].product} · ${data.response}`,
+    units: data.units,
   };
 }
 
-// How many series start checked/visible the first time a category is shown
-// -- the rest are opt-in via the checkbox legend (renderCategoryLegend
-// below). Only applies on first view; compareState.checkedByCategory
-// remembers whatever the user changes it to after that.
-const CATEGORY_OVERLAY_DEFAULT_VISIBLE = 2;
-
-async function renderCategoryOverlay() {
+// Two panels stacked top (A) over bottom (B), both referencing the single
+// shared x-axis so their time axes stay aligned; each keeps its own y-axis in
+// its own units. Panel titles sit above each panel (A in the top margin, B in
+// the gap between panels) so the units-only y-axis label stays short.
+async function renderCompare() {
   const chart = document.getElementById("compare-chart");
-  const note = document.getElementById("compare-category-note");
-  const category = compareState.category;
-  const products = manifest.categories[category] || {};
-  const pairs = [];
-  for (const [product, responses] of Object.entries(products)) {
-    for (const response of Object.keys(responses)) pairs.push({ product, response });
-  }
-  if (pairs.length === 0) {
-    chart.innerHTML = '<p class="chart-empty">No products in this category.</p>';
-    document.getElementById("compare-category-legend").innerHTML = "";
-    return;
-  }
-  note.textContent = "Each color is one variable. Check a variable below to add it to the chart.";
-
-  // First time this category is shown, default to the first N visible;
-  // after that, keep whatever the user has checked/unchecked -- switching
-  // region re-renders the same category and must not silently discard it.
-  const checkedKey = compareState.checkedByCategory[category] || new Set(
-    pairs.slice(0, CATEGORY_OVERLAY_DEFAULT_VISIBLE).map((p) => `${p.product}|${p.response}`)
-  );
-  compareState.checkedByCategory[category] = checkedKey;
-
-  // Fetch every product's JSON concurrently instead of one at a time (plus
-  // each one's seasonal JSON too, for the vegetation category's growing-
-  // season mask) -- some categories have 15-27 products, and awaiting each
-  // fetch in turn meant a full re-render waited on that many sequential
-  // network round-trips (fetchTimeseriesJson/fetchSeasonalJson's shared
-  // per-page caches, js/common.js, apply per key either way).
-  const seriesList = await Promise.all(
-    pairs.map(({ product, response }) => fetchTimeseriesJson(`${product}_${response}`))
-  );
-  const seasonalList = category === "vegetation"
-    ? await Promise.all(pairs.map(({ product, response }) => fetchSeasonalJson(`${product}_${response}`)))
-    : null;
-
-  // Extra series added from any category (compareState.customSeries), minus
-  // whatever duplicates a pair the browsed category is already plotting
-  // below -- adding e.g. "PRISM Precipitation" while browsing precipitation
-  // itself would otherwise double-plot the same line.
-  const extraEntries = compareState.customSeries.filter(
-    (s) => !(s.category === category && pairs.some((p) => p.product === s.product && p.response === s.response))
-  );
-  const extraSeriesList = await Promise.all(
-    extraEntries.map((e) => fetchTimeseriesJson(`${e.product}_${e.response}`))
-  );
-  const extraSeasonalList = await Promise.all(
-    extraEntries.map((e) => (e.category === "vegetation" ? fetchSeasonalJson(`${e.product}_${e.response}`) : null))
-  );
-
-  function standardizedSeries(product, response, region, seasonalRegion, entryCategory, drierIsHigh) {
-    let sigma = region.sigma;
-    if (entryCategory === "vegetation" && seasonalRegion) {
-      const mean = seasonalRegion.climatology_mean;
-      const trough = Math.min(...mean);
-      const amplitude = Math.max(...mean) - trough;
-      const keepMonth = mean.map((v) => (v - trough) > COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION * amplitude);
-      sigma = region.dates.map((d, i) => {
-        // mean/keepMonth are water-year ordered (index 0 = Oct ... index 11
-        // = Sep, see manifest.water_year_month_names), but `d` is a real
-        // calendar date -- converting to a water-year index before indexing
-        // keepMonth is required, not optional. Indexing with the calendar
-        // month directly was a 3-month-offset bug: it kept December (the
-        // dormant trough month) and dropped March-May (the real growing-
-        // season ramp), confirmed against MODIS-Terra_GPP.json's own
-        // climatology (Dylan, 2026-09).
-        const calendarMonth = parseInt(d.slice(5, 7), 10);
-        const waterYearMonth = (calendarMonth - 10 + 12) % 12;
-        return keepMonth[waterYearMonth] ? sigma[i] : null;
-      });
-    }
-    // Flip to the same drier_is_high convention js/summary.js, js/heatmaps.js,
-    // and js/map-viewer.js already use, so positive always means the stress
-    // direction here too -- replaces the old hardcoded 5-response
-    // COMBINED_INVERTED_VALENCE_RESPONSES negation (dead code once this
-    // flip applies everywhere: every response in that list was exactly the
-    // drier_is_high=True oddity within an otherwise drier_is_high=False/None
-    // group, e.g. NEE within vegetation, TD2m within climate -- this flip
-    // reproduces that same alignment for free, and also fixes drought-group
-    // EDDI-03/06/12 and USDM, which needed the identical treatment but had
-    // drifted out of this file's own copy of the Python constant).
-    const sign = drierIsHigh ? 1 : -1;
-    return sigma.map((v) => (v === null || v === undefined ? null : sign * v));
-  }
+  const [aData, bData] = await Promise.all([
+    fetchTimeseriesJson(`${compareState.a.product}_${compareState.a.response}`),
+    fetchTimeseriesJson(`${compareState.b.product}_${compareState.b.response}`),
+  ]);
+  const a = slotSeries("a", aData);
+  const b = slotSeries("b", bData);
 
   const traces = [];
-  const legendItems = [];
-  let colorIndex = 0;
-  pairs.forEach(({ product, response }, pairIndex) => {
-    const data = seriesList[pairIndex];
-    const region = data.regions[compareState.region];
-    if (!region) return;
+  const annotations = [];
+  const regionLabel = regionLabelFor(compareState.region);
 
-    const pairKey = `${product}|${response}`;
-
-    const seasonal = seasonalList ? seasonalList[pairIndex] : null;
-    const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-    const sigma = standardizedSeries(product, response, region, seasonalRegion, category, data.drier_is_high);
-
-    const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
-    const name = `${product} ${response}`;
-    const visible = checkedKey.has(pairKey);
-    const { dates, values } = filterFromStartYear(region.dates, sigma);
+  if (a) {
     traces.push({
-      x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
-      line: { color, width: 2.5 },
-      name, visible,
+      x: a.dates, y: a.values, type: "scatter", mode: "lines",
+      line: { color: a.color, width: 2 }, xaxis: "x", yaxis: "y",
+      hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
     });
-    legendItems.push({ name, color, visible, pairKey });
-    colorIndex++;
-  });
-
-  const extraChipColors = [];
-  extraEntries.forEach((entry, i) => {
-    const data = extraSeriesList[i];
-    const region = data.regions[compareState.region];
-    if (!region) { extraChipColors.push(null); return; }
-
-    const seasonal = extraSeasonalList[i];
-    const seasonalRegion = seasonal && seasonal.regions[compareState.region];
-    const sigma = standardizedSeries(entry.product, entry.response, region, seasonalRegion, entry.category, data.drier_is_high);
-
-    const color = CATEGORY_OVERLAY_COLORS[colorIndex % CATEGORY_OVERLAY_COLORS.length];
-    const name = `${entry.product} ${entry.response}`;
-    const { dates, values } = filterFromStartYear(region.dates, sigma);
+    annotations.push(panelTitle(a.name, a.color, 1.0));
+  } else {
+    annotations.push(emptyPanel(`No ${regionLabel} data`, 0.78));
+  }
+  if (b) {
     traces.push({
-      x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
-      line: { color, width: 2.5 },
-      name, visible: true,
+      x: b.dates, y: b.values, type: "scatter", mode: "lines",
+      line: { color: b.color, width: 2 }, xaxis: "x", yaxis: "y2",
+      hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
     });
-    extraChipColors.push(color);
-    colorIndex++;
-  });
+    annotations.push(panelTitle(b.name, b.color, 0.42));
+  } else {
+    annotations.push(emptyPanel(`No ${regionLabel} data`, 0.22));
+  }
 
-  Plotly.newPlot(chart, traces, { ...plotlyLayout(), showlegend: false }, { responsive: true, displaylogo: false });
-  renderCategoryLegend(legendItems);
-  renderExtraSeriesChips(extraEntries, extraChipColors);
+  const layout = {
+    margin: { t: 34, r: 20, b: 45, l: 70 },
+    font: { family: "Source Sans Pro, sans-serif", size: 13 },
+    showlegend: false,
+    annotations,
+    xaxis: { title: "Year", showgrid: false, anchor: "y2", ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
+    yaxis: { title: a ? a.units : "", domain: [0.58, 1.0], anchor: "x", ...PLOTLY_AXIS_LINE },
+    yaxis2: { title: b ? b.units : "", domain: [0.0, 0.42], anchor: "x", ...PLOTLY_AXIS_LINE },
+  };
+  Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }
 
-function renderExtraSeriesChips(extraEntries, extraChipColors) {
-  const row = document.getElementById("compare-extra-series");
-  row.innerHTML = "";
-  extraEntries.forEach((entry, i) => {
-    const color = extraChipColors[i];
-    if (!color) return; // region had no data for this entry -- nothing plotted, nothing to show
-    const chip = document.createElement("span");
-    chip.className = "year-chip";
-    chip.style.background = color;
-    chip.innerHTML = `${entry.product} ${entry.response} <button type="button" aria-label="Remove ${entry.product} ${entry.response}">&times;</button>`;
-    chip.querySelector("button").addEventListener("click", () => {
-      compareState.customSeries = compareState.customSeries.filter((s) => s !== entry);
-      renderCategoryOverlay();
-    });
-    row.appendChild(chip);
-  });
+function panelTitle(text, color, yTop) {
+  return {
+    text, xref: "paper", yref: "paper", x: 0, y: yTop, xanchor: "left", yanchor: "bottom",
+    showarrow: false, font: { size: 14, color }, align: "left",
+  };
 }
 
-function renderCategoryLegend(items) {
-  const container = document.getElementById("compare-category-legend");
-  container.innerHTML = "";
-  items.forEach((item, i) => {
-    const label = document.createElement("label");
-    label.className = "compare-legend-item";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = item.visible;
-    checkbox.addEventListener("change", (event) => {
-      const checkedKey = compareState.checkedByCategory[compareState.category];
-      if (event.target.checked) checkedKey.add(item.pairKey);
-      else checkedKey.delete(item.pairKey);
-      const chart = document.getElementById("compare-chart");
-      Plotly.restyle(chart, { visible: event.target.checked }, [i]);
-      // restyle() alone doesn't recompute the axis range for the now-
-      // different set of visible traces -- confirmed live: check/uncheck a
-      // few series and the y-axis stayed pinned to whatever range the
-      // ORIGINAL default-visible traces needed, not the current ones.
-      Plotly.relayout(chart, { "yaxis.autorange": true });
-    });
-    const swatch = document.createElement("span");
-    swatch.className = "compare-legend-swatch";
-    swatch.style.background = item.color;
-    label.appendChild(checkbox);
-    label.appendChild(swatch);
-    label.appendChild(document.createTextNode(item.name));
-    container.appendChild(label);
-  });
+function emptyPanel(text, yMid) {
+  return {
+    text, xref: "paper", yref: "paper", x: 0.5, y: yMid, xanchor: "center", yanchor: "middle",
+    showarrow: false, font: { size: 14, color: "#888" },
+  };
 }
 
 loadManifest().then(initCompareView);

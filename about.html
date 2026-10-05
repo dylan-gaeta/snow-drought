@@ -31,6 +31,7 @@
       <a href="data.html">Summary Table</a>
       <a href="heatmaps.html">Heatmap</a>
       <a href="classification.html">Classification</a>
+      <a href="compare.html">Compare</a>
       <a href="gallery.html">Figure Gallery</a>
       <a href="about.html" class="active">About</a>
     </nav>
@@ -71,26 +72,18 @@
   <section id="cross-product-methodology">
     <h2>Cross-product views</h2>
     <p>
-      Three tools on this site overlay or aggregate more than one product at
-      once. All three are computed live in the browser from the same
+      Three tools on this site place more than one product in a single view.
+      All three are computed live in the browser from the same
       per-product JSON everything else on this site reads &mdash; nothing is
       a static image, and no product is ever averaged or blended into
       another.
     </p>
     <ul>
       <li><strong>Compare</strong>
-        (<a href="compare.html">Compare</a>): every product
-        that shares a physical theme (snow, soil moisture, vegetation, ...)
-        overlaid on one standardized-anomaly (&sigma;) axis, drawn solid for
-        an observation and dashed for a model or data-driven product; check a
-        variable to add it to the chart. Vegetation responses are shown only
-        during each product's own active growing season &mdash; a
-        dormant-season baseline near zero would otherwise make a tiny
-        absolute anomaly explode when standardized. Every series is
-        sign-flipped by its own stress direction before overlay (the same
-        convention the Summary Table, Heatmap, and Map use), so positive
-        always reads as the stress direction regardless of a variable's raw
-        sign convention.</li>
+        (<a href="compare.html">Compare</a>): any two variables placed side by
+        side, each on its own panel in its own physical units, sharing one time
+        axis. Raw monthly values only &mdash; nothing is standardized, blended,
+        or sign-flipped; pick a variable for each panel.</li>
       <li><strong>Heatmap</strong> (<a href="heatmaps.html">Heatmap</a>):
         every product's standardized anomaly, one row per product, for any
         month or season window back to 1990, as one color matrix per
