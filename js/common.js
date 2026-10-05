@@ -548,6 +548,14 @@ function findResponseEntry(product, response) {
 // plain-language definition plus the same units/record/baseline facts
 // already in the exported JSON, never any interpretive claim about current
 // conditions.
+// Readable labels for the pipeline's internal record-status enum, so the raw
+// snake_case value (e.g. "partial_target_record") never shows in the UI.
+const STATUS_LABELS = {
+  complete_target_record: "complete record",
+  partial_target_record: "current period provisional",
+  no_target_observations: "no current-period data",
+};
+
 function productMetaHtml(entry) {
   const recordRange = entry.record_start && entry.record_end
     ? `${entry.record_start.slice(0, 7)} – ${entry.record_end.slice(0, 7)}`
@@ -556,7 +564,7 @@ function productMetaHtml(entry) {
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}`
     : "n/a";
   const glossaryLine = entry.glossary ? `<p class="product-glossary">${entry.glossary}</p>` : "";
-  return `${glossaryLine}<p class="product-facts">Units: ${entry.units || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${entry.status}</p>`;
+  return `${glossaryLine}<p class="product-facts">Units: ${entry.units || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${STATUS_LABELS[entry.status] || entry.status}</p>`;
 }
 
 // Cross-page continuity for the Explore <-> Maps product picker: the last

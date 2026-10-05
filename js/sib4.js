@@ -53,7 +53,19 @@ function pftColor(code) {
   return (m.pft_line_colors && m.pft_line_colors[code]) || m.pft_colors[code] || "#888";
 }
 function pftFillColor(code) { return pftMeta().pft_colors[code] || "#888"; }
-function pftLabel(code) { return pftMeta().pft_labels[code] || code; }
+// Several PFT codes share one display name (en2/en3, eb1/eb2, db1/db2/db3), so
+// append the code for those -- otherwise they are indistinguishable, especially
+// in the diurnal <select> which carries no color swatch.
+let _pftDupLabels = null;
+function pftLabel(code) {
+  const m = pftMeta();
+  const label = m.pft_labels[code] || code;
+  if (!_pftDupLabels) {
+    _pftDupLabels = {};
+    Object.values(m.pft_labels).forEach((v) => { _pftDupLabels[v] = (_pftDupLabels[v] || 0) + 1; });
+  }
+  return _pftDupLabels[label] > 1 ? `${label} (${code})` : label;
+}
 function monthlyVar(key) { return pftMeta().monthly_variables.find((v) => v.key === key); }
 
 // Order a region's PFTs by the manifest's WUS-dominant pft_order.
@@ -84,10 +96,15 @@ async function renderComposition() {
     type: "bar", orientation: "h", marker: { color: pftFillColor(code), line: { color: "#fff", width: 0.5 } },
     hovertemplate: `${pftLabel(code)}: %{x:.1f}%<extra></extra>`,
   }));
+  // On a phone the ~19-entry horizontal legend needs far more room than the
+  // 280px desktop box, or ~12 entries clip; give it a taller chart and a deep
+  // bottom margin there.
+  const isNarrow = window.innerWidth < 600;
+  el.style.height = isNarrow ? "500px" : "280px";
   Plotly.newPlot(el, traces, {
     barmode: "stack", showlegend: true,
-    legend: { orientation: "h", y: -0.55, yanchor: "top", font: { size: 12 } },
-    margin: { t: 6, r: 12, b: 48, l: 12 },
+    legend: { orientation: "h", y: isNarrow ? -0.12 : -0.55, yanchor: "top", font: { size: 12 } },
+    margin: { t: 6, r: 12, b: isNarrow ? 260 : 48, l: 12 },
     xaxis: { title: "share of land (%)", range: sib4State.excludeDBG ? undefined : [0, 100], ...PLOTLY_AXIS_LINE },
     yaxis: { showticklabels: false }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });

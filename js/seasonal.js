@@ -78,8 +78,11 @@ async function renderSeasonal() {
   // overlaid curve is still its OWN real water year underneath (the x
   // values themselves stay plain month names); this only makes the
   // shared axis concretely dated instead of a bare, ambiguous "Oct...Sep".
+  const isNarrow = window.innerWidth < 820;
   const referenceYear = Math.max(...manifest.seasonal_highlight_years);
-  const tickText = x.map((month, i) => `${month}<br>${i < 3 ? referenceYear - 1 : referenceYear}`);
+  // On a phone the two-line month+year ticks collide into garbled text, so show
+  // just the month there and drop the dated-year second line.
+  const tickText = isNarrow ? x : x.map((month, i) => `${month}<br>${i < 3 ? referenceYear - 1 : referenceYear}`);
   const isAnomaly = seasonalSeries === "anomaly";
   const teal = manifest.climatology_color;
   const upper = isAnomaly ? region.anomaly_upper : region.climatology_upper;
@@ -128,7 +131,6 @@ async function renderSeasonal() {
   // the viewport width with illegible, crammed two-line month/year tick
   // labels (confirmed live, 375px). Below the chart, horizontal, instead --
   // same breakpoint map.html's own side-panel-to-stacked layout already uses.
-  const isNarrow = window.innerWidth < 820;
   document.getElementById("seasonal-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
   const layout = {
     margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },

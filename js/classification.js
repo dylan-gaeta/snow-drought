@@ -177,9 +177,12 @@ function renderQuadrantChart() {
   }
 
   // Year labels on every point with a short leader line, matching the static
-  // classification figures (Dylan, #3); 2026 is bold and larger.
+  // classification figures (Dylan, #3); 2026 is bold and larger. On a phone the
+  // 36 labels collide into an unreadable mass, so there show only 2026.
+  const isNarrow = typeof window !== "undefined" && window.innerWidth < 600;
   const sizes = points.map((p) => (p.winter_year === 2026 ? 16 : 9));
   points.forEach((p) => {
+    if (isNarrow && p.winter_year !== 2026) return;
     annotations.push({
       x: p[x], y: p[y], text: String(p.winter_year),
       showarrow: true, arrowhead: 0, arrowwidth: 0.7, arrowcolor: "#bbb", ax: 10, ay: -11,
@@ -220,7 +223,7 @@ function renderQuadrantChart() {
   };
 
   const layout = {
-    margin: { t: 20, r: 80, b: 55, l: 65 },
+    margin: { t: 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
     xaxis: { title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
     yaxis: { title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },

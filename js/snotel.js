@@ -193,6 +193,10 @@ function selectStation(triplet) {
 function renderDetail() {
   const triplet = snotelState.selected;
   if (!triplet) return;
+  // Restore the reserved chart heights once a station is actually chosen (they
+  // start collapsed so an unselected page isn't a ~720px blank band).
+  document.getElementById("snotel-detail-chart").style.height = "420px";
+  document.getElementById("snotel-history-chart").style.height = "300px";
   const meta = stationMeta(triplet);
   const wyData = currentDaily();
   const s = wyData && wyData.stations[triplet];
@@ -323,6 +327,11 @@ async function init() {
 
   refreshMap();
   populateStationSelect();
+  // Empty-state until a station is picked, so the two fixed-height chart divs
+  // don't render as a tall blank band on load.
+  document.getElementById("snotel-detail-chart").innerHTML = '<p class="chart-empty">Pick a station above, or click a dot on the map, to see its daily snowpack record.</p>';
+  document.getElementById("snotel-detail-chart").style.height = "auto";
+  document.getElementById("snotel-history-chart").style.height = "0";
   document.getElementById("snotel-station-select").addEventListener("change", (e) => { if (e.target.value) selectStation(e.target.value); });
 
   document.getElementById("snotel-metric-select").addEventListener("change", (e) => { snotelState.metric = e.target.value; refreshMap(); });

@@ -324,6 +324,11 @@ async function renderHeatmapUnsafe(chart, pairs) {
   };
   const layout = {
     margin: { t: 90, r: heatmapState.category === "all" ? 48 : 20, b: 60, l: 180 },
+    // Gray fills the plot behind the cells, so a missing (null) cell reads as
+    // gray "no data" instead of falling through to white -- which the diverging
+    // scale also uses for a neutral sigma=0, a dangerous look-alike on a drought
+    // heatmap. hoverongaps:false keeps gaps non-interactive.
+    plot_bgcolor: "#c8c8c8",
     xaxis: { side: "bottom", tickangle: 0 },
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
@@ -337,7 +342,11 @@ async function renderHeatmapUnsafe(chart, pairs) {
   // wide heatmap illegible on mobile. Force a real per-column width and let
   // .heatmap-chart-scroll (css/style.css) handle the horizontal scroll
   // instead, same as the Summary Table's own too-wide-for-mobile table.
-  chart.style.minWidth = `${Math.max(600, xLabels.length * 45 + 220)}px`;
+  // On phones let the heatmap fit the viewport so its colorbar stays on-screen,
+  // rather than forcing a wide horizontal scroll that pushes the sigma scale off
+  // the right edge (it reappears as a stray navy sliver otherwise).
+  const isNarrow = typeof window !== "undefined" && window.innerWidth < 600;
+  chart.style.minWidth = isNarrow ? "0" : `${Math.max(600, xLabels.length * 45 + 220)}px`;
   // Plotly.newPlot() appends its own plot div into `chart` but doesn't touch
   // pre-existing sibling elements -- the "Computing..." <p> set above the
   // fetch would otherwise sit there forever, untouched, next to the finished
