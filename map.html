@@ -50,69 +50,77 @@
     <h2>Interactive maps</h2>
     <p class="finding-note">Cloud Optimized GeoTIFF maps. Click for pixel value. Download GeoTIFF or copy view link. Colors/bins match the pre-rendered static maps (server-side).</p>
 
-    <div class="product-search-wrap">
-      <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
-      <div id="product-search-results" class="search-results"></div>
-    </div>
-
-    <div class="explorer-layout">
-      <nav class="category-tabs" id="category-tabs" aria-label="Dataset category"></nav>
-
-      <div>
-        <div class="map-sticky">
-        <div class="selector-row">
+    <div class="map-panels-top">
+      <div class="map-panel">
+        <p class="map-panel-title">Variable</p>
+        <div class="product-search-wrap">
+          <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
+          <div id="product-search-results" class="search-results"></div>
+        </div>
+        <div class="map-panel-row">
+          <label class="select-field">Category <select id="ol-category-select" aria-label="Category"></select></label>
           <label class="select-field">Dataset <select id="product-select" aria-label="Product"></select></label>
           <label class="select-field">Variable <select id="response-select" aria-label="Variable"></select></label>
-          <label class="select-field">Color theme <select id="ol-colormap-select" aria-label="Color theme"></select></label>
-        </div>
-        <div class="map-controls">
-          <div class="ol-period-slider" id="ol-period-slider">
-            <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
-            <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
-          </div>
-          <div class="series-toggle" id="ol-mode-toggle">
-            <button type="button" data-mode="climatology" class="active">Climatology</button>
-            <button type="button" data-mode="raw">Raw units</button>
-            <button type="button" data-mode="anomaly">Anomaly</button>
-          </div>
-          <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
-            <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
-            <div class="ol-year-slider-wrap">
-              <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
-              <div class="ol-year-axis" id="ol-year-axis" aria-hidden="true"></div>
-            </div>
-            <select id="ol-year-select" aria-label="Year"></select>
-            <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
-          </div>
-          <label class="boundary-toggle"><input type="checkbox" id="ol-boundary-toggle" checked> State boundaries</label>
-          <label class="boundary-toggle"><input type="checkbox" id="ol-huc-toggle"> HUC2 basins</label>
-        </div>
-        </div>
-        <h3 id="ol-map-title" class="figure-title"></h3>
-        <div class="product-meta" id="product-meta"></div>
-        <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
-        <div id="ol-map-wrap">
-          <div id="ol-legend"></div>
-          <div id="ol-map" aria-label="Interactive map"></div>
-        </div>
-        <div id="ol-query-readout">Click the map to read a pixel value.</div>
-        <div class="ol-actions">
-          <button id="ol-reset-view-btn" type="button">Reset view</button>
-          <button id="ol-fullscreen-btn" type="button">Full screen</button>
-          <button id="ol-screenshot-btn" type="button">Download screenshot</button>
-          <a id="ol-geotiff-link" download>Download GeoTIFF</a>
-          <button id="ol-copy-url-btn" type="button">Copy COG URL</button>
-          <button id="ol-copy-view-btn" type="button">Copy link to this view</button>
-        </div>
-        <div id="ol-region-table-wrap" class="region-table-card">
-          <h3 id="ol-region-table-heading">Regional values</h3>
-          <p id="ol-region-table-note" class="value-glossary"></p>
-          <table class="headline-table" id="ol-region-table">
-            <thead><tr><th>Region</th><th id="ol-region-rawval-th">Raw value</th><th>Anomaly (raw)</th><th>Anomaly (σ)</th><th>Rank on record</th></tr></thead>
-            <tbody id="ol-region-table-body"></tbody>
-          </table>
         </div>
       </div>
+
+      <div class="map-panel">
+        <p class="map-panel-title">Time &amp; type</p>
+        <div class="ol-period-slider" id="ol-period-slider">
+          <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
+          <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
+        </div>
+        <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
+          <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
+          <div class="ol-year-slider-wrap">
+            <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
+            <div class="ol-year-axis" id="ol-year-axis" aria-hidden="true"></div>
+          </div>
+          <select id="ol-year-select" aria-label="Year"></select>
+          <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
+        </div>
+        <div class="series-toggle" id="ol-mode-toggle">
+          <button type="button" data-mode="climatology" class="active">Climatology</button>
+          <button type="button" data-mode="raw">Raw units</button>
+          <button type="button" data-mode="anomaly">Anomaly</button>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="ol-map-title" class="figure-title"></h3>
+    <div class="product-meta" id="product-meta"></div>
+    <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
+    <div id="ol-map-wrap">
+      <div id="ol-legend"></div>
+      <div id="ol-map" aria-label="Interactive map"></div>
+    </div>
+    <div id="ol-query-readout">Click the map to read a pixel value.</div>
+
+    <div class="map-panel map-panel-display">
+      <p class="map-panel-title">Display</p>
+      <div class="map-panel-row">
+        <label class="select-field">Color theme <select id="ol-colormap-select" aria-label="Color theme"></select></label>
+        <button type="button" id="ol-invert-btn" class="map-toggle-btn" aria-pressed="false">Invert colors</button>
+        <label class="boundary-toggle"><input type="checkbox" id="ol-boundary-toggle" checked> State boundaries</label>
+        <label class="boundary-toggle"><input type="checkbox" id="ol-huc-toggle"> HUC2 basins</label>
+      </div>
+    </div>
+
+    <div class="ol-actions">
+      <button id="ol-reset-view-btn" type="button">Reset view</button>
+      <button id="ol-fullscreen-btn" type="button">Full screen</button>
+      <button id="ol-screenshot-btn" type="button">Download screenshot</button>
+      <a id="ol-geotiff-link" download>Download GeoTIFF</a>
+      <button id="ol-copy-url-btn" type="button">Copy COG URL</button>
+      <button id="ol-copy-view-btn" type="button">Copy link to this view</button>
+    </div>
+    <div id="ol-region-table-wrap" class="region-table-card">
+      <h3 id="ol-region-table-heading">Regional values</h3>
+      <p id="ol-region-table-note" class="value-glossary"></p>
+      <table class="headline-table" id="ol-region-table">
+        <thead><tr><th>Region</th><th id="ol-region-rawval-th">Raw value</th><th>Anomaly (raw)</th><th>Anomaly (σ)</th><th>Rank on record</th></tr></thead>
+        <tbody id="ol-region-table-body"></tbody>
+      </table>
     </div>
   </section>
 

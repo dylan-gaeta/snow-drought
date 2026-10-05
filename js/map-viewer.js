@@ -63,6 +63,9 @@ function initMapPicker() {
     selectMapCategory(initialCategory);
   }
 
+  document.getElementById("ol-category-select").addEventListener("change", (event) => {
+    selectMapCategory(event.target.value);
+  });
   document.getElementById("product-select").addEventListener("change", (event) => {
     mapPickerState.product = event.target.value;
     populateMapResponseSelect();
@@ -79,43 +82,42 @@ function initMapPicker() {
 }
 
 function renderMapCategoryTabs() {
-  const nav = document.getElementById("category-tabs");
-  nav.innerHTML = "";
-  manifest.category_order.forEach((category) => {
-    const products = manifest.categories[category];
-    if (Object.keys(products).length === 0) return;
-    const button = document.createElement("button");
-    button.className = "category-tab";
-    button.textContent = categoryLabelWithIcon(category);
-    button.style.setProperty("--cat", manifest.category_colors[category]);
-    button.dataset.category = category;
-    button.addEventListener("click", () => selectMapCategory(category));
-    nav.appendChild(button);
+  const select = document.getElementById("ol-category-select");
+  select.innerHTML = "";
+  manifest.category_order.filter(categoryHasSpatialMap).forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = categoryLabelWithIcon(category);
+    select.appendChild(option);
   });
 }
 
 function selectMapCategory(category) {
   mapPickerState.category = category;
-  document.querySelectorAll("#category-tabs .category-tab").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.category === category);
-  });
+  document.getElementById("ol-category-select").value = category;
   populateMapProductSelect();
 }
 
-// A response gets a spatial map unless its manifest entry is flagged
-// no_spatial_maps -- site/point products (e.g. PhenoCam camera sites) whose
-// gridded field is interpolated from sparse points, misleading as a map
-// (Dylan, 2026-10). Such products still appear on Time Series/Seasonal/etc.
-function responseHasSpatialMap(product, response) {
-  const entry = manifest.categories[mapPickerState.category]?.[product]?.[response];
-  return !(entry && entry.no_spatial_maps);
+// A response gets a spatial map only if its manifest entry actually carries
+// map outputs and isn't flagged no_spatial_maps -- site/point products whose
+// gridded field would be interpolated from sparse stations (PhenoCam, SNOTEL,
+// NEON, AmeriFlux) have no COG at all and must not appear in the map pickers,
+// only on Time Series/Seasonal/etc. (Dylan, 2026-10).
+function responseHasSpatialMap(category, product, response) {
+  const entry = manifest.categories[category]?.[product]?.[response];
+  return !!(entry && entry.maps && !entry.no_spatial_maps);
+}
+
+function categoryHasSpatialMap(category) {
+  return Object.entries(manifest.categories[category]).some(([product, responses]) =>
+    Object.keys(responses).some((r) => responseHasSpatialMap(category, product, r)));
 }
 
 function populateMapProductSelect() {
   const select = document.getElementById("product-select");
   select.innerHTML = "";
   const products = Object.keys(manifest.categories[mapPickerState.category]).filter((product) =>
-    Object.keys(manifest.categories[mapPickerState.category][product]).some((r) => responseHasSpatialMap(product, r)));
+    Object.keys(manifest.categories[mapPickerState.category][product]).some((r) => responseHasSpatialMap(mapPickerState.category, product, r)));
   products.forEach((product) => {
     const option = document.createElement("option");
     option.value = product;
@@ -133,7 +135,7 @@ function populateMapResponseSelect() {
   const select = document.getElementById("response-select");
   select.innerHTML = "";
   const responses = Object.keys(manifest.categories[mapPickerState.category][mapPickerState.product])
-    .filter((response) => responseHasSpatialMap(mapPickerState.product, response));
+    .filter((response) => responseHasSpatialMap(mapPickerState.category, mapPickerState.product, response));
   responses.forEach((response) => {
     const option = document.createElement("option");
     option.value = response;
@@ -181,6 +183,7 @@ const olMapState = {
   currentCogUrl: null,
   currentScale: null,
   colormap: null, // null = the product's own NCL palette; else an NCL_COLORMAPS key
+  invert: false, // flip the color scale direction (legend gradient + raster)
 };
 
 // The Color theme dropdown offers the NCL tables appropriate to the current
@@ -201,12 +204,12 @@ function populateColormapSelect() {
 // product's own style palette (256-stop sequential / diverging anomaly).
 function currentPalette(style) {
   const isDiverging = olMapState.mode === "anomaly";
-  const defaultPalette = isDiverging ? style.anomaly_colors : style.baseline_colors;
+  let palette = isDiverging ? style.anomaly_colors : style.baseline_colors;
   if (olMapState.colormap && typeof NCL_COLORMAPS !== "undefined") {
     const group = isDiverging ? "diverging" : "sequential";
-    if (NCL_COLORMAPS[group][olMapState.colormap]) return NCL_COLORMAPS[group][olMapState.colormap].colors;
+    if (NCL_COLORMAPS[group][olMapState.colormap]) palette = NCL_COLORMAPS[group][olMapState.colormap].colors;
   }
-  return defaultPalette;
+  return olMapState.invert ? palette.slice().reverse() : palette;
 }
 
 const COG_NODATA = -32768;
@@ -384,6 +387,16 @@ function initInteractiveMap() {
     olMapState.colormap = event.target.value || null;
     // Rebuild every cached layer with the new palette (WebGLTile's color style
     // is fixed at construction); the COG bytes stay HTTP-cached so this is fast.
+    if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
+    olMapState.layerCache = {};
+    updateInteractiveMapLayer();
+  });
+  document.getElementById("ol-invert-btn").addEventListener("click", (event) => {
+    olMapState.invert = !olMapState.invert;
+    event.currentTarget.classList.toggle("active", olMapState.invert);
+    event.currentTarget.setAttribute("aria-pressed", String(olMapState.invert));
+    // Same rebuild as a colormap change: the palette is baked into each cached
+    // WebGLTile's color style at construction, so reversed colors need fresh layers.
     if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
     olMapState.layerCache = {};
     updateInteractiveMapLayer();

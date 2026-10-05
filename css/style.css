@@ -586,6 +586,43 @@ table.headline-table tr.group-row td {
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; align-items: center; }
 
+/* Map controls grouped into three labelled panels (Dylan, 2026-10): "Variable"
+   and "Time & type" sit side by side above the map; "Display" (cosmetic
+   options) sits below it. Replaces the old left category sidebar + sticky bar,
+   which ate the map's height and scattered related controls. */
+.map-panels-top { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.map-panel {
+  flex: 1 1 340px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  padding: 0.8rem 1rem;
+}
+.map-panel-display { margin: 1rem 0; }
+.map-panel-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.map-panel-row { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; }
+.map-toggle-btn {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.map-toggle-btn:hover { border-color: var(--blue); }
+.map-toggle-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
 /* Period picker as a slider (Dylan, 2026-10): a play button + a track of
    discrete stops. The longer seasonal windows sit first in their own shaded,
    rounded band so they read as seasons, not months; the 12 months follow as

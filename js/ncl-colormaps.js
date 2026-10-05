@@ -233,6 +233,44 @@ const NCL_COLORMAPS = {
   }
  },
  "diverging": {
+  "MPL_BrBG": {
+   "label": "MPL_BrBG",
+   "colors": [
+    "#563105",
+    "#683c07",
+    "#794608",
+    "#8b500a",
+    "#9b5f14",
+    "#ab6e1f",
+    "#bb7d2a",
+    "#c79040",
+    "#d1a559",
+    "#dbb972",
+    "#e3c989",
+    "#ead59f",
+    "#f1e1b5",
+    "#f6eac9",
+    "#f6eed9",
+    "#f5f2e8",
+    "#f2f4f4",
+    "#e4f1ef",
+    "#d5edea",
+    "#c7eae5",
+    "#b1e1da",
+    "#9ad8ce",
+    "#84cfc3",
+    "#6dbfb4",
+    "#55aea5",
+    "#3e9d95",
+    "#2b8d85",
+    "#1a7e76",
+    "#0a6f67",
+    "#016058",
+    "#015349",
+    "#00463b",
+    "#003c30"
+   ]
+  },
   "precip_diff_12lev": {
    "label": "precip diff (brown\u2194blue)",
    "colors": [
