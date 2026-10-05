@@ -95,7 +95,7 @@ async function renderComposition() {
 
 // --------------------------------------------------- 2. SiB4 stress functions
 const STRESS_KEYS = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"];
-const STRESS_LABELS = { ROOT_STRESS: "Rootzone water (rstfac2)", LEAF_STRESS: "Leaf/humidity water (rstfac1)", TEMP_STRESS: "Temperature (rstfac3)" };
+const STRESS_LABELS = { ROOT_STRESS: "Root-zone soil water (rstfac2)", LEAF_STRESS: "Leaf-surface humidity (rstfac1)", TEMP_STRESS: "Temperature (rstfac3)" };
 
 function renderStressFactorButtons() {
   const box = document.getElementById("sib4-limitation-factors");
