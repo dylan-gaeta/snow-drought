@@ -200,13 +200,28 @@ const olMapState = {
 // mode -- diverging for Anomaly, sequential for Climatology/Raw -- plus the
 // product's own default. Repopulated when the mode changes; an override that
 // no longer fits the new mode's group resets to Default.
+// Find a theme's colors by key across all three groups (Diverging / Continuous
+// / Discrete) -- the dropdown offers every group at once, so an override isn't
+// tied to the current mode's group.
+function lookupColormapColors(key) {
+  if (typeof NCL_COLORMAPS === "undefined") return null;
+  for (const group of Object.values(NCL_COLORMAPS)) if (group[key]) return group[key].colors;
+  return null;
+}
+
+const COLORMAP_GROUP_LABELS = { diverging: "Diverging", continuous: "Continuous", discrete: "Discrete" };
 function populateColormapSelect() {
   const sel = document.getElementById("ol-colormap-select");
   if (!sel || typeof NCL_COLORMAPS === "undefined") return;
-  const group = olMapState.mode === "anomaly" ? "diverging" : "sequential";
-  sel.innerHTML = '<option value="">Default (product)</option>' +
-    Object.keys(NCL_COLORMAPS[group]).map((k) => `<option value="${k}">${k}</option>`).join("");
-  if (olMapState.colormap && NCL_COLORMAPS[group][olMapState.colormap]) sel.value = olMapState.colormap;
+  let html = '<option value="">Default (product)</option>';
+  for (const [group, label] of Object.entries(COLORMAP_GROUP_LABELS)) {
+    if (!NCL_COLORMAPS[group]) continue;
+    html += `<optgroup label="${label}">` +
+      Object.keys(NCL_COLORMAPS[group]).map((k) => `<option value="${k}">${k}</option>`).join("") +
+      "</optgroup>";
+  }
+  sel.innerHTML = html;
+  if (olMapState.colormap && lookupColormapColors(olMapState.colormap)) sel.value = olMapState.colormap;
   else { olMapState.colormap = null; sel.value = ""; }
 }
 
@@ -215,9 +230,9 @@ function populateColormapSelect() {
 function currentPalette(style) {
   const isDiverging = olMapState.mode === "anomaly";
   let palette = isDiverging ? style.anomaly_colors : style.baseline_colors;
-  if (olMapState.colormap && typeof NCL_COLORMAPS !== "undefined") {
-    const group = isDiverging ? "diverging" : "sequential";
-    if (NCL_COLORMAPS[group][olMapState.colormap]) palette = NCL_COLORMAPS[group][olMapState.colormap].colors;
+  if (olMapState.colormap) {
+    const colors = lookupColormapColors(olMapState.colormap);
+    if (colors) palette = colors;
   }
   return olMapState.invert ? palette.slice().reverse() : palette;
 }
