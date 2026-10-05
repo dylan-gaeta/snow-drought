@@ -192,7 +192,7 @@ function populateColormapSelect() {
   if (!sel || typeof NCL_COLORMAPS === "undefined") return;
   const group = olMapState.mode === "anomaly" ? "diverging" : "sequential";
   sel.innerHTML = '<option value="">Default (product)</option>' +
-    Object.entries(NCL_COLORMAPS[group]).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+    Object.keys(NCL_COLORMAPS[group]).map((k) => `<option value="${k}">${k}</option>`).join("");
   if (olMapState.colormap && NCL_COLORMAPS[group][olMapState.colormap]) sel.value = olMapState.colormap;
   else { olMapState.colormap = null; sel.value = ""; }
 }
@@ -242,13 +242,22 @@ function hexToRgbTriple(hex) {
 // evenly across [vmin, vmax] and interpolated linearly; OL clamps values
 // outside that range to the end colors. Replaces the old discrete-bin scheme,
 // whose break ticks/extend arrows were hard to format on the dynamic maps.
+// Cap on how many color stops go into the WebGL "interpolate" expression. A
+// 256-stop baseline palette (and even a 33-stop NCL one on stricter GPUs)
+// compiles to a GLSL chain so long the fragment shader fails outright with
+// "Expression too complex" and the raster never paints -- raw/climatology maps
+// went fully transparent while anomaly (11 stops) was fine (Dylan, 2026-10). A
+// linear ramp over ~16 evenly-spaced stops of an already-smooth NCL table is
+// visually indistinguishable from the full-resolution palette.
+const MAX_COLOR_STOPS = 16;
 function buildContinuousColorExpression(vmin, vmax, colors, scale) {
   const value = ["/", ["band", 1], scale];
   const stops = [];
-  const n = colors.length;
+  const n = Math.min(colors.length, MAX_COLOR_STOPS);
   for (let i = 0; i < n; i++) {
-    const v = vmin + (i / (n - 1)) * (vmax - vmin);
-    const [r, g, b] = hexToRgbTriple(colors[i]);
+    const t = n === 1 ? 0 : i / (n - 1);
+    const v = vmin + t * (vmax - vmin);
+    const [r, g, b] = hexToRgbTriple(colors[Math.round(t * (colors.length - 1))]);
     stops.push(v, ["color", r, g, b]);
   }
   // ol.source.GeoTIFF's `nodata` option adds an alpha band (0 at nodata); gate
@@ -814,9 +823,11 @@ async function updateInteractiveMapLayer() {
   const legend = document.getElementById("ol-legend");
   const units = entry.units || "";
   const palette = currentPalette(style);
-  const label = olMapState.mode === "climatology" ? `Climatology (${units})`
-    : olMapState.mode === "raw" ? `${olMapState.year} (${units})`
-    : `${units} anomaly`;
+  const unitSuffix = units ? ` [${units}]` : "";
+  const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
+  const label = olMapState.mode === "climatology" ? `${pv} — climatology${unitSuffix}`
+    : olMapState.mode === "raw" ? `${pv} — ${olMapState.year}${unitSuffix}`
+    : `${pv} — ${olMapState.year} anomaly${unitSuffix}`;
   let boundaries = fileEntry.boundaries;
   let binColors = palette;
   let colorExpr = null;
