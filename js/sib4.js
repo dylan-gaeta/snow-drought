@@ -34,7 +34,10 @@ const SIB4_CORRESPONDENCE = {
 
 const SIB4_NAVY = "#023858";
 const COMPARE_COLORS = ["#b2182b", "#ef8a62", "#fddbc7", "#4393c3", "#2166ac", "#762a83", "#1b7837", "#999999"];
-const STRESS_COLORS = { ROOT_STRESS: "#8c510a", LEAF_STRESS: "#bf812d", TEMP_STRESS: "#c51b7d" };
+// Three distinct hues (soil=brown, air/humidity=blue, temperature=magenta):
+// rstfac1 and rstfac2 were both brown and too close to tell apart once the
+// axis autoscaled. Validated colorblind-safe (dataviz validate_palette).
+const STRESS_COLORS = { ROOT_STRESS: "#8c510a", LEAF_STRESS: "#2166ac", TEMP_STRESS: "#c51b7d" };
 
 const _sib4Cache = {};
 function fetchSib4(kind, key) {
