@@ -165,7 +165,30 @@ function bandAt(band, key, doy) {
   return ys[i - 1] + frac * (ys[i] - ys[i - 1]);
 }
 
-function selectStation(triplet) { snotelState.selected = triplet; renderDetail(); refreshMap(); }
+// Station dropdown: grouped by state, each state's stations sorted
+// highest-elevation first, so sites can be found without hunting for a dot.
+function populateStationSelect() {
+  const sel = document.getElementById("snotel-station-select");
+  if (!sel) return;
+  const byState = {};
+  snotelState.stations.stations.forEach((st) => { (byState[st.state] = byState[st.state] || []).push(st); });
+  let html = '<option value="">Select a station&hellip;</option>';
+  Object.keys(byState).sort().forEach((state) => {
+    const list = byState[state].slice().sort((a, b) => (b.elev_ft || 0) - (a.elev_ft || 0));
+    html += `<optgroup label="${state}">` + list.map((st) =>
+      `<option value="${st.triplet}">${st.name}${st.elev_ft ? " (" + st.elev_ft.toLocaleString() + " ft)" : ""}</option>`
+    ).join("") + "</optgroup>";
+  });
+  sel.innerHTML = html;
+}
+
+function selectStation(triplet) {
+  snotelState.selected = triplet;
+  const sel = document.getElementById("snotel-station-select");
+  if (sel && sel.value !== triplet) sel.value = triplet;
+  renderDetail();
+  refreshMap();
+}
 
 function renderDetail() {
   const triplet = snotelState.selected;
@@ -299,6 +322,8 @@ async function init() {
   wySel.value = String(snotelState.wy);
 
   refreshMap();
+  populateStationSelect();
+  document.getElementById("snotel-station-select").addEventListener("change", (e) => { if (e.target.value) selectStation(e.target.value); });
 
   document.getElementById("snotel-metric-select").addEventListener("change", (e) => { snotelState.metric = e.target.value; refreshMap(); });
   wySel.addEventListener("change", (e) => changeWaterYear(parseInt(e.target.value, 10)));
