@@ -457,7 +457,7 @@ table.headline-table tr.group-row td {
    .year-control-wrap with its own narrower, stepper-button-paired styling
    below, and a plain descendant selector here would have widened it to
    this rule's 180px min-width, breaking that compact layout. */
-.selector-row select, .map-controls > select {
+.selector-row select, .map-controls > select, .map-panel-row select {
   font-family: var(--font-body);
   font-size: 0.95rem;
   padding: 0.5rem 2.1rem 0.5rem 0.75rem;
@@ -470,8 +470,13 @@ table.headline-table tr.group-row td {
   cursor: pointer;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-.selector-row select:hover, .map-controls > select:hover { border-color: var(--blue); }
-.selector-row select:focus-visible, .map-controls > select:focus-visible { border-color: var(--blue); box-shadow: var(--shadow-focus); outline: none; }
+.selector-row select:hover, .map-controls > select:hover, .map-panel-row select:hover { border-color: var(--blue); }
+.selector-row select:focus-visible, .map-controls > select:focus-visible, .map-panel-row select:focus-visible { border-color: var(--blue); box-shadow: var(--shadow-focus); outline: none; }
+/* Inside the map panels the key selects share the row and fill their share
+   rather than each forcing a 180px min-width (which overflowed). Scoped to
+   .map-panel-row so the compact year scrubber's own select is untouched. */
+.map-panel-row .select-field { flex: 0 1 240px; min-width: 0; }
+.map-panel-row select { min-width: 0; width: 100%; }
 
 .compare-slot-label {
   display: inline-flex;
@@ -590,10 +595,8 @@ table.headline-table tr.group-row td {
    and "Time & type" sit side by side above the map; "Display" (cosmetic
    options) sits below it. Replaces the old left category sidebar + sticky bar,
    which ate the map's height and scattered related controls. */
-.map-panels-top { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.map-panels-top { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; }
 .map-panel {
-  flex: 1 1 340px;
-  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-panel);
@@ -622,6 +625,13 @@ table.headline-table tr.group-row td {
 }
 .map-toggle-btn:hover { border-color: var(--blue); }
 .map-toggle-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+/* Time & type panel stacks its controls so the period slider, the year
+   scrubber, and the Climatology/Raw/Anomaly toggle each sit on their own row
+   (they are inline-flex and otherwise crowd onto one line). */
+#ol-time-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; }
+#ol-time-panel .map-panel-title { margin-bottom: 0; }
+#ol-time-panel .ol-period-slider,
+#ol-time-panel .year-control-wrap { width: 100%; }
 
 /* Period picker as a slider (Dylan, 2026-10): a play button + a track of
    discrete stops. The longer seasonal windows sit first in their own shaded,
