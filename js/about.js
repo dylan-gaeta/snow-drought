@@ -3,7 +3,14 @@
 
 function renderValueTypeGlossary() {
   const list = document.getElementById("value-type-list");
-  Object.entries(manifest.value_type_glossary || {}).forEach(([key, text]) => {
+  // Merge in representations the Summary Table adds client-side but the
+  // manifest glossary doesn't carry yet (keeps this list in sync with the
+  // actual Summary Table dropdown).
+  const glossary = {
+    ...(manifest.value_type_glossary || {}),
+    anomaly_raw: "the departure from the baseline mean in the variable's own physical units (not standardized).",
+  };
+  Object.entries(glossary).forEach(([key, text]) => {
     const li = document.createElement("li");
     li.innerHTML = `<strong>${key}</strong>: ${text}`;
     list.appendChild(li);

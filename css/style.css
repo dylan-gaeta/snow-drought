@@ -296,15 +296,27 @@ table.headline-table tr.group-row td {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
-  margin: 1.5rem 0;
+  margin: 0.5rem 0 0;
 }
 @media (max-width: 860px) { .home-nav-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .home-nav-grid { grid-template-columns: 1fr; } }
+/* Home cards grouped by function (Maps / Trends & cycles / Cross-product /
+   Reference), each group carrying its own accent on the card left-border. */
+.home-nav-section { margin: 1.75rem 0; }
+.home-nav-section-title {
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0 0.3rem;
+}
 .home-nav-card {
   display: block;
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--blue-dark);
+  border-left: 4px solid var(--group-accent, var(--blue-dark));
   border-radius: var(--radius-sm);
   padding: 1rem 1.2rem;
   text-decoration: none;

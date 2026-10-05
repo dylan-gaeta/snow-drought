@@ -62,7 +62,7 @@
       and are shown directly rather than recomputed.
     </p>
     <p>
-      On the <a href="data.html">summary table</a>, five ways to display the
+      On the <a href="data.html">summary table</a>, several ways to display the
       same underlying anomaly are available:
     </p>
     <ul id="value-type-list"></ul>
@@ -149,21 +149,27 @@
           <tr><td>PDSI</td><td>Palmer Drought Severity Index, computed on the gridMET grid</td><td><a href="https://www.drought.gov/data-maps-tools/us-gridded-palmer-drought-severity-index-pdsi-gridmet" target="_blank" rel="noopener">University of Idaho (gridMET / Climatology Lab)</a></td></tr>
           <tr><td>ForDRI</td><td>Forest Drought Response Index &mdash; composite drought index for forested land</td><td><a href="https://fordri.unl.edu" target="_blank" rel="noopener">National Drought Mitigation Center, University of Nebraska-Lincoln / USDA Forest Service</a></td></tr>
           <tr><td>ESI</td><td>Evaporative Stress Index &mdash; MODIS actual/reference-ET ratio anomaly (plant water stress)</td><td><a href="https://gis1.servirglobal.net/data/esi" target="_blank" rel="noopener">USDA / SERVIR</a></td></tr>
+          <tr><td>VegDRI</td><td>Vegetation Drought Response Index &mdash; a satellite-greenness, climate, and biophysical blend of vegetation drought stress</td><td><a href="https://vegdri.unl.edu/" target="_blank" rel="noopener">National Drought Mitigation Center, University of Nebraska-Lincoln / USGS EROS</a></td></tr>
           <tr><td>USDM</td><td>U.S. Drought Monitor &mdash; weekly composite drought classification (D0&ndash;D4) and severity index</td><td><a href="https://droughtmonitor.unl.edu/" target="_blank" rel="noopener">National Drought Mitigation Center, University of Nebraska-Lincoln</a></td></tr>
           <tr><td>ERA5-Land</td><td>Reanalysis land-surface SWE, soil moisture, ET, precipitation, temperature, runoff</td><td><a href="https://cds.climate.copernicus.eu/" target="_blank" rel="noopener">ECMWF / Copernicus Climate Data Store</a></td></tr>
           <tr><td>UA-SWE-Monthly</td><td>4-km daily gridded snow water equivalent, aggregated to monthly</td><td><a href="https://climate.arizona.edu/data/UA_SWE/DailyData_4km" target="_blank" rel="noopener">University of Arizona</a></td></tr>
-          <tr><td>MODIS-TerraAqua</td><td>Daily 0.05&deg; snow-cover fraction (MOD10C1/MYD10C1)</td><td><a href="https://nsidc.org/data/mod10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
+          <tr><td>MODIS-Terra-SCA / MODIS-Aqua-SCA</td><td>Daily 0.05&deg; snow-cover fraction from the Terra (MOD10C1) and Aqua (MYD10C1) sensors</td><td><a href="https://nsidc.org/data/mod10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
           <tr><td>VIIRS</td><td>Satellite (VNP10C1) daily snow-covered-area product</td><td><a href="https://nsidc.org/data/vnp10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
           <tr><td>IMS-Snow</td><td>Interactive Multisensor Snow and Ice Mapping System, daily snow-cover classification (NSIDC G02156)</td><td><a href="https://nsidc.org/data/g02156" target="_blank" rel="noopener">NOAA / NSIDC</a></td></tr>
+          <tr><td>SNODAS</td><td>Snow Data Assimilation System &mdash; modeled daily snow water equivalent (NOHRSC, NSIDC G02158)</td><td><a href="https://nsidc.org/data/g02158" target="_blank" rel="noopener">NOAA NOHRSC / NSIDC</a></td></tr>
           <tr><td>NLDAS-Mosaic</td><td>NLDAS-2 Mosaic land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>NLDAS-Noah</td><td>NLDAS-2 Noah land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>NLDAS-VIC</td><td>NLDAS-2 VIC land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>PRISM</td><td>Monthly 4-km precipitation and vapor-pressure-deficit grids</td><td><a href="https://prism.oregonstate.edu/" target="_blank" rel="noopener">PRISM Climate Group, Oregon State University</a></td></tr>
           <tr><td>MODIS-Terra</td><td>Leaf area index (MOD15A2H.061), evapotranspiration (MOD16A2GF.061), gross primary productivity (MOD17A2HGF.061), and NDVI/EVI vegetation indices (MOD13C1.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>MODIS-Aqua</td><td>Aqua-sensor counterparts: leaf area index, evapotranspiration, gross primary productivity, NDVI/EVI/LSWI vegetation indices, and day/night land-surface temperature (MYD-series, e.g. MYD13C1.061, MYD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>VIIRS-NDVI</td><td>VIIRS 0.05&deg; NDVI and EVI vegetation indices (VNP13C1)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>VIIRS-LST</td><td>VIIRS day/night land-surface temperature (VNP21C2)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>GPCP</td><td>Global Precipitation Climatology Project monthly precipitation, 2.5&deg;</td><td><a href="https://www.ncei.noaa.gov/products/global-precipitation-climatology-project" target="_blank" rel="noopener">NOAA NCEI / University of Maryland</a></td></tr>
           <tr><td>GRACE-JPL-L3</td><td>Mascon terrestrial water-storage anomaly (TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4, DOI 10.5067/TEMSC-3JC634)</td><td><a href="https://podaac.jpl.nasa.gov/dataset/TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4" target="_blank" rel="noopener">NASA JPL / PO.DAAC</a></td></tr>
           <tr><td>GRACE-L4</td><td>Catchment land-surface data-assimilation model groundwater/soil-moisture storage (GRACEDADM_CLSM025GL_7D)</td><td><a href="https://earth.gsfc.nasa.gov/hydro/data/groundwater-and-soil-moisture-conditions-grace-data-assimilation" target="_blank" rel="noopener">NASA Goddard Space Flight Center / GES DISC</a></td></tr>
           <tr><td>SMOS</td><td>L2 soil moisture (MIR_SMUDP2)</td><td><a href="https://earth.esa.int/eogateway/missions/smos" target="_blank" rel="noopener">European Space Agency</a></td></tr>
+          <tr><td>SMAP</td><td>L3 radiometer surface soil moisture (SPL3SMP)</td><td><a href="https://nsidc.org/data/spl3smp" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
           <tr><td>SiB4</td><td>Process-based terrestrial biosphere model (GPP/RECO/NEE by plant functional type)</td><td>Colorado State University (Dr. Aleya Kaushik)</td></tr>
           <tr><td>OCO-2</td><td>Level-2 Lite solar-induced fluorescence (OCO2_L2_Lite_SIF)</td><td><a href="https://disc.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>TROPOSIF</td><td>TROPOMI solar-induced fluorescence (L2B_SIF___)</td><td><a href="https://s5p-pal.com/" target="_blank" rel="noopener">ESA Sentinel-5P S5P-PAL</a></td></tr>
