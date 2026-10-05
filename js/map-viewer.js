@@ -269,6 +269,24 @@ function pickTickDecimals(boundaries) {
   return 6;
 }
 
+// Round "axis" tick values across [vmin, vmax], stepped by 1/2/5 times a power
+// of ten so the labels land on human-friendly numbers (0, 50, 100, ...) rather
+// than vmin + k*(range/n) fractions -- the same idea as a matplotlib colorbar's
+// tick locator. targetCount is a target, not exact: the chosen round step gives
+// however many ticks fit the range.
+function niceTickValues(vmin, vmax, targetCount) {
+  const range = vmax - vmin;
+  if (!(range > 0)) return [vmin];
+  const rawStep = range / targetCount;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const first = Math.ceil(vmin / step - 1e-9) * step;
+  const ticks = [];
+  for (let v = first; v <= vmax + step * 1e-9; v += step) ticks.push(v);
+  return ticks;
+}
+
 function olPeriodLabel(period) {
   return periodLabel(period); // shared implementation, js/common.js -- do not reimplement its body here
 }
@@ -814,13 +832,19 @@ async function updateInteractiveMapLayer() {
     // align (Dylan, 2026-10). Values outside the range clamp to the end colors.
     const vmin = boundaries[0];
     const vmax = boundaries[boundaries.length - 1];
-    const nTicks = 5;
-    const tickValues = Array.from({ length: nTicks }, (_, i) => vmin + (i / (nTicks - 1)) * (vmax - vmin));
+    // Aim for one round-number tick roughly every 70px of the bar's actual
+    // width, so a wide desktop colorbar gets a full axis of labels and a narrow
+    // phone one stays legible -- derived from the rendered width, not a fixed
+    // count (the old fixed 5 left the bar looking bare, Dylan 2026-10).
+    const barWidth = document.getElementById("ol-map").clientWidth || 700;
+    const targetCount = Math.max(5, Math.min(12, Math.round(barWidth / 70)));
+    const tickValues = niceTickValues(vmin, vmax, targetCount);
     const decimals = pickTickDecimals(tickValues);
     const gradient = `linear-gradient(to right, ${palette.join(", ")})`;
-    const ticks = tickValues.map((v, i) =>
-      `<span class="ol-legend-tick" style="left:${(i / (nTicks - 1)) * 100}%">${v.toFixed(decimals)}</span>`
-    ).join("");
+    const ticks = tickValues.map((v) => {
+      const frac = (v - vmin) / (vmax - vmin);
+      return `<span class="ol-legend-tick" style="left:${(frac * 100).toFixed(2)}%">${v.toFixed(decimals)}</span>`;
+    }).join("");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
       `<div class="ol-legend-scale-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +
       `<div class="ol-legend-ticks">${ticks}</div></div>`;
