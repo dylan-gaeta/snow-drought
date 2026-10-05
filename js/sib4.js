@@ -84,7 +84,7 @@ async function renderComposition() {
   }, { displaylogo: false, responsive: true });
 }
 
-// --------------------------------------------------- 2. SiB4 stress factors
+// --------------------------------------------------- 2. SiB4 stress functions
 const STRESS_KEYS = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"];
 const STRESS_LABELS = { ROOT_STRESS: "Rootzone water (rstfac2)", LEAF_STRESS: "Leaf/humidity water (rstfac1)", TEMP_STRESS: "Temperature (rstfac3)" };
 
@@ -97,7 +97,7 @@ function renderStressFactorButtons() {
 
 async function renderLimitation() {
   const el = document.getElementById("sib4-limitation");
-  document.getElementById("sib4-limitation-title").textContent = `Stress factors — ${regionLabelFor(sib4State.region)}`;
+  document.getElementById("sib4-limitation-title").textContent = `Stress functions — ${regionLabelFor(sib4State.region)}`;
   const isAnom = sib4State.limitationSeries === "anomaly";
   const shown = STRESS_KEYS.filter((k) => sib4State.stressFactors.has(k));
   const data = await Promise.all(shown.map((k) => fetchSib4("timeseries", k)));
@@ -105,14 +105,18 @@ async function renderLimitation() {
   shown.forEach((k, i) => {
     const agg = data[i] && data[i].regions[sib4State.region] && data[i].regions[sib4State.region].AGG;
     if (!agg) return;
-    // Plot the actual rstfac factor (0-1, 1 = unstressed); anomaly = raw departure.
+    // Plot the actual rstfac stress function (0-1, 1 = unstressed); anomaly = raw departure.
     const raw = isAnom ? agg.anomaly : agg.value;
     const { dates, values } = afterStart(data[i].dates, raw);
     traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: STRESS_LABELS[k], line: { color: STRESS_COLORS[k], width: 2 } });
   });
   Plotly.newPlot(el, traces, {
     margin: { t: 8, r: 16, b: 40, l: 56 },
-    yaxis: { title: isAnom ? "stress-factor anomaly" : "stress factor (0 = limiting, 1 = unstressed)", range: isAnom ? undefined : [0, 1], zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    // Autorange rather than a forced [0,1]: WUS rstfac values sit low (~0.06-0.33),
+    // so pinning the axis to the full 0-1 range flattened all three lines against
+    // the bottom and hid their variation (Dylan, 2026-10). The title still states
+    // the 0-1 convention.
+    yaxis: { title: isAnom ? "stress-function anomaly" : "stress function (0-1, 1 = unstressed)", zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     legend: { orientation: "h", y: -0.18 }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
