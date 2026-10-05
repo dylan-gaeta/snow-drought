@@ -598,9 +598,11 @@ function buildYearAxis(years) {
   if (!axis) return;
   if (years.length < 2) { axis.innerHTML = ""; return; }
   const last = years.length - 1;
-  const step = [1, 2, 3, 5, 10, 20].find((s) => years.length / s <= 16) || 20;
-  const show = new Set([0, last]);
-  years.forEach((y, i) => { if ((y - years[0]) % step === 0) show.add(i); });
+  const lastYear = years[last];
+  // A tick every 5 years counting back from the most recent year (so 2026,
+  // 2021, 2016, ...), plus the latest year itself.
+  const show = new Set([last]);
+  years.forEach((y, i) => { if ((lastYear - y) % 5 === 0) show.add(i); });
   axis.innerHTML = [...show].sort((a, b) => a - b).map((i) =>
     `<span class="ol-year-tick" style="left:${(i / last) * 100}%">${years[i]}</span>`
   ).join("");

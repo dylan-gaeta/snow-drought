@@ -625,11 +625,10 @@ table.headline-table tr.group-row td {
 }
 .map-toggle-btn:hover { border-color: var(--blue); }
 .map-toggle-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-/* Time & type panel stacks its controls so the period slider, the year
-   scrubber, and the Climatology/Raw/Anomaly toggle each sit on their own row
-   (they are inline-flex and otherwise crowd onto one line). */
-#ol-time-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; }
-#ol-time-panel .map-panel-title { margin-bottom: 0; }
+/* Each panel's controls stack with consistent spacing so the search box, the
+   select row, the mode toggle, the period slider and the year scrubber each sit
+   on their own row (several are inline-flex and would otherwise crowd a line). */
+.map-panel > * + * { margin-top: 0.8rem; }
 #ol-time-panel .ol-period-slider,
 #ol-time-panel .year-control-wrap { width: 100%; }
 

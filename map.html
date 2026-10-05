@@ -52,7 +52,6 @@
 
     <div class="map-panels-top">
       <div class="map-panel">
-        <p class="map-panel-title">Variable</p>
         <div class="product-search-wrap">
           <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
           <div id="product-search-results" class="search-results"></div>
@@ -62,10 +61,14 @@
           <label class="select-field">Dataset <select id="product-select" aria-label="Product"></select></label>
           <label class="select-field">Variable <select id="response-select" aria-label="Variable"></select></label>
         </div>
+        <div class="series-toggle" id="ol-mode-toggle">
+          <button type="button" data-mode="climatology" class="active">Climatology</button>
+          <button type="button" data-mode="raw">Raw units</button>
+          <button type="button" data-mode="anomaly">Anomaly</button>
+        </div>
       </div>
 
       <div class="map-panel" id="ol-time-panel">
-        <p class="map-panel-title">Time &amp; type</p>
         <div class="ol-period-slider" id="ol-period-slider">
           <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
           <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
@@ -78,11 +81,6 @@
           </div>
           <select id="ol-year-select" aria-label="Year"></select>
           <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
-        </div>
-        <div class="series-toggle" id="ol-mode-toggle">
-          <button type="button" data-mode="climatology" class="active">Climatology</button>
-          <button type="button" data-mode="raw">Raw units</button>
-          <button type="button" data-mode="anomaly">Anomaly</button>
         </div>
       </div>
     </div>
@@ -97,7 +95,6 @@
     <div id="ol-query-readout">Click the map to read a pixel value.</div>
 
     <div class="map-panel map-panel-display" id="ol-display-panel">
-      <p class="map-panel-title">Display</p>
       <div class="map-panel-row">
         <label class="select-field">Color theme <select id="ol-colormap-select" aria-label="Color theme"></select></label>
         <button type="button" id="ol-invert-btn" class="map-toggle-btn" aria-pressed="false">Invert colors</button>
