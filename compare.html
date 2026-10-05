@@ -42,8 +42,9 @@
 
   <section id="compare">
     <h2>Compare</h2>
-    <p class="finding-note">Any two variables side by side, each in its own
-      units on a shared time axis.</p>
+    <p class="finding-note">Any two variables on a shared time axis &mdash; in
+      raw units each reads on its own y-axis (A left, B right); switch to
+      &sigma; to put both on one standardized scale.</p>
     <div class="selector-row">
       <span class="compare-slot-label">A</span>
       <select id="compare-a-category" aria-label="Panel A category"></select>
@@ -61,8 +62,12 @@
       <label class="boundary-toggle" for="compare-start-year-select">Start year
         <select id="compare-start-year-select" aria-label="Start year"></select>
       </label>
+      <div class="series-toggle" id="compare-series-toggle">
+        <button type="button" data-series="value" class="active">Raw units</button>
+        <button type="button" data-series="sigma">&sigma;</button>
+      </div>
     </div>
-    <div id="compare-chart" style="height:620px;"></div>
+    <div id="compare-chart" style="height:460px;"></div>
   </section>
 
 </main>

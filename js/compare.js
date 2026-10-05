@@ -9,9 +9,16 @@
 const compareState = {
   region: "ALL",
   startYear: null,
+  series: "value", // "value" (raw, dual y-axis) | "sigma" (shared standardized axis)
   a: { category: null, product: null, response: null },
   b: { category: null, product: null, response: null },
 };
+
+// Two fixed, clearly-distinct line colors -- the series are overlaid on one
+// plot now, so they can't be colored by category (two same-category variables
+// would collide). Left axis + line A read blue, right axis + line B read orange.
+const COMPARE_A_COLOR = "#1b6ca8";
+const COMPARE_B_COLOR = "#e8702a";
 
 // Opens on the modern era rather than the full 1990-2026 record, matching
 // js/explore.js -- the whole record crams ~430 monthly points into a smear.
@@ -124,6 +131,13 @@ function initCompareView() {
     compareState.startYear = event.target.value ? parseInt(event.target.value, 10) : null;
     renderCompare();
   });
+  document.getElementById("compare-series-toggle").addEventListener("click", (event) => {
+    const btn = event.target.closest("button[data-series]");
+    if (!btn) return;
+    compareState.series = btn.dataset.series;
+    document.querySelectorAll("#compare-series-toggle button").forEach((x) => x.classList.toggle("active", x === btn));
+    renderCompare();
+  });
 
   renderCompare();
 }
@@ -132,20 +146,19 @@ function slotSeries(slot, data) {
   const region = data.regions[compareState.region];
   if (!region) return null;
   const startYear = Math.max(DASHBOARD_MIN_YEAR, compareState.startYear || DASHBOARD_MIN_YEAR);
-  const keep = (d) => parseInt(d.slice(0, 4), 10) >= startYear;
+  const keep = region.dates.map((d) => parseInt(d.slice(0, 4), 10) >= startYear);
+  const raw = compareState.series === "sigma" ? region.sigma : region.value;
   return {
-    dates: region.dates.filter(keep),
-    values: region.value.filter((_, i) => keep(region.dates[i])),
-    color: manifest.category_colors[compareState[slot].category],
+    dates: region.dates.filter((_, i) => keep[i]),
+    values: raw.filter((_, i) => keep[i]).map((v) => (v === null || v === undefined ? null : v)),
     name: `${compareState[slot].product} · ${data.response}`,
     units: data.units,
   };
 }
 
-// Two panels stacked top (A) over bottom (B), both referencing the single
-// shared x-axis so their time axes stay aligned; each keeps its own y-axis in
-// its own units. Panel titles sit above each panel (A in the top margin, B in
-// the gap between panels) so the units-only y-axis label stays short.
+// Both variables share one time axis. In raw mode each keeps its own units on
+// its own y-axis (A left/blue, B right/orange); in sigma mode both are
+// standardized and share a single axis, so the lines sit on a common scale.
 async function renderCompare() {
   const chart = document.getElementById("compare-chart");
   const [aData, bData] = await Promise.all([
@@ -154,56 +167,40 @@ async function renderCompare() {
   ]);
   const a = slotSeries("a", aData);
   const b = slotSeries("b", bData);
+  const isSigma = compareState.series === "sigma";
+
+  if (!a && !b) {
+    chart.innerHTML = `<p class="chart-empty">No data for ${regionLabelFor(compareState.region)}.</p>`;
+    return;
+  }
 
   const traces = [];
-  const annotations = [];
-  const regionLabel = regionLabelFor(compareState.region);
-
-  if (a) {
-    traces.push({
-      x: a.dates, y: a.values, type: "scatter", mode: "lines",
-      line: { color: a.color, width: 2 }, xaxis: "x", yaxis: "y",
-      hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
-    });
-    annotations.push(panelTitle(a.name, a.color, 1.0));
-  } else {
-    annotations.push(emptyPanel(`No ${regionLabel} data`, 0.78));
-  }
-  if (b) {
-    traces.push({
-      x: b.dates, y: b.values, type: "scatter", mode: "lines",
-      line: { color: b.color, width: 2 }, xaxis: "x", yaxis: "y2",
-      hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
-    });
-    annotations.push(panelTitle(b.name, b.color, 0.42));
-  } else {
-    annotations.push(emptyPanel(`No ${regionLabel} data`, 0.22));
-  }
+  if (a) traces.push({
+    x: a.dates, y: a.values, type: "scatter", mode: "lines", connectgaps: false,
+    name: a.name, line: { color: COMPARE_A_COLOR, width: 2.5 }, yaxis: "y",
+    hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${a.name}</extra>`,
+  });
+  if (b) traces.push({
+    x: b.dates, y: b.values, type: "scatter", mode: "lines", connectgaps: false,
+    name: b.name, line: { color: COMPARE_B_COLOR, width: 2.5 }, yaxis: isSigma ? "y" : "y2",
+    hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${b.name}</extra>`,
+  });
 
   const layout = {
-    margin: { t: 34, r: 20, b: 45, l: 70 },
+    margin: { t: 10, r: isSigma ? 20 : 66, b: 45, l: 66 },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
-    showlegend: false,
-    annotations,
-    xaxis: { title: "Year", showgrid: false, anchor: "y2", ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
-    yaxis: { title: a ? a.units : "", domain: [0.58, 1.0], anchor: "x", ...PLOTLY_AXIS_LINE },
-    yaxis2: { title: b ? b.units : "", domain: [0.0, 0.42], anchor: "x", ...PLOTLY_AXIS_LINE },
+    legend: { orientation: "h", y: 1.1, x: 0, yanchor: "bottom", font: { size: 13 } },
+    hovermode: "x unified",
+    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
+    shapes: isSigma ? [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }] : [],
   };
+  if (isSigma) {
+    layout.yaxis = { title: "Standardized anomaly (σ)", zeroline: true, ...PLOTLY_AXIS_LINE };
+  } else {
+    layout.yaxis = { title: { text: a ? a.units : "", font: { color: COMPARE_A_COLOR } }, color: COMPARE_A_COLOR, ...PLOTLY_AXIS_LINE };
+    layout.yaxis2 = { title: { text: b ? b.units : "", font: { color: COMPARE_B_COLOR } }, color: COMPARE_B_COLOR, overlaying: "y", side: "right", showgrid: false, ...PLOTLY_AXIS_LINE };
+  }
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
-}
-
-function panelTitle(text, color, yTop) {
-  return {
-    text, xref: "paper", yref: "paper", x: 0, y: yTop, xanchor: "left", yanchor: "bottom",
-    showarrow: false, font: { size: 14, color }, align: "left",
-  };
-}
-
-function emptyPanel(text, yMid) {
-  return {
-    text, xref: "paper", yref: "paper", x: 0.5, y: yMid, xanchor: "center", yanchor: "middle",
-    showarrow: false, font: { size: 14, color: "#888" },
-  };
 }
 
 loadManifest().then(initCompareView);
