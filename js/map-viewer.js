@@ -105,12 +105,22 @@ function selectMapCategory(category) {
 // only on Time Series/Seasonal/etc. (Dylan, 2026-10).
 function responseHasSpatialMap(category, product, response) {
   const entry = manifest.categories[category]?.[product]?.[response];
-  return !!(entry && entry.maps && !entry.no_spatial_maps);
+  // entry.maps is an (empty) object for site/point products with no COG, so
+  // test for actual map entries, not just the key's presence.
+  return !!(entry && entry.maps && Object.keys(entry.maps).length > 0 && !entry.no_spatial_maps);
 }
 
 function categoryHasSpatialMap(category) {
   return Object.entries(manifest.categories[category]).some(([product, responses]) =>
     Object.keys(responses).some((r) => responseHasSpatialMap(category, product, r)));
+}
+
+// The Variable panel stays put (so a different product can always be chosen);
+// only the Time & type and Display panels hide when a product has no COG.
+function setMapControlPanelsVisible(visible) {
+  const display = visible ? "" : "none";
+  document.getElementById("ol-time-panel").style.display = display;
+  document.getElementById("ol-display-panel").style.display = display;
 }
 
 function populateMapProductSelect() {
@@ -1017,7 +1027,7 @@ async function renderInteractiveMap() {
     // Without this, the period slider/year toggle/boundary checkbox stay
     // visible with nothing to control -- an empty control bar next to a map
     // that isn't there.
-    document.querySelector(".map-controls").style.display = "none";
+    setMapControlPanelsVisible(false);
     document.getElementById("ol-map-wrap").style.display = "none";
     document.getElementById("ol-map-empty").style.display = "block";
     document.getElementById("ol-map-empty").textContent = "No interactive map for this dataset yet.";
@@ -1025,7 +1035,7 @@ async function renderInteractiveMap() {
     return;
   }
   document.getElementById("ol-region-table-wrap").style.display = "";
-  document.querySelector(".map-controls").style.display = "";
+  setMapControlPanelsVisible(true);
   const periods = sortedPeriods(Object.keys(style.periods));
   if (!olMapState.period || !periods.includes(olMapState.period)) {
     olMapState.period = periods.includes("DJFM") ? "DJFM" : periods[0];
