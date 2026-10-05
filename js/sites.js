@@ -42,10 +42,14 @@ function buildSitesMap() {
   });
 }
 
-function markerStyle(color, selected) {
+// Flux-tower networks (AmeriFlux, NEON) get larger markers than the PhenoCam
+// camera network, which is much denser and secondary here.
+function networkRadius(network) { return network === "PhenoCam" ? 4 : 7; }
+
+function markerStyle(color, selected, radius) {
   return new ol.style.Style({
     image: new ol.style.Circle({
-      radius: selected ? 8 : 5,
+      radius: selected ? radius + 2.5 : radius,
       fill: new ol.style.Fill({ color }),
       stroke: new ol.style.Stroke({ color: selected ? "#1b1b1b" : "#fff", width: selected ? 2.5 : 1.3 }),
     }),
@@ -58,7 +62,7 @@ function buildNetworkLayer(network) {
     const f = new ol.Feature({ geometry: new ol.geom.Point(ol.proj.fromLonLat([s.lon, s.lat])) });
     f.set("network", network);
     f.set("site", s.site);
-    f.setStyle(markerStyle(net.color, false));
+    f.setStyle(markerStyle(net.color, false, networkRadius(network)));
     return f;
   });
   const layer = new ol.layer.Vector({ source: new ol.source.Vector({ features }), zIndex: 10 });
@@ -72,7 +76,7 @@ function refreshMarkerStyles() {
     if (!layer) return;
     layer.getSource().getFeatures().forEach((f) => {
       const isSel = sitesState.selected && sitesState.selected.network === network && sitesState.selected.site === f.get("site");
-      f.setStyle(markerStyle(net.color, isSel));
+      f.setStyle(markerStyle(net.color, isSel, networkRadius(network)));
     });
   });
 }
@@ -81,8 +85,24 @@ function siteRecord(network, site) {
   return sitesState.networks[network].sites.find((s) => s.site === site);
 }
 
+// Site dropdown grouped by dataset (network), each network's sites A-Z.
+function populateSiteSelect() {
+  const sel = document.getElementById("sites-site-select");
+  if (!sel) return;
+  let html = '<option value="">Select a site&hellip;</option>';
+  Object.entries(sitesState.networks).forEach(([network, net]) => {
+    const sites = net.sites.slice().sort((a, b) => String(a.site).localeCompare(String(b.site)));
+    html += `<optgroup label="${net.label}">` + sites.map((s) =>
+      `<option value="${network}|${s.site}">${s.site}</option>`
+    ).join("") + "</optgroup>";
+  });
+  sel.innerHTML = html;
+}
+
 function selectSite(network, site) {
   sitesState.selected = { network, site };
+  const siteSel = document.getElementById("sites-site-select");
+  if (siteSel) siteSel.value = `${network}|${site}`;
   const net = sitesState.networks[network];
   // Populate the variable selector with this site's available responses.
   const rec = siteRecord(network, site);
@@ -114,7 +134,7 @@ function renderSiteChart() {
   const y = isAnom ? s.anomaly : s.value;
   const traces = [{
     x: s.dates, y, type: "scatter", mode: "lines+markers",
-    line: { color: net.color, width: 1.6 }, marker: { size: 3, color: net.color },
+    line: { color: net.color, width: 2.6 }, marker: { size: 4, color: net.color },
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   }];
   Plotly.newPlot(el, traces, {
@@ -167,6 +187,12 @@ async function init() {
     buildNetworkLayer(net.network);
   });
 
+  populateSiteSelect();
+  document.getElementById("sites-site-select").addEventListener("change", (e) => {
+    if (!e.target.value) return;
+    const [network, site] = e.target.value.split("|");
+    selectSite(network, site);
+  });
   document.getElementById("sites-response-select").addEventListener("change", (e) => { sitesState.response = e.target.value; renderSiteChart(); });
   document.getElementById("sites-series-toggle").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-series]");
