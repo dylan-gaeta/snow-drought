@@ -122,14 +122,33 @@ function refreshMap() {
 }
 
 // Month ticks under the day slider: the 1st of each water-year month (Oct..Sep)
-// positioned by its day index as a fraction of the 365-day track.
+// positioned by its real day index as a fraction of this water year's own track
+// length -- derived from actual dates and the loaded year's n_days, so a leap
+// water year (366 days) neither drifts the ticks nor clips Sep 30.
 function buildSliderAxis() {
   const axis = document.getElementById("snotel-slider-axis");
-  const monthStart = [0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 335]; // Oct..Sep (non-leap WY)
+  const wy = snotelState.wy;
+  const nDays = (currentDaily() && currentDaily().n_days) || 365;
+  const wyStart = Date.UTC(wy - 1, 9, 1);
+  const months = [[10, wy - 1], [11, wy - 1], [12, wy - 1], [1, wy], [2, wy], [3, wy], [4, wy], [5, wy], [6, wy], [7, wy], [8, wy], [9, wy]];
   const labels = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"];
-  axis.innerHTML = monthStart.map((day, i) =>
-    `<span class="snotel-axis-tick" style="left:${(day / 365) * 100}%">${labels[i]}</span>`
-  ).join("");
+  axis.innerHTML = months.map(([m, y], i) => {
+    const dayIndex = Math.round((Date.UTC(y, m - 1, 1) - wyStart) / 86400000);
+    return `<span class="snotel-axis-tick" style="left:${(dayIndex / (nDays - 1)) * 100}%">${labels[i]}</span>`;
+  }).join("");
+}
+
+// Set the day slider's max (and clamp the current day) to the loaded water
+// year's own length -- 366 for a leap water year, so its final day (Sep 30) is
+// reachable instead of being cut off by a hardcoded 364.
+function updateSliderRange() {
+  const slider = document.getElementById("snotel-day-slider");
+  const nDays = (currentDaily() && currentDaily().n_days) || 365;
+  slider.max = String(nDays - 1);
+  if (snotelState.dayIndex > nDays - 1) {
+    snotelState.dayIndex = nDays - 1;
+    slider.value = String(snotelState.dayIndex);
+  }
 }
 
 function updateDayLabel() {
@@ -290,9 +309,10 @@ function togglePlay() {
   const btn = document.getElementById("snotel-play");
   btn.innerHTML = "&#10073;&#10073;"; btn.classList.add("playing");
   const slider = document.getElementById("snotel-day-slider");
+  const lastDay = ((currentDaily() && currentDaily().n_days) || 365) - 1;
   snotelState.playTimer = setInterval(() => {
     let next = snotelState.dayIndex + PLAY_STEP_DAYS;
-    if (next > 364) next = 0;
+    if (next > lastDay) next = 0;
     snotelState.dayIndex = next; slider.value = String(next);
     refreshMap();
   }, PLAY_INTERVAL_MS);
@@ -302,6 +322,8 @@ async function changeWaterYear(wy) {
   stopPlay();
   snotelState.wy = wy;
   await loadWaterYear(wy);
+  buildSliderAxis();
+  updateSliderRange();
   refreshMap();
   if (snotelState.selected) renderDetail();
 }
@@ -321,6 +343,7 @@ async function init() {
   buildMap();
 
   buildSliderAxis();
+  updateSliderRange();
   const wySel = document.getElementById("snotel-wy-select");
   index.water_years.slice().reverse().forEach((wy) => { const o = document.createElement("option"); o.value = wy; o.textContent = `WY ${wy}`; wySel.appendChild(o); });
   wySel.value = String(snotelState.wy);

@@ -52,8 +52,8 @@ async function renderTimeseries() {
   // Native-direction sigma here: +sigma = above-normal value, -sigma = below,
   // so SCA/SWE/precip depletion reads as NEGATIVE -- the intuitive direction
   // for a single-variable time series. The stress-direction sign flip
-  // (positive = drought stress) stays on the cross-variable views (Compare,
-  // Heatmap, Map), where unifying every product's stress direction aids
+  // (positive = drought stress) stays on the cross-variable Heatmap and Map
+  // views, where unifying every product's stress direction aids
   // comparison, but it misleads here (Dylan, 2026-10-02: SCA depletion was
   // showing as +sigma). Raw values are unaffected either way.
   const fullY = isSigma
@@ -62,7 +62,7 @@ async function renderTimeseries() {
   // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
   // a standardized departure -- their sigma series is identical to raw, not
   // a re-standardization (see common/canonical.py::_load_drought_index).
-  const sigmaLabel = data.native_standardized
+  const sigmaLabel = data.aggregation === "native_index"
     ? `${data.response} (native standardized index)`
     : "Standardized anomaly (σ)";
   const yTitle = isSigma ? sigmaLabel
@@ -79,6 +79,12 @@ async function renderTimeseries() {
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   }];
   document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
+  const sigmaNote = document.getElementById("timeseries-sigma-note");
+  if (sigmaNote) {
+    sigmaNote.textContent = (isSigma && data.aggregation !== "native_index" && manifest.value_type_glossary)
+      ? `σ: ${manifest.value_type_glossary.sigma || ""}`
+      : "";
+  }
   const layout = {
     margin: { t: 20, r: 20, b: 45, l: 60 },
     yaxis: { title: yTitle, zeroline: isDeparture, ...PLOTLY_AXIS_LINE },

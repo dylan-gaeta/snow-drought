@@ -169,6 +169,30 @@ async function renderCompare() {
   const b = slotSeries("b", bData);
   const isSigma = compareState.series === "sigma";
 
+  // Title + per-variable facts (units + baseline window) above the chart. In
+  // sigma mode each series is standardized against its OWN baseline, so two
+  // series whose baseline windows differ are not level-comparable -- surface
+  // the baselines and warn when they disagree.
+  const aEntry = findResponseEntry(compareState.a.product, compareState.a.response);
+  const bEntry = findResponseEntry(compareState.b.product, compareState.b.response);
+  const baselineText = (entry) => (entry && entry.baseline_start_year && entry.baseline_end_year)
+    ? `${entry.baseline_start_year}–${entry.baseline_end_year}` : "n/a";
+  const metaLine = (label, state, entry) => entry
+    ? `${label}: ${state.product} ${state.response} · units ${entry.units || "n/a"} · baseline ${baselineText(entry)}`
+    : "";
+  document.getElementById("compare-title").textContent =
+    `${compareState.a.product} · ${compareState.a.response} vs ${compareState.b.product} · ${compareState.b.response} — ${regionLabelFor(compareState.region)}`;
+  let metaHtml = `${metaLine("A", compareState.a, aEntry)}<br>${metaLine("B", compareState.b, bEntry)}`;
+  if (isSigma) {
+    metaHtml += "<br>σ is native-direction (positive = above that variable's own baseline, not necessarily stress).";
+    const sigmaGlossary = (manifest.value_type_glossary || {}).sigma;
+    if (sigmaGlossary) metaHtml += `<br>σ: ${sigmaGlossary}`;
+    if (aEntry && bEntry && baselineText(aEntry) !== baselineText(bEntry)) {
+      metaHtml += `<br><strong>Note:</strong> the two σ series use different baselines (A: ${baselineText(aEntry)}, B: ${baselineText(bEntry)}), so their levels are not directly comparable.`;
+    }
+  }
+  document.getElementById("compare-meta").innerHTML = metaHtml;
+
   if (!a && !b) {
     chart.innerHTML = `<p class="chart-empty">No data for ${regionLabelFor(compareState.region)}.</p>`;
     return;

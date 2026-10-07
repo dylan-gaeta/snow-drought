@@ -143,11 +143,13 @@ const PRODUCT_OBSERVATION_KIND = {
   "NEON": "observation", "AmeriFlux": "observation",
 };
 
-// Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION exactly.
-// A calendar month is kept in the vegetation group overlay only where its
-// baseline mean clears this fraction of the seasonal amplitude above the
+// Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION. In the
+// pipeline a calendar month is kept in the vegetation group overlay only where
+// its baseline mean clears this fraction of the seasonal amplitude above the
 // dormant trough -- otherwise a tiny winter absolute anomaly divided by a
-// near-zero dormant-season spread explodes the standardized value.
+// near-zero dormant-season spread explodes the standardized value. Kept for
+// reference only: this dashboard's rank-based window statistics don't apply the
+// amplitude mask, so nothing client-side reads this constant today.
 const COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION = 0.15;
 
 // ---------------------------------------------------------- Window statistics
@@ -252,13 +254,15 @@ function meanStd(values) {
 
 // Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex,
 // stressRank, n } for one product/response/region/window/year.
-// sigma/percentile standardize the window-aggregated anomaly the same way
-// common/detrend.py's normal_score_transform standardizes a single month:
-// rank the target against the baseline years' own aggregated-anomaly
-// distribution (Weibull plotting position), then map that percentile
-// through the inverse normal CDF -- non-parametric, so it stays meaningful
-// for skewed/bounded fields instead of assuming the baseline years are
-// normally distributed.
+// sigma/percentile rank the window-aggregated anomaly against the baseline
+// years' own aggregated-anomaly distribution (Weibull plotting position), then
+// map that percentile through the inverse normal CDF -- non-parametric, like
+// common/detrend.py's normal_score_transform, so it stays meaningful for
+// skewed/bounded fields instead of assuming the baseline years are normally
+// distributed. NOTE it ranks the RAW (mean-centered) anomaly, not the
+// per-grid-cell detrended anomaly the pipeline's monthly sigma uses, so this
+// window sigma can differ from the Time Series stored sigma by a few tenths;
+// the client has no exported trend coefficients to reproduce the detrended value.
 // percentOfNormal is null wherever the baseline mean is too close to zero to
 // divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
 // or for native standardized indices (already a departure statistic, not a
@@ -335,7 +339,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const { mean: meanRaw, std: stdRaw } = meanStd(baselineRaws);
     // Guard: a baseline mean within one baseline std of zero makes "percent
     // of normal" numerically unstable (small denominator), not meaningful.
-    if (Math.abs(meanRaw) > stdRaw) percentOfNormal = ((targetRaw - meanRaw) / meanRaw) * 100;
+    if (Math.abs(meanRaw) > stdRaw) percentOfNormal = (targetRaw / meanRaw) * 100;
   }
   // The rank badge is "stressRank of nRecord": stressRank is ranked against
   // the FULL record (recordAnomalies / nRecord above), so its denominator must
@@ -375,12 +379,10 @@ function fetchTimeseriesJson(key) {
   return _timeseriesCache[key];
 }
 
-// Same sharing rationale as fetchTimeseriesJson above, for data/seasonal/*.json
-// (explore.html's Explorer "Seasonal cycle" tab and Compare's vegetation-only
-// growing-season mask both read it). Resolves to null on a non-ok response
-// rather than rejecting -- mirrors the tolerance the old per-page
-// fetchCompareSeasonal() already had, so callers can just check for a falsy
-// result instead of a try/catch.
+// Like fetchTimeseriesJson above, for data/seasonal/*.json -- read by the
+// Seasonal Cycle page (js/seasonal.js). Caches the in-flight promise and
+// resolves to null on a non-ok response rather than rejecting, so a caller can
+// just check for a falsy result instead of wrapping it in a try/catch.
 const _seasonalCache = {};
 function fetchSeasonalJson(key) {
   if (!_seasonalCache[key]) {

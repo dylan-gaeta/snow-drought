@@ -200,8 +200,11 @@ async function renderPftTimeseries() {
   const isAnom = mode === "anomaly";
   const departure = isSigma || isAnom;
   const noteEl = document.getElementById("sib4-ts-note");
+  const isStressScalar = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"].includes(key);
   noteEl.textContent = info.bounded && isSigma
-    ? "Bounded 0–1 stress scalar: shown as native departure (no σ); switch to Anomaly (raw)."
+    ? (isStressScalar
+      ? "Bounded 0–1 stress function (1 = unstressed): shown as native departure (no σ); switch to Anomaly (raw)."
+      : `${info.long_name} (${data.units}) has no standardized σ in this build: shown as native departure; switch to Anomaly (raw).`)
     : `Units: ${data.units} · area-weighted mean per PFT.`;
   if (!region) { el.innerHTML = '<p class="chart-empty">No data for this region.</p>'; return; }
   const pick = (s) => isSigma ? (info.bounded ? s.anomaly : s.sigma) : isAnom ? s.anomaly : s.value;
@@ -230,7 +233,7 @@ async function renderPftTimeseries() {
   }, { displaylogo: false, responsive: true });
 }
 
-// Per-PFT water-year seasonal cycle (climatology mean ±2σ band + the region
+// Per-PFT water-year seasonal cycle (climatology mean ±2 SD band + the region
 // mean), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
 // a departure already); sigma not applicable to a climatology.
 async function renderPftSeasonal() {
@@ -251,7 +254,11 @@ async function renderPftSeasonal() {
   pfts.filter((code) => checked.has(code)).forEach((code) => {
     const c = region[code];
     if (!c) return;
-    const y = isAnom ? (c.anomaly_upper ? c.anomaly_upper.map(() => 0) : null) : c.climatology_mean;
+    // Only the region mean (AGG) carries an exported anomaly band; a per-PFT
+    // line in the anomaly view would be a flat zero, so per-PFT lines show in
+    // the raw-climatology view only.
+    if (isAnom) return;
+    const y = c.climatology_mean;
     if (!y) return;
     traces.push({ x, y, type: "scatter", mode: "lines", name: pftLabel(code), line: { color: pftColor(code), width: 1.5 }, opacity: 0.85 });
   });
@@ -262,7 +269,7 @@ async function renderPftSeasonal() {
     const mean = isAnom ? upper.map(() => 0) : agg.climatology_mean;
     if (upper && lower) {
       traces.push({ x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" });
-      traces.push({ x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: hexToRgba(SIB4_NAVY, 0.15), name: "Region mean ±2σ", hoverinfo: "skip" });
+      traces.push({ x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: hexToRgba(SIB4_NAVY, 0.15), name: "Region mean ±2 SD", hoverinfo: "skip" });
     }
     traces.push({ x, y: mean, type: "scatter", mode: "lines+markers", line: { color: SIB4_NAVY, width: 3 }, marker: { size: 5 }, name: "Region mean" });
   }
@@ -446,7 +453,7 @@ async function init() {
 
   populateVariableSelect("sib4-ts-variable", meta.monthly_variables, sib4State.tsVariable);
   populateVariableSelect("sib4-diurnal-variable", meta.diurnal_variables, sib4State.diurnalVariable);
-  populateVariableSelect("sib4-compare-variable", meta.monthly_variables.filter((v) => SIB4_CORRESPONDENCE[v.key]), sib4State.compareVariable);
+  populateVariableSelect("sib4-compare-variable", meta.monthly_variables.filter((v) => SIB4_CORRESPONDENCE[v.key] && !v.bounded), sib4State.compareVariable);
 
   const monthSel = document.getElementById("sib4-diurnal-month");
   MONTH_NAMES.forEach((name, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; if (i + 1 === sib4State.diurnalMonth) o.selected = true; monthSel.appendChild(o); });

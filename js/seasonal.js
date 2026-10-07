@@ -93,7 +93,7 @@ async function renderSeasonal() {
     { x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
     {
       x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty",
-      fillcolor: hexToRgba(teal, 0.25), name: "Climatology ± 2σ", hoverinfo: "skip",
+      fillcolor: hexToRgba(teal, 0.25), name: "Climatology ± 2 SD", hoverinfo: "skip",
     },
     {
       x, y: mean, type: "scatter", mode: "lines+markers", line: { color: teal, width: 3 },

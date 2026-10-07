@@ -11,11 +11,11 @@
 // a finding.)
 
 // Snow-drought quadrant classification -- mirrors
-// code/94_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
+// code/11_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
 // classify() exactly (do not diverge). The regime itself always comes from
 // the pipeline's own precomputed classification (data/
 // snow_drought_classification.json's "regime" field), never recomputed here.
-// Labels are dataset-qualified, matching 94_context_SnowDroughtQuadrants_
+// Labels are dataset-qualified, matching 11_context_SnowDroughtQuadrants_
 // analyze.py's own VARIABLES dict verbatim (its "label" field, minus the
 // "DJFM Anomaly (unit)" suffix -- unit/window are shown separately here).
 // Expanded 2026-10-01 (Dylan: "we should be able to plot more temp/vpd/
@@ -47,7 +47,7 @@ const PRECIP_DIFF = [
   [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"], [1, "#b66a28"],
 ];
 
-const quadrantState = { region: "ALL", x: "t_anom", y: "ppt_anom", color: "year", rows: [] };
+const quadrantState = { region: "ALL", x: "t_anom", y: "ppt_anom", color: "regime", rows: [] };
 
 async function initQuadrantView() {
   const xSelect = document.getElementById("quadrant-x-select");
@@ -126,55 +126,37 @@ function renderQuadrantChart() {
   const ymax = Math.max(...points.map((p) => Math.abs(p[y]))) * 1.12;
   const shapes = [];
   const annotations = [];
-  const isDierauer = x === "t_anom" && y === "ppt_anom";
-
-  if (isDierauer) {
-    // Native Dierauer view: x = temperature (warm right), y = precipitation (wet up).
-    const fills = {
-      warm: [0, xmax, 0, ymax], none: [-xmax, 0, 0, ymax],
-      warm_dry: [0, xmax, -ymax, 0], dry: [-xmax, 0, -ymax, 0],
-    };
-    const corners = {
-      warm: [xmax, ymax, "right", "top"], none: [-xmax, ymax, "left", "top"],
-      warm_dry: [xmax, -ymax, "right", "bottom"], dry: [-xmax, -ymax, "left", "bottom"],
-    };
-    Object.entries(fills).forEach(([regime, [x0, x1, y0, y1]]) => {
-      shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: REGIME_COLORS[regime], opacity: 0.13, line: { width: 0 }, layer: "below" });
+  // Stress-quadrant shading, identical for every axis pair including the
+  // Dierauer temperature-vs-precip default: tint each quadrant by how many of
+  // the two axes point toward drought stress, and label the fully-stressed and
+  // fully-benign corners by AXIS POSITION (e.g. "dry + warm", "wet + cold").
+  // The actual snow-drought regime is SWE-gated (SWE is on neither axis), so
+  // it is shown per point via color-by-regime + hover -- never implied by the
+  // quadrant, which would mislabel the ~25% of winters whose regime differs
+  // from their temperature/precipitation position.
+  const sx = xMeta.stress_high ? 1 : -1;
+  const sy = yMeta.stress_high ? 1 : -1;
+  const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
+  [1, -1].forEach((xs) => {
+    const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
+    [1, -1].forEach((ys) => {
+      const [y0, y1] = ys > 0 ? [0, ymax] : [-ymax, 0];
+      const n = (xs === sx ? 1 : 0) + (ys === sy ? 1 : 0);
+      shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: tint[n], opacity: 0.13, line: { width: 0 }, layer: "below" });
     });
-    Object.entries(corners).forEach(([regime, [ax, ay, xanchor, yanchor]]) => {
-      annotations.push({
-        x: ax * 0.96, y: ay * 0.96, text: REGIME_LABELS[regime], showarrow: false,
-        font: { size: 12, color: REGIME_COLORS[regime], weight: 700 },
-        xanchor, yanchor,
-      });
-    });
-  } else {
-    // Generic stress-quadrant shading for any other axis pair: tint by how
-    // many of the two axes point toward drought stress.
-    const sx = xMeta.stress_high ? 1 : -1;
-    const sy = yMeta.stress_high ? 1 : -1;
-    const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
-    [1, -1].forEach((xs) => {
-      const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
-      [1, -1].forEach((ys) => {
-        const [y0, y1] = ys > 0 ? [0, ymax] : [-ymax, 0];
-        const n = (xs === sx ? 1 : 0) + (ys === sy ? 1 : 0);
-        shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: tint[n], opacity: 0.13, line: { width: 0 }, layer: "below" });
-      });
-    });
-    const sxp = sx > 0 ? xmax : -xmax;
-    const syp = sy > 0 ? ymax : -ymax;
-    annotations.push({
-      x: sxp * 0.96, y: syp * 0.96, text: `${yMeta.stress} + ${xMeta.stress}`, showarrow: false,
-      font: { size: 12, color: "#955910", weight: 700 },
-      xanchor: sx > 0 ? "right" : "left", yanchor: sy > 0 ? "top" : "bottom",
-    });
-    annotations.push({
-      x: -sxp * 0.96, y: -syp * 0.96, text: `${yMeta.benign} + ${xMeta.benign}`, showarrow: false,
-      font: { size: 12, color: "#0570b0", weight: 700 },
-      xanchor: sx > 0 ? "left" : "right", yanchor: sy > 0 ? "bottom" : "top",
-    });
-  }
+  });
+  const sxp = sx > 0 ? xmax : -xmax;
+  const syp = sy > 0 ? ymax : -ymax;
+  annotations.push({
+    x: sxp * 0.96, y: syp * 0.96, text: `${yMeta.stress} + ${xMeta.stress}`, showarrow: false,
+    font: { size: 12, color: "#955910", weight: 700 },
+    xanchor: sx > 0 ? "right" : "left", yanchor: sy > 0 ? "top" : "bottom",
+  });
+  annotations.push({
+    x: -sxp * 0.96, y: -syp * 0.96, text: `${yMeta.benign} + ${xMeta.benign}`, showarrow: false,
+    font: { size: 12, color: "#0570b0", weight: 700 },
+    xanchor: sx > 0 ? "left" : "right", yanchor: sy > 0 ? "bottom" : "top",
+  });
 
   // Year labels on every point with a short leader line, matching the static
   // classification figures (Dylan, #3); 2026 is bold and larger. On a phone the
@@ -194,43 +176,67 @@ function renderQuadrantChart() {
     });
   });
 
-  // Color encoding (3rd axis): by winter year (default, sequential), by any
-  // driver variable's anomaly (diverging, centered at 0), or by regime.
+  // Color encoding (3rd axis): by regime (default; categorical, so one trace
+  // per regime to get a real legend -- a discrete field has no colorbar), by
+  // winter year (sequential), or by any driver variable's anomaly (diverging,
+  // centered at 0).
   const colorBy = quadrantState.color;
-  let marker;
+  let traces;
   if (colorBy === "regime") {
-    marker = { size: sizes, color: points.map((p) => REGIME_COLORS[p.regime]), line: { color: "#333", width: 0.8 } };
-  } else if (colorBy === "year") {
-    marker = {
-      size: sizes, color: points.map((p) => p.winter_year), colorscale: "Viridis",
-      colorbar: { title: { text: "Winter year", side: "right" }, thickness: 14 },
-      line: { color: "#333", width: 0.8 },
-    };
+    traces = Object.keys(REGIME_COLORS)
+      .filter((regime) => points.some((p) => p.regime === regime))
+      .map((regime) => {
+        const pr = points.filter((p) => p.regime === regime);
+        return {
+          x: pr.map((p) => p[x]), y: pr.map((p) => p[y]),
+          mode: "markers", type: "scatter", name: REGIME_LABELS[regime],
+          marker: {
+            size: pr.map((p) => (p.winter_year === 2026 ? 16 : 9)),
+            color: REGIME_COLORS[regime], line: { color: "#333", width: 0.8 },
+          },
+          hovertext: pr.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),
+          hoverinfo: "text",
+        };
+      });
   } else {
-    const cMeta = QUADRANT_VARIABLES[colorBy];
-    marker = {
-      size: sizes, color: points.map((p) => p[colorBy]), colorscale: PRECIP_DIFF, cmid: 0,
-      colorbar: { title: { text: `${cMeta.label} (${cMeta.unit})`, side: "right" }, thickness: 14 },
-      line: { color: "#333", width: 0.8 },
-    };
+    let marker;
+    if (colorBy === "year") {
+      marker = {
+        size: sizes, color: points.map((p) => p.winter_year), colorscale: "Viridis",
+        colorbar: { title: { text: "Winter year", side: "right" }, thickness: 14 },
+        line: { color: "#333", width: 0.8 },
+      };
+    } else {
+      const cMeta = QUADRANT_VARIABLES[colorBy];
+      // Flip the diverging ramp for benign-direction variables (stress_high
+      // false, e.g. precipitation / SWE / snow cover) so the stressed end
+      // always reads brown and the benign end blue, matching the site-wide
+      // palette; cmid:0 keeps white anchored at zero anomaly either way.
+      marker = {
+        size: sizes, color: points.map((p) => p[colorBy]), colorscale: PRECIP_DIFF, cmid: 0,
+        reversescale: !cMeta.stress_high,
+        colorbar: { title: { text: `${cMeta.label} (${cMeta.unit})`, side: "right" }, thickness: 14 },
+        line: { color: "#333", width: 0.8 },
+      };
+    }
+    traces = [{
+      x: points.map((p) => p[x]), y: points.map((p) => p[y]),
+      mode: "markers", type: "scatter", marker,
+      hovertext: points.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),
+      hoverinfo: "text",
+    }];
   }
 
-  const trace = {
-    x: points.map((p) => p[x]), y: points.map((p) => p[y]),
-    mode: "markers", type: "scatter", marker,
-    hovertext: points.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),
-    hoverinfo: "text",
-  };
-
   const layout = {
-    margin: { t: 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
-    xaxis: { title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
-    yaxis: { title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
+    margin: { t: colorBy === "regime" ? 46 : 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
+    xaxis: { ...PLOTLY_AXIS_LINE, title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
+    yaxis: { ...PLOTLY_AXIS_LINE, title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes, annotations,
-    showlegend: false,
+    showlegend: colorBy === "regime",
+    legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0.5, xanchor: "center", font: { size: 12 } },
   };
-  Plotly.newPlot(chart, [trace], layout, { responsive: true, displaylogo: false });
+  Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }
 
 loadManifest().then(() => {

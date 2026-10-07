@@ -715,10 +715,10 @@ async function renderRegionValuesTable(entry) {
     return [groupRow, ...dataRows];
   });
   body.innerHTML = rows.join("");
-  const nativeNote = data.native_standardized
+  const nativeNote = data.aggregation === "native_index"
     ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
     : "";
-  note.textContent = `Rank 1 = the most drought-stressed year of record for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
+  note.textContent = `Cells are shaded gold = stress, blue = relief in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} values = more stress); the σ sign stays native (+ above / − below normal), so a stressed cell can read as a negative σ. Rank 1 = the most drought-stressed year of record for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
 }
 
 async function updateInteractiveMapLayer() {

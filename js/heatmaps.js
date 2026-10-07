@@ -316,7 +316,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
       len: 0.55, thickness: 16,
       tickmode: "array",
       tickvals: [-zAbs, 0, zAbs],
-      ticktext: ["Stress ↓", "0", "Stress ↑"],
+      ticktext: ["Relief", "0", "Stress"],
       tickfont: { size: 12 },
       title: { text: "Standardized anomaly (σ)", side: "top", font: { size: 13 } },
     },

@@ -575,7 +575,7 @@ table.headline-table tr.group-row td {
 }
 .region-type-tab:last-child { border-right: none; }
 .region-type-tab:hover:not(.active) { background: #eef1f5; color: var(--text); }
-.region-type-tab.active { background: var(--gold); color: #fff; }
+.region-type-tab.active { background: #8c510a; color: #fff; }
 /* Individual rounded pills with gaps -- a shared-border segmented bar wraps
    raggedly once there are 11+ buttons (the States tab). */
 .region-buttons { display: flex; flex-wrap: wrap; gap: 0.35rem; max-width: 100%; }

@@ -68,8 +68,8 @@ function renderCoverageChart() {
   const layout = {
     margin: { t: 55, r: 20, b: 45, l: 180 },
     barmode: "stack",
-    xaxis: { type: "date", title: "Record coverage", range: [`${DASHBOARD_MIN_YEAR}-01-01`, latestEnd] },
-    yaxis: { automargin: true },
+    xaxis: { ...PLOTLY_AXIS_LINE, type: "date", title: "Record coverage", range: [`${DASHBOARD_MIN_YEAR}-01-01`, latestEnd] },
+    yaxis: { ...PLOTLY_AXIS_LINE, automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
     height: Math.max(400, rows.length * 16 + 100),
     // Anchor the legend flush above the plot top; a fractional y (e.g. 1.08)

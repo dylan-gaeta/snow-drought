@@ -110,8 +110,7 @@ function formatSummaryValue(result, units, valueType) {
   }
   if (valueType === "percent_of_normal") {
     if (result.percentOfNormal === null) return "n/a";
-    const pctSign = result.percentOfNormal >= 0 ? "+" : "";
-    return `${pctSign}${result.percentOfNormal.toFixed(0)}%`;
+    return `${result.percentOfNormal.toFixed(0)}%`;
   }
   if (valueType === "rank") {
     if (result.stressRank === null || result.nRecord === null) return "&mdash;";
