@@ -77,6 +77,21 @@
         <h3 class="figure-title" id="timeseries-title"></h3>
         <div class="product-meta" id="product-meta"></div>
         <div id="timeseries-chart" style="height:480px;"></div>
+
+        <div class="region-table-card" id="timeseries-region-table-wrap">
+          <h3 id="timeseries-region-table-heading">Regional values</h3>
+          <div class="selector-row">
+            <label class="select-field">Window <select id="timeseries-table-window-select" aria-label="Table window"></select></label>
+            <label class="select-field">Year <select id="timeseries-table-year-select" aria-label="Table year"></select></label>
+          </div>
+          <p id="timeseries-region-table-note" class="value-glossary"></p>
+          <div class="table-scroll">
+            <table class="headline-table" id="timeseries-region-table">
+              <thead><tr><th>Region</th><th id="timeseries-region-rawval-th">Raw value</th><th>Anomaly (raw)</th><th>Anomaly (&sigma;)</th><th>Rank on record</th></tr></thead>
+              <tbody id="timeseries-region-table-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>

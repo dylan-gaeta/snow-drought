@@ -5,6 +5,8 @@
 
 let timeseriesSeries = "value";
 let timeseriesStartYear = null; // null = default recent window, see populateStartYearControl
+let tsTableWindow = "DJFM"; // regional-summary-table window + year (feeds the shared table)
+let tsTableYear = null;
 
 // Default view starts at 2000, or the product's own first year if that's
 // later -- the full 1990-2026 record crams ~430 monthly points into a solid
@@ -95,11 +97,38 @@ async function renderTimeseries() {
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }
 
+// Regional summary table (shared design with the Map + Seasonal pages): every
+// region's raw value / anomaly / sigma / rank for the selected window + year.
+async function renderTimeseriesRegionTable() {
+  const body = document.getElementById("timeseries-region-table-body");
+  if (!body) return;
+  const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
+  document.getElementById("timeseries-region-table-heading").textContent =
+    `Regional values — ${pickerState.product} · ${data.response}, ${periodLabel(tsTableWindow)} ${tsTableYear}`;
+  const rawHeader = document.getElementById("timeseries-region-rawval-th");
+  if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, tsTableWindow);
+  const note = document.getElementById("timeseries-region-table-note");
+  if (!data.aggregation) {
+    body.innerHTML = "";
+    note.textContent = "No established window-aggregation rule for this variable.";
+    return;
+  }
+  body.innerHTML = regionalSummaryRowsHtml(data, tsTableWindow, tsTableYear);
+  note.textContent = regionalSummaryNote(data);
+}
+
 function onTimeseriesSelectionChanged(entry) {
   // A new product/response has its own record span -- last product's start
   // year may not even exist in this one, so reset rather than carry it over.
   populateStartYearControl(entry);
+  // Point the regional-summary table at this product's latest available year.
+  const recordEndYear = entry.record_end ? parseInt(entry.record_end.slice(0, 4), 10) : null;
+  const { maxYear } = fullRecordYearRange();
+  tsTableYear = Math.min(recordEndYear || maxYear, maxYear);
+  const yearSel = document.getElementById("timeseries-table-year-select");
+  if (yearSel) yearSel.value = String(tsTableYear);
   renderTimeseries();
+  renderTimeseriesRegionTable();
 }
 
 function wireTimeseriesControls() {
@@ -113,6 +142,17 @@ function wireTimeseriesControls() {
   document.getElementById("timeseries-start-year-select").addEventListener("change", (event) => {
     timeseriesStartYear = event.target.value ? parseInt(event.target.value, 10) : null;
     renderTimeseries();
+  });
+  // Regional summary table window + year pickers (shared populators + table).
+  populateWindowSelect(document.getElementById("timeseries-table-window-select"), tsTableWindow);
+  populateYearSelect(document.getElementById("timeseries-table-year-select"), fullRecordYearRange().maxYear);
+  document.getElementById("timeseries-table-window-select").addEventListener("change", (event) => {
+    tsTableWindow = event.target.value;
+    renderTimeseriesRegionTable();
+  });
+  document.getElementById("timeseries-table-year-select").addEventListener("change", (event) => {
+    tsTableYear = parseInt(event.target.value, 10);
+    renderTimeseriesRegionTable();
   });
 }
 

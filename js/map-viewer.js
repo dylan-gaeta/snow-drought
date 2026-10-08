@@ -645,18 +645,6 @@ function stepYear(delta) {
 // while the map itself sits in Climatology mode (only the year CONTROL is
 // hidden there, see updateYearControlForPeriod), so the same target year
 // stays available here regardless of which mode the map is showing.
-function regionTableCellClass(result, drierIsHigh) {
-  if (result.sigma === null) return "";
-  const isStress = drierIsHigh ? result.sigma > 0 : result.sigma < 0;
-  return isStress ? "stress" : "relief";
-}
-
-function formatRankBadge(result, cls) {
-  if (result.stressRank === null || result.nRecord === null) return "&mdash;";
-  const badgeCls = cls === "stress" || cls === "relief" ? cls : "";
-  return `<span class="rank-badge ${badgeCls}">${result.stressRank}/${result.nRecord}</span>`;
-}
-
 async function renderRegionValuesTable(entry) {
   const heading = document.getElementById("ol-region-table-heading");
   const note = document.getElementById("ol-region-table-note");
@@ -679,46 +667,10 @@ async function renderRegionValuesTable(entry) {
   const year = olMapState.year;
   heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
-  // Clarify what "Raw value" is: a single month is that month's value; a
-  // multi-month window is the day-weighted MEAN (mean-type variables) or the
-  // SUM (accumulation variables like precip/runoff) over the window.
   const rawHeader = document.getElementById("ol-region-rawval-th");
-  if (rawHeader) {
-    rawHeader.textContent = /^\d{2}$/.test(period) ? "Raw value"
-      : data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
-  }
-  // Named regions + all 11 western states + all 5 HUC2 basins -- the same
-  // full region set data.html's Summary Table exposes (as three separate
-  // group tabs there; here as one list with group-row dividers, since rows
-  // scale far more gracefully than the Summary Table's per-region COLUMNS
-  // would). Was just the 6 named regions (Dylan, 2026-09-29: "doesn't
-  // include states or huc2 basins").
-  const regionGroups = [
-    { label: "Regions", entries: regionEntries() },
-    { label: "States", entries: manifest.western_states.map((code) => ({ code, label: manifest.state_labels[code] })) },
-    { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
-  ];
-  const rows = regionGroups.flatMap(({ label: groupLabel, entries }) => {
-    const groupRow = `<tr class="group-row"><td colspan="5">${groupLabel}</td></tr>`;
-    const dataRows = entries.map(({ code, label }) => {
-      const region = data.regions[code];
-      const result = region ? computeWindowValue(data, region, period, year) : null;
-      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
-      const cls = regionTableCellClass(result, data.drier_is_high);
-      const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
-      const rawAnomText = (result.anomaly === null || result.isNativeIndex)
-        ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;
-      const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
-      const rankText = formatRankBadge(result, cls);
-      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
-    });
-    return [groupRow, ...dataRows];
-  });
-  body.innerHTML = rows.join("");
-  const nativeNote = data.aggregation === "native_index"
-    ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
-    : "";
-  note.textContent = `Cells are shaded gold = stress, blue = relief in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} values = more stress); the σ sign stays native (+ above / − below normal), so a stressed cell can read as a negative σ. Rank 1 = the most drought-stressed year of record for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
+  if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, period);
+  body.innerHTML = regionalSummaryRowsHtml(data, period, year);
+  note.textContent = regionalSummaryNote(data);
 }
 
 async function updateInteractiveMapLayer() {

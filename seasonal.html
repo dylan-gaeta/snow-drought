@@ -76,6 +76,21 @@
         <h3 class="figure-title" id="seasonal-title"></h3>
         <div class="product-meta" id="product-meta"></div>
         <div id="seasonal-chart" style="height:480px;"></div>
+
+        <div class="region-table-card" id="seasonal-region-table-wrap">
+          <h3 id="seasonal-region-table-heading">Regional values</h3>
+          <div class="selector-row">
+            <label class="select-field">Window <select id="seasonal-table-window-select" aria-label="Table window"></select></label>
+            <label class="select-field">Year <select id="seasonal-table-year-select" aria-label="Table year"></select></label>
+          </div>
+          <p id="seasonal-region-table-note" class="value-glossary"></p>
+          <div class="table-scroll">
+            <table class="headline-table" id="seasonal-region-table">
+              <thead><tr><th>Region</th><th id="seasonal-region-rawval-th">Raw value</th><th>Anomaly (raw)</th><th>Anomaly (&sigma;)</th><th>Rank on record</th></tr></thead>
+              <tbody id="seasonal-region-table-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>

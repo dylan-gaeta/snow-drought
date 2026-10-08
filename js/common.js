@@ -516,6 +516,85 @@ function periodLabel(period) {
   return SEASON_LABELS[period] || MONTH_NAMES[parseInt(period, 10) - 1];
 }
 
+// ---------------------------------------------- Shared regional summary table
+//
+// The region x value table (one row per named region, state, and HUC2 basin,
+// with raw value / raw anomaly / standardized sigma / rank on record for a
+// product at one window+year) is shown identically on the Map, Time Series, and
+// Seasonal pages. These pure helpers are the single source of that table's
+// design; each page just drops the rows/note/header into its own markup, so the
+// four data columns, number formats, stress/relief coloring, and glossary never
+// drift between pages.
+
+// "Raw value" header: a single month is that month's value; a multi-month window
+// is a day-weighted MEAN (mean-type variables) or a SUM (accumulations).
+function rawValueHeaderLabel(data, windowKey) {
+  return /^\d{2}$/.test(windowKey) ? "Raw value"
+    : data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
+}
+
+function regionalSummaryNote(data) {
+  const nativeNote = data.aggregation === "native_index"
+    ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
+    : "";
+  return `Cells are shaded gold = stress, blue = relief in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} values = more stress); the σ sign stays native (+ above / − below normal), so a stressed cell can read as a negative σ. Rank 1 = the most drought-stressed year of record for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
+}
+
+function regionalSummaryRowsHtml(data, windowKey, year) {
+  const regionGroups = [
+    { label: "Regions", entries: regionEntries() },
+    { label: "States", entries: manifest.western_states.map((code) => ({ code, label: manifest.state_labels[code] })) },
+    { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
+  ];
+  return regionGroups.flatMap(({ label: groupLabel, entries }) => {
+    const groupRow = `<tr class="group-row"><td colspan="5">${groupLabel}</td></tr>`;
+    const dataRows = entries.map(({ code, label }) => {
+      const region = data.regions[code];
+      const result = region ? computeWindowValue(data, region, windowKey, year) : null;
+      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+      const cls = result.sigma === null ? ""
+        : (data.drier_is_high ? (result.sigma > 0 ? "stress" : "relief") : (result.sigma < 0 ? "stress" : "relief"));
+      const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+      const rawAnomText = (result.anomaly === null || result.isNativeIndex)
+        ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;
+      const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
+      const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
+        : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${result.stressRank}/${result.nRecord}</span>`;
+      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+    });
+    return [groupRow, ...dataRows];
+  }).join("");
+}
+
+// Shared window (season/month) and year <select> population, so the pages that
+// carry the summary table offer identical window+year pickers feeding it.
+function populateWindowSelect(select, defaultKey) {
+  select.innerHTML = "";
+  SEASON_ORDER.forEach((key) => {
+    const o = document.createElement("option");
+    o.value = key; o.textContent = `${key} (${SEASON_LABELS[key]})`;
+    if (key === defaultKey) o.selected = true;
+    select.appendChild(o);
+  });
+  MONTH_NAMES.forEach((name, i) => {
+    const o = document.createElement("option");
+    o.value = String(i + 1).padStart(2, "0"); o.textContent = name;
+    if (o.value === defaultKey) o.selected = true;
+    select.appendChild(o);
+  });
+}
+
+function populateYearSelect(select, defaultYear) {
+  select.innerHTML = "";
+  const { minYear, maxYear } = fullRecordYearRange();
+  for (let y = maxYear; y >= minYear; y--) {
+    const o = document.createElement("option");
+    o.value = String(y); o.textContent = String(y);
+    if (y === defaultYear) o.selected = true;
+    select.appendChild(o);
+  }
+}
+
 function sortedPeriods(periodKeys) {
   return periodKeys.slice().sort((a, b) => {
     const aSeason = SEASON_ORDER.indexOf(a);

@@ -4,6 +4,8 @@
 
 let seasonalSeries = "raw";
 let extraYears = []; // user-added years, beyond manifest.seasonal_highlight_years
+let seasonalTableWindow = "DJFM"; // regional-summary-table window + year (feeds the shared table)
+let seasonalTableYear = null;
 
 // Distinct from manifest.seasonal_highlight_year_colors (an orange/red
 // family) and from the teal climatology-mean line, so user-added years
@@ -159,12 +161,38 @@ function renderExtraYearChips() {
   });
 }
 
+// Regional summary table (shared design with the Map + Time Series pages):
+// every region's raw value / anomaly / sigma / rank for the selected window+year.
+async function renderSeasonalRegionTable() {
+  const body = document.getElementById("seasonal-region-table-body");
+  if (!body) return;
+  const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
+  document.getElementById("seasonal-region-table-heading").textContent =
+    `Regional values — ${pickerState.product} · ${data.response}, ${periodLabel(seasonalTableWindow)} ${seasonalTableYear}`;
+  const rawHeader = document.getElementById("seasonal-region-rawval-th");
+  if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, seasonalTableWindow);
+  const note = document.getElementById("seasonal-region-table-note");
+  if (!data.aggregation) {
+    body.innerHTML = "";
+    note.textContent = "No established window-aggregation rule for this variable.";
+    return;
+  }
+  body.innerHTML = regionalSummaryRowsHtml(data, seasonalTableWindow, seasonalTableYear);
+  note.textContent = regionalSummaryNote(data);
+}
+
 function onSeasonalSelectionChanged(entry) {
   // A new product/response has its own record span -- last product's added
   // years may not even exist in this one, so reset rather than carry over.
   extraYears = [];
   populateAddYearControl(entry);
+  const recordEndYear = entry.record_end ? parseInt(entry.record_end.slice(0, 4), 10) : null;
+  const { maxYear } = fullRecordYearRange();
+  seasonalTableYear = Math.min(recordEndYear || maxYear, maxYear);
+  const yearSel = document.getElementById("seasonal-table-year-select");
+  if (yearSel) yearSel.value = String(seasonalTableYear);
   renderSeasonal();
+  renderSeasonalRegionTable();
 }
 
 function wireSeasonalControls() {
@@ -180,6 +208,17 @@ function wireSeasonalControls() {
     if (!year || extraYears.includes(year) || manifest.seasonal_highlight_years.includes(year)) return;
     extraYears.push(year);
     renderSeasonal();
+  });
+  // Regional summary table window + year pickers (shared populators + table).
+  populateWindowSelect(document.getElementById("seasonal-table-window-select"), seasonalTableWindow);
+  populateYearSelect(document.getElementById("seasonal-table-year-select"), fullRecordYearRange().maxYear);
+  document.getElementById("seasonal-table-window-select").addEventListener("change", (event) => {
+    seasonalTableWindow = event.target.value;
+    renderSeasonalRegionTable();
+  });
+  document.getElementById("seasonal-table-year-select").addEventListener("change", (event) => {
+    seasonalTableYear = parseInt(event.target.value, 10);
+    renderSeasonalRegionTable();
   });
 }
 
