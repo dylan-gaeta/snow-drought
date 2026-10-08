@@ -34,10 +34,10 @@ const QUADRANT_VARIABLES = {
   era5_swe_anom: { label: "ERA5-Land SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   era5_sca_anom: { label: "ERA5-Land Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
-const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", none: "#92c5de" };
+const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", other: "#998ec3", none: "#92c5de" };
 const REGIME_LABELS = {
   dry: "Dry snow drought", warm_dry: "Warm & dry snow drought",
-  warm: "Warm snow drought", none: "No snow drought",
+  warm: "Warm snow drought", other: "Other snow drought", none: "No snow drought",
 };
 // NCL precip_diff_12lev diverging ramp -- used when points are colored by a
 // driver variable's anomaly (centered at 0), matching the rest of the site.
