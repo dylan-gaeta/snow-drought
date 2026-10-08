@@ -106,9 +106,11 @@ async function initQuadrantView() {
   regionSelect.addEventListener("change", (e) => {
     quadrantState.region = e.target.value;
     renderQuadrantChart();
+    renderQuadrantTable();
   });
 
   renderQuadrantChart();
+  renderQuadrantTable();
 }
 
 function renderQuadrantChart() {
@@ -237,6 +239,27 @@ function renderQuadrantChart() {
     legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0.5, xanchor: "center", font: { size: 12 } },
   };
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
+}
+
+// Tabulated classification results for the selected region: every DJFM winter
+// with its regime and the three driver anomalies, loaded on page load alongside
+// the scatter so the actual values are inspectable, not just plotted.
+function renderQuadrantTable() {
+  const body = document.getElementById("quadrant-table-body");
+  if (!body) return;
+  const region = quadrantState.region;
+  const heading = document.getElementById("quadrant-table-heading");
+  if (heading) heading.textContent = `Classification by winter — ${manifest.region_labels[region] || region}`;
+  const fmt = (v, d) => (v === null || v === undefined ? "&mdash;" : `${v >= 0 ? "+" : ""}${v.toFixed(d)}`);
+  const rows = quadrantState.rows
+    .filter((r) => r.region === region)
+    .sort((a, b) => a.winter_year - b.winter_year);
+  body.innerHTML = rows.map((r) => {
+    const color = REGIME_COLORS[r.regime] || "#ccc";
+    const swatch = `<span style="display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:7px;vertical-align:-1px;background:${color}"></span>`;
+    return `<tr><td>${r.winter_year}</td><td>${swatch}${REGIME_LABELS[r.regime] || r.regime}</td>`
+      + `<td>${fmt(r.t_anom, 2)}</td><td>${fmt(r.ppt_anom, 1)}</td><td>${fmt(r.swe_anom, 1)}</td></tr>`;
+  }).join("");
 }
 
 loadManifest().then(() => {

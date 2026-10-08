@@ -45,10 +45,13 @@
       <h2>Snow drought classification by winter type</h2>
       <p class="finding-note">
         Dierauer, Allen &amp; Whitfield (2019, <em>Water Resources
-        Research</em>) classification: dry / warm-and-dry / warm snow
-        drought, by precipitation and temperature departure. One point per
-        DJFM winter (1991&ndash;2026). Color = classification (temperature
-        &times; precipitation &times; snowpack), independent of axes shown.
+        Research</em>) classification of each below-normal-snow winter by its
+        drivers: <strong>dry</strong> (precip deficit), <strong>warm</strong>
+        (adequate precip but above-normal temperature), <strong>warm &amp;
+        dry</strong>, or <strong>other</strong> (neither &mdash; cold with
+        adequate precip). One point per DJFM winter (1991&ndash;2026); color =
+        classification. The table below lists every winter's values for the
+        selected region.
       </p>
       <div class="selector-row">
         <label class="select-field">Region <select id="quadrant-region-select" aria-label="Region"></select></label>
@@ -57,6 +60,14 @@
         <label class="select-field">Color <select id="quadrant-color-select" aria-label="Color by"></select></label>
       </div>
       <div id="quadrant-chart"></div>
+
+      <h3 class="figure-title" id="quadrant-table-heading">Classification by winter</h3>
+      <div class="table-scroll">
+        <table class="headline-table" id="quadrant-table">
+          <thead><tr><th>Winter</th><th>Classification</th><th>Temp anomaly (&deg;C)</th><th>Precip anomaly (mm)</th><th>Snowpack anomaly (mm)</th></tr></thead>
+          <tbody id="quadrant-table-body"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 

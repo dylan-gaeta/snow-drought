@@ -723,6 +723,7 @@ table.headline-table tr.group-row td {
    scrolls once that width exceeds the viewport, same pattern data.html's
    Summary Table already uses for its own too-wide-for-mobile table. */
 .heatmap-chart-scroll { overflow-x: auto; }
+.table-scroll { overflow-x: auto; }
 
 .heatmap-legend-key {
   display: flex;
