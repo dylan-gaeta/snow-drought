@@ -1,13 +1,13 @@
 // Sites page: the individual observation stations behind the site-based
-// products (AmeriFlux, NEON flux towers). An OpenLayers point map of the
-// stations, colored by network; click a station to see its own monthly time
-// series (data/sites/*). Reuses the Map page's WUS view + boundary layer.
+// products (AmeriFlux, NEON flux towers, PhenoCam cameras). An OpenLayers
+// point map of the stations, colored by network; click a station to see its
+// own monthly time series (data/sites/*), every response overlaid on one
+// shared axis. Reuses the Map page's WUS view + boundary layer.
 
 const sitesState = {
   networks: {},        // key -> full network JSON (sites + series)
   visible: new Set(),  // networks currently shown on the map
   selected: null,      // { network, site } of the clicked station
-  response: null,      // current variable for the selected site
   series: "value",     // value | anomaly
   map: null,
   layers: {},          // network -> ol vector layer
@@ -15,6 +15,16 @@ const sitesState = {
 
 const SITES_EXTENT = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
 const SITES_PAN_EXTENT = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
+
+// Every response a site carries shares the network's units, so they overlay on
+// one axis (PhenoCam GCC+RCC, AmeriFlux GPP+NEE). Each response gets its own
+// color so the two curves stay distinct; GCC green / RCC red mirrors the
+// greenness vs. senescence meaning. Unlisted responses fall back to the
+// network marker color.
+const RESPONSE_COLORS = {
+  GCC: "#238b45", RCC: "#cb181d",
+  GPP: "#238b45", NEE: "#d7301f",
+};
 
 function buildSitesMap() {
   const boundary = new ol.layer.Vector({
@@ -103,19 +113,6 @@ function selectSite(network, site) {
   sitesState.selected = { network, site };
   const siteSel = document.getElementById("sites-site-select");
   if (siteSel) siteSel.value = `${network}|${site}`;
-  const net = sitesState.networks[network];
-  // Populate the variable selector with this site's available responses.
-  const rec = siteRecord(network, site);
-  const responses = net.responses.filter((r) => rec.series[r]);
-  const select = document.getElementById("sites-response-select");
-  select.innerHTML = "";
-  responses.forEach((r) => {
-    const o = document.createElement("option");
-    o.value = r; o.textContent = r;
-    select.appendChild(o);
-  });
-  if (!responses.includes(sitesState.response)) sitesState.response = responses[0];
-  select.value = sitesState.response;
   refreshMarkerStyles();
   renderSiteChart();
 }
@@ -126,22 +123,31 @@ function renderSiteChart() {
   const { network, site } = sitesState.selected;
   const net = sitesState.networks[network];
   const rec = siteRecord(network, site);
-  const response = sitesState.response;
-  const s = rec.series[response];
-  document.getElementById("sites-chart-title").textContent = `${site} · ${response} — ${net.label}`;
-  if (!s) { el.innerHTML = '<p class="chart-empty">No data for this variable at this site.</p>'; return; }
+  const responses = net.responses.filter((r) => rec.series[r]);
+  document.getElementById("sites-chart-title").textContent = `${site} — ${net.label}`;
+  if (!responses.length) { el.innerHTML = '<p class="chart-empty">No data at this site.</p>'; return; }
   const isAnom = sitesState.series === "anomaly";
-  const y = isAnom ? s.anomaly : s.value;
-  const traces = [{
-    x: s.dates, y, type: "scatter", mode: "lines+markers",
-    line: { color: net.color, width: 2.6 }, marker: { size: 4, color: net.color },
-    hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
-  }];
+  // Every response at a site shares the network's units, so overlay them on one
+  // axis (GCC+RCC for PhenoCam, GPP+NEE for AmeriFlux) rather than one at a time.
+  const traces = responses.map((r) => {
+    const s = rec.series[r];
+    const color = RESPONSE_COLORS[r] || net.color;
+    return {
+      x: s.dates, y: isAnom ? s.anomaly : s.value, type: "scatter", mode: "lines+markers",
+      name: r, line: { color, width: 2.4 }, marker: { size: 4, color },
+      hovertemplate: `${r} %{x|%Y-%m}: %{y:.2f}<extra></extra>`,
+    };
+  });
+  const yUnits = net.units;
+  const yTitle = isAnom ? `Anomaly (${yUnits})`
+    : responses.length === 1 ? `${responses[0]} (${yUnits})` : `Value (${yUnits})`;
   Plotly.newPlot(el, traces, {
-    margin: { t: 10, r: 16, b: 44, l: 60 },
-    yaxis: { title: isAnom ? `${response} anomaly (${net.units})` : `${response} (${net.units})`, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    margin: { t: 10, r: 16, b: responses.length > 1 ? 70 : 44, l: 60 },
+    yaxis: { title: yTitle, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
+    showlegend: responses.length > 1,
+    legend: { orientation: "h", x: 0.5, xanchor: "center", y: -0.2, yanchor: "top" },
     shapes: isAnom ? [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }] : [],
   }, { responsive: true, displaylogo: false });
 }
@@ -193,7 +199,6 @@ async function init() {
     const [network, site] = e.target.value.split("|");
     selectSite(network, site);
   });
-  document.getElementById("sites-response-select").addEventListener("change", (e) => { sitesState.response = e.target.value; renderSiteChart(); });
   document.getElementById("sites-series-toggle").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-series]");
     if (!b) return;
