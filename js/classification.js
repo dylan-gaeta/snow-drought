@@ -11,11 +11,11 @@
 // a finding.)
 
 // Snow-drought quadrant classification -- mirrors
-// code/11_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
+// code/94_context_SnowDroughtQuadrants_analyze.py's VARIABLES/REGIMES/
 // classify() exactly (do not diverge). The regime itself always comes from
 // the pipeline's own precomputed classification (data/
 // snow_drought_classification.json's "regime" field), never recomputed here.
-// Labels are dataset-qualified, matching 11_context_SnowDroughtQuadrants_
+// Labels are dataset-qualified, matching 94_context_SnowDroughtQuadrants_
 // analyze.py's own VARIABLES dict verbatim (its "label" field, minus the
 // "DJFM Anomaly (unit)" suffix -- unit/window are shown separately here).
 // Expanded 2026-10-01 (Dylan: "we should be able to plot more temp/vpd/
@@ -60,7 +60,7 @@ async function initQuadrantView() {
   quadrantState.rows = await res.json();
 
   // This classification is computed over PILOT_REGIONS specifically (see
-  // 11_context_SnowDroughtQuadrants_analyze.py), a narrower set than the
+  // 94_context_SnowDroughtQuadrants_analyze.py), a narrower set than the
   // dashboard's general manifest.region_labels -- so the region options
   // here come from whichever regions actually appear in this file's own
   // data, not the full region list. manifest.region_labels only supplies

@@ -259,10 +259,13 @@ function meanStd(values) {
 // map that percentile through the inverse normal CDF -- non-parametric, like
 // common/detrend.py's normal_score_transform, so it stays meaningful for
 // skewed/bounded fields instead of assuming the baseline years are normally
-// distributed. NOTE it ranks the RAW (mean-centered) anomaly, not the
-// per-grid-cell detrended anomaly the pipeline's monthly sigma uses, so this
-// window sigma can differ from the Time Series stored sigma by a few tenths;
-// the client has no exported trend coefficients to reproduce the detrended value.
+// distributed. It ranks the SAME anomaly basis the pipeline exports (an OLS
+// trend residual where a real secular trend exists, else mean-centered by
+// calendar month -- see common/detrend.py), not a separate "raw" value. This
+// window sigma can still differ slightly from the stored per-month Time Series
+// sigma: it aggregates the anomaly across the season window first, and at the
+// rank line below it uses a side-right count where the pipeline uses a mid-rank
+// tie rule -- aligning that ranking is a pending correctness fix.
 // percentOfNormal is null wherever the baseline mean is too close to zero to
 // divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
 // or for native standardized indices (already a departure statistic, not a

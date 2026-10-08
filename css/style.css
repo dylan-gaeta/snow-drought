@@ -708,7 +708,7 @@ table.headline-table tr.group-row td {
 .map-image-wrap img { max-width: 100%; height: auto; border-radius: var(--radius-sm); }
 .finding-card h3 { margin-top: 0; }
 .finding-note { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.6rem; margin-bottom: 0; }
-/* Matches code/11_context_SnowDroughtQuadrants_analyze.py's own
+/* Matches code/94_context_SnowDroughtQuadrants_analyze.py's own
    figsize=(12.0, 10.2) -- that script never calls set_aspect('equal'), so
    this is the source figure's actual proportions, not a forced square. */
 #quadrant-chart { max-width: 720px; aspect-ratio: 12 / 10.2; margin: 0 auto; }
