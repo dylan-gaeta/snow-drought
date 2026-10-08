@@ -263,9 +263,10 @@ function meanStd(values) {
 // trend residual where a real secular trend exists, else mean-centered by
 // calendar month -- see common/detrend.py), not a separate "raw" value. This
 // window sigma can still differ slightly from the stored per-month Time Series
-// sigma: it aggregates the anomaly across the season window first, and at the
-// rank line below it uses a side-right count where the pipeline uses a mid-rank
-// tie rule -- aligning that ranking is a pending correctness fix.
+// sigma because it aggregates the anomaly across the season window first; the
+// rank line below now uses the same mid-rank tie rule and Weibull plotting
+// position as the pipeline (common/detrend.py::normal_score_transform), so the
+// standardization convention itself matches.
 // percentOfNormal is null wherever the baseline mean is too close to zero to
 // divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
 // or for native standardized indices (already a departure statistic, not a
@@ -308,7 +309,15 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   if (baselineAnomalies.length < MIN_BASELINE_YEARS) return null;
   baselineAnomalies.sort((a, b) => a - b);
   const n = baselineAnomalies.length;
-  const rank = baselineAnomalies.filter((a) => a <= targetAnomaly).length; // matches np.searchsorted(..., side="right")
+  // Mid-rank tie handling, matching common/detrend.py::normal_score_transform
+  // exactly: a value tied with k baseline years counts as k/2 below it, not
+  // all k. below = searchsorted(side="left"), atOrBelow = side="right"; the two
+  // agree for tie-free data, but mid-rank stops a degenerate all-tied baseline
+  // (e.g. a desert cell with SCA = 0 every year) from reading a merely-average
+  // target as an all-time record extreme.
+  const below = baselineAnomalies.filter((a) => a < targetAnomaly).length;
+  const atOrBelow = baselineAnomalies.filter((a) => a <= targetAnomaly).length;
+  const rank = 0.5 * (below + atOrBelow);
   const percentile = ((rank + 0.5) / (n + 1)) * 100;
   const sigma = normInv(percentile / 100);
 
