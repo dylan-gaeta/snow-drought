@@ -7,7 +7,7 @@
 
 const snotelState = {
   stations: null, climatology: null, history: null, waterYears: [],
-  metric: "pct_of_median", wy: null, dayIndex: 182, selected: null, stateFilter: "",
+  metric: "swe", wy: null, dayIndex: 182, selected: null, stateFilter: "",
   map: null, layer: null, dailyCache: {}, playTimer: null,
 };
 
