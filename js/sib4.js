@@ -330,7 +330,8 @@ async function renderCompare() {
   const sib4Data = await fetchSib4("timeseries", key);
   const sib4Region = sib4Data && sib4Data.regions[sib4State.region];
   const traces = [];
-  if (sib4Region && sib4Region.AGG && !info.bounded) {
+  const sib4Plotted = Boolean(sib4Region && sib4Region.AGG && !info.bounded);
+  if (sib4Plotted) {
     const sign = info.drier_is_high ? 1 : -1;
     const { dates, values } = afterStart(sib4Data.dates, sib4Region.AGG.sigma.map((v) => (v == null ? null : sign * v)));
     traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: "SiB4", line: { color: SIB4_NAVY, width: 3 }, connectgaps: false });
@@ -357,6 +358,20 @@ async function renderCompare() {
   }, { displaylogo: false, responsive: true });
   // checkbox legend (SiB4 is always on; datasets toggle)
   legendEl.innerHTML = "";
+  if (sib4Plotted) {
+    // SiB4 is the reference line every dataset is compared against -- always
+    // drawn, not toggleable. Show it as a fixed (disabled, checked) legend
+    // entry so the navy line isn't left unlabeled.
+    const refLabel = document.createElement("label");
+    refLabel.className = "compare-legend-item";
+    const refCb = document.createElement("input");
+    refCb.type = "checkbox"; refCb.checked = true; refCb.disabled = true;
+    const refSw = document.createElement("span");
+    refSw.className = "compare-legend-swatch"; refSw.style.background = SIB4_NAVY;
+    refLabel.appendChild(refCb); refLabel.appendChild(refSw);
+    refLabel.appendChild(document.createTextNode("SiB4 (reference)"));
+    legendEl.appendChild(refLabel);
+  }
   legendItems.forEach((item) => {
     const label = document.createElement("label");
     label.className = "compare-legend-item";
