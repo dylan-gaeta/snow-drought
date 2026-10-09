@@ -7,7 +7,7 @@
 
 const snotelState = {
   stations: null, climatology: null, history: null, waterYears: [],
-  metric: "pct_of_median", wy: null, dayIndex: 182, selected: null,
+  metric: "pct_of_median", wy: null, dayIndex: 182, selected: null, stateFilter: "",
   map: null, layer: null, dailyCache: {}, playTimer: null,
 };
 
@@ -186,19 +186,37 @@ function bandAt(band, key, doy) {
 
 // Station dropdown: grouped by state, each state's stations sorted
 // highest-elevation first, so sites can be found without hunting for a dot.
+// Populate the State filter from the station metadata (plus an "All states"
+// option). Picking a state narrows the ~800-station dropdown to one state so
+// it isn't one giant list.
+function populateStateSelect() {
+  const sel = document.getElementById("snotel-state-select");
+  if (!sel) return;
+  const states = [...new Set(snotelState.stations.stations.map((s) => s.state).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All states</option>' + states.map((s) => `<option value="${s}">${s}</option>`).join("");
+}
+
 function populateStationSelect() {
   const sel = document.getElementById("snotel-station-select");
   if (!sel) return;
+  const filter = snotelState.stateFilter;
   const byState = {};
-  snotelState.stations.stations.forEach((st) => { (byState[st.state] = byState[st.state] || []).push(st); });
+  snotelState.stations.stations.forEach((st) => {
+    if (filter && st.state !== filter) return;
+    (byState[st.state] = byState[st.state] || []).push(st);
+  });
   let html = '<option value="">Select a station&hellip;</option>';
   Object.keys(byState).sort().forEach((state) => {
     const list = byState[state].slice().sort((a, b) => (b.elev_ft || 0) - (a.elev_ft || 0));
-    html += `<optgroup label="${state}">` + list.map((st) =>
+    const options = list.map((st) =>
       `<option value="${st.triplet}">${st.name}${st.elev_ft ? " (" + st.elev_ft.toLocaleString() + " ft)" : ""}</option>`
-    ).join("") + "</optgroup>";
+    ).join("");
+    // When filtered to a single state the optgroup wrapper is redundant.
+    html += filter ? options : `<optgroup label="${state}">${options}</optgroup>`;
   });
   sel.innerHTML = html;
+  // Keep the current station shown as selected if it's still in the list.
+  if (snotelState.selected) sel.value = snotelState.selected;
 }
 
 function selectStation(triplet) {
@@ -349,6 +367,7 @@ async function init() {
   wySel.value = String(snotelState.wy);
 
   refreshMap();
+  populateStateSelect();
   populateStationSelect();
   // Default to Niwot, CO (9,940 ft) so a real station record loads on open
   // instead of an empty prompt. Falls back to the empty state if that station
@@ -361,6 +380,7 @@ async function init() {
     document.getElementById("snotel-detail-chart").style.height = "auto";
     document.getElementById("snotel-history-chart").style.height = "0";
   }
+  document.getElementById("snotel-state-select").addEventListener("change", (e) => { snotelState.stateFilter = e.target.value; populateStationSelect(); });
   document.getElementById("snotel-station-select").addEventListener("change", (e) => { if (e.target.value) selectStation(e.target.value); });
 
   document.getElementById("snotel-metric-select").addEventListener("change", (e) => { snotelState.metric = e.target.value; refreshMap(); });
