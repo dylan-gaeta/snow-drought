@@ -350,11 +350,17 @@ async function init() {
 
   refreshMap();
   populateStationSelect();
-  // Empty-state until a station is picked, so the two fixed-height chart divs
-  // don't render as a tall blank band on load.
-  document.getElementById("snotel-detail-chart").innerHTML = '<p class="chart-empty">Pick a station above, or click a dot on the map, to see its daily snowpack record.</p>';
-  document.getElementById("snotel-detail-chart").style.height = "auto";
-  document.getElementById("snotel-history-chart").style.height = "0";
+  // Default to Niwot, CO (9,940 ft) so a real station record loads on open
+  // instead of an empty prompt. Falls back to the empty state if that station
+  // isn't present in the data.
+  const DEFAULT_STATION = "663:CO:SNTL";
+  if (stationMeta(DEFAULT_STATION)) {
+    selectStation(DEFAULT_STATION);
+  } else {
+    document.getElementById("snotel-detail-chart").innerHTML = '<p class="chart-empty">Pick a station above, or click a dot on the map, to see its daily snowpack record.</p>';
+    document.getElementById("snotel-detail-chart").style.height = "auto";
+    document.getElementById("snotel-history-chart").style.height = "0";
+  }
   document.getElementById("snotel-station-select").addEventListener("change", (e) => { if (e.target.value) selectStation(e.target.value); });
 
   document.getElementById("snotel-metric-select").addEventListener("change", (e) => { snotelState.metric = e.target.value; refreshMap(); });
