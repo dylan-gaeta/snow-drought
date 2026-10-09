@@ -286,25 +286,48 @@ function renderElevation() {
   document.getElementById("snotel-elev-title").textContent =
     `Snow drought by elevation — ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const wyData = currentDaily();
-  const xs = [], ys = [], colors = [], text = [];
+  // The scatter follows the same metric selector as the map (SWE % of normal /
+  // percentile / raw mm). "% of normal" is a ratio whose day-of-year normal
+  // denominator can be tiny at low or marginal-snow stations, so one station
+  // can read many hundreds of % in a decent year (observed up to ~7000%) and
+  // stretch the whole y-axis. Clamp ONLY that metric to PCT_CAP (color + hover
+  // keep the true value; a clamped point draws as an up-triangle on the cap).
+  // Raw mm and percentile are naturally bounded and need no clamp.
+  const metric = snotelState.metric;
+  const scale = METRIC_SCALES[metric];
+  const PCT_CAP = 200;
+  const clamp = metric === "pct_of_median";
+  const xs = [], yPlot = [], yTrue = [], colors = [], text = [], symbols = [];
   if (wyData) {
     snotelState.stations.stations.forEach((st) => {
       if (st.elev_ft === null) return;
       const s = wyData.stations[st.triplet];
-      const v = s ? s.pct_of_median[snotelState.dayIndex] : null;
+      const v = s ? s[scale.field][snotelState.dayIndex] : null;
       if (v === null || v === undefined) return;
-      xs.push(st.elev_ft); ys.push(v); colors.push(colorFor("pct_of_median", v)); text.push(`${st.name}, ${st.state}`);
+      xs.push(st.elev_ft);
+      yPlot.push(clamp ? Math.min(v, PCT_CAP) : v);
+      yTrue.push(v);
+      colors.push(colorFor(metric, v));
+      text.push(`${st.name}, ${st.state}`);
+      symbols.push(clamp && v > PCT_CAP ? "triangle-up" : "circle");
     });
   }
+  const refAt = (y) => ({ type: "line", x0: 0, x1: 1, xref: "paper", y0: y, y1: y, line: { color: "#888", width: 1, dash: "dash" } });
+  const yaxis = { title: scale.label, ...PLOTLY_AXIS_LINE };
+  const shapes = [];
+  if (metric === "pct_of_median") { yaxis.range = [0, PCT_CAP]; shapes.push(refAt(100)); }
+  else if (metric === "percentile") { yaxis.range = [0, 100]; shapes.push(refAt(50)); }
+  else { yaxis.rangemode = "tozero"; }
+  const unit = metric === "pct_of_median" ? "% of normal" : metric === "percentile" ? "th percentile" : " mm";
   Plotly.newPlot("snotel-elev-chart", [{
-    x: xs, y: ys, text, type: "scatter", mode: "markers",
-    marker: { size: 6, color: colors, line: { color: "#333", width: 0.5 } },
-    hovertemplate: "%{text}<br>%{x:,} ft · %{y:.0f}% of normal<extra></extra>",
+    x: xs, y: yPlot, text, customdata: yTrue, type: "scatter", mode: "markers",
+    marker: { size: 6, color: colors, symbol: symbols, line: { color: "#333", width: 0.5 } },
+    hovertemplate: `%{text}<br>%{x:,} ft · %{customdata:.0f}${unit}<extra></extra>`,
   }], {
     margin: { t: 10, r: 16, b: 46, l: 60 },
     xaxis: { title: "Elevation (ft)", showgrid: false, ...PLOTLY_AXIS_LINE },
-    yaxis: { title: "SWE % of normal", rangemode: "tozero", ...PLOTLY_AXIS_LINE },
-    shapes: [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 100, y1: 100, line: { color: "#888", width: 1, dash: "dash" } }],
+    yaxis,
+    shapes,
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
   }, { responsive: true, displaylogo: false });
 }
