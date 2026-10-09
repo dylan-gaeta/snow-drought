@@ -599,12 +599,14 @@ function buildYearAxis(years) {
   if (years.length < 2) { axis.innerHTML = ""; return; }
   const last = years.length - 1;
   const lastYear = years[last];
-  // A tick every 5 years counting back from the most recent year (so 2026,
-  // 2021, 2016, ...), plus the latest year itself.
-  const show = new Set([last]);
-  years.forEach((y, i) => { if ((lastYear - y) % 5 === 0) show.add(i); });
-  axis.innerHTML = [...show].sort((a, b) => a - b).map((i) =>
-    `<span class="ol-year-tick" style="left:${(i / last) * 100}%">${years[i]}</span>`
+  // A tick at EVERY year (the scrubber selects whole years, so the integer
+  // granularity should be visible), with a 4-digit label only on the latest
+  // year and every 5th year back from it, so labels never overlap while the
+  // per-year minor ticks stay readable.
+  const major = new Set([last]);
+  years.forEach((y, i) => { if ((lastYear - y) % 5 === 0) major.add(i); });
+  axis.innerHTML = years.map((y, i) =>
+    `<span class="ol-year-tick${major.has(i) ? " major" : ""}" style="left:${(i / last) * 100}%">${major.has(i) ? y : ""}</span>`
   ).join("");
 }
 
