@@ -9,6 +9,7 @@ const sitesState = {
   visible: new Set(),  // networks currently shown on the map
   selected: null,      // { network, site } of the clicked station
   series: "value",     // value | anomaly
+  stateFilter: "",     // "" = all states; otherwise a 2-letter state filtering the dropdown
   map: null,
   layers: {},          // network -> ol vector layer
 };
@@ -96,17 +97,34 @@ function siteRecord(network, site) {
 }
 
 // Site dropdown grouped by dataset (network), each network's sites A-Z.
+// State filter so the dropdown (esp. PhenoCam's ~200 cameras) isn't one giant
+// list. States come from each site's own `state` (point-in-polygon, set in
+// dashboard_export.py::export_sites).
+function populateSiteStateSelect() {
+  const sel = document.getElementById("sites-state-select");
+  if (!sel) return;
+  const states = [...new Set(
+    Object.values(sitesState.networks).flatMap((net) => net.sites.map((s) => s.state)).filter(Boolean)
+  )].sort();
+  sel.innerHTML = '<option value="">All states</option>' + states.map((s) => `<option value="${s}">${s}</option>`).join("");
+}
+
 function populateSiteSelect() {
   const sel = document.getElementById("sites-site-select");
   if (!sel) return;
+  const filter = sitesState.stateFilter;
   let html = '<option value="">Select a site&hellip;</option>';
   Object.entries(sitesState.networks).forEach(([network, net]) => {
-    const sites = net.sites.slice().sort((a, b) => String(a.site).localeCompare(String(b.site)));
+    const sites = net.sites
+      .filter((s) => !filter || s.state === filter)
+      .slice().sort((a, b) => String(a.site).localeCompare(String(b.site)));
+    if (!sites.length) return;
     html += `<optgroup label="${net.label}">` + sites.map((s) =>
       `<option value="${network}|${s.site}">${s.site}</option>`
     ).join("") + "</optgroup>";
   });
   sel.innerHTML = html;
+  if (sitesState.selected) sel.value = `${sitesState.selected.network}|${sitesState.selected.site}`;
 }
 
 function selectSite(network, site) {
@@ -193,7 +211,9 @@ async function init() {
     buildNetworkLayer(net.network);
   });
 
+  populateSiteStateSelect();
   populateSiteSelect();
+  document.getElementById("sites-state-select").addEventListener("change", (e) => { sitesState.stateFilter = e.target.value; populateSiteSelect(); });
   document.getElementById("sites-site-select").addEventListener("change", (e) => {
     if (!e.target.value) return;
     const [network, site] = e.target.value.split("|");
