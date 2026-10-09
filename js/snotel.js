@@ -260,7 +260,7 @@ function renderDetail() {
   Plotly.newPlot("snotel-detail-chart", traces, {
     margin: { t: 10, r: 16, b: 40, l: 60 },
     yaxis: { title: "SWE (mm)", rangemode: "tozero", ...PLOTLY_AXIS_LINE },
-    xaxis: { showgrid: false, ...PLOTLY_AXIS_LINE },
+    xaxis: { showgrid: false, dtick: "M1", tickformat: "%b", ...PLOTLY_AXIS_LINE },
     legend: { orientation: "h", y: -0.18 }, font: { family: "Source Sans Pro, sans-serif", size: 13 },
   }, { responsive: true, displaylogo: false });
 
