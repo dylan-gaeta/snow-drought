@@ -27,7 +27,7 @@ function parseSharedMapViewFromUrl() {
 }
 
 let pendingSharedMapView = null;
-let lastMapSelection = null;
+let mapPicker = null;
 
 // First-ever visit (no shared-view URL hash, no remembered localStorage
 // selection) opens on this view rather than whatever happens to sort first
@@ -41,61 +41,65 @@ const DEFAULT_MAP_VIEW = {
 
 // A URL fragment-only change (e.g. a shared link pasted into the same tab,
 // or browser back/forward across two hash states) does not reload the page
-// or re-run init(), so it must be re-applied explicitly via the hashchange
-// event below.
+// or re-run init(), so re-apply it: stash the period/mode/year extras and
+// drive the shared picker to the hash's product/response (the picker's own
+// settle() then fires onMapSelectionChanged, which consumes the extras).
 function applySharedMapView() {
   const view = parseSharedMapViewFromUrl();
-  if (!view || !manifest.categories[view.category]) return false;
+  if (!view || !mapPicker) return;
   pendingSharedMapView = view;
-  selectMapCategory(view.category);
-  return true;
+  mapPicker.select(view.product, view.response);
+}
+
+// The map's year/period/mode live outside the shared picker (no other page has
+// them), so a shared-view hash carries them separately -- apply them here.
+function applyMapViewExtras(view) {
+  if (!view) return;
+  if (view.period) olMapState.period = view.period;
+  if (view.mode) {
+    olMapState.mode = view.mode;
+    document.querySelectorAll("#ol-mode-toggle button").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === view.mode);
+    });
+  }
+  if (view.year) olMapState.year = parseInt(view.year, 10);
+}
+
+// Shared-picker onChange. The picker has already filled the metadata panel and
+// saved the shared last-selection; here we mirror its choice into
+// mapPickerState, apply any period/mode/year a shared-view hash carried (once),
+// and redraw. The picker's spatial-map filter guarantees every selectable
+// product/response actually has a COG, so there is no category cascade to drive.
+function onMapSelectionChanged(entry, selection) {
+  mapPickerState.category = selection.category;
+  mapPickerState.product = selection.product;
+  mapPickerState.response = selection.response;
+  applyMapViewExtras(pendingSharedMapView);
+  pendingSharedMapView = null;
+  renderInteractiveMap();
 }
 
 function initMapPicker() {
-  renderMapCategoryTabs();
-  if (!applySharedMapView()) {
-    lastMapSelection = loadLastSelection();
-    if (!lastMapSelection) pendingSharedMapView = DEFAULT_MAP_VIEW;
-    const preferredCategory = lastMapSelection?.category || pendingSharedMapView?.category;
-    const initialCategory = (preferredCategory && manifest.categories[preferredCategory])
-      ? preferredCategory
-      : manifest.category_order.find((cat) => Object.keys(manifest.categories[cat]).length > 0);
-    selectMapCategory(initialCategory);
-  }
-
-  document.getElementById("ol-category-select").addEventListener("change", (event) => {
-    selectMapCategory(event.target.value);
+  // The picker seeds product/response itself (shared-view hash -> remembered
+  // selection -> DEFAULT_MAP_VIEW). Only the period/mode/year extras need
+  // handling here: from the hash, or -- first visit, no hash, nothing
+  // remembered -- from DEFAULT_MAP_VIEW.
+  const urlView = parseSharedMapViewFromUrl();
+  if (urlView) pendingSharedMapView = urlView;
+  else if (!loadLastSelection()) pendingSharedMapView = DEFAULT_MAP_VIEW;
+  mapPicker = createProductPicker({
+    ids: {
+      pivot: "picker-pivot", product: "product-select", response: "response-select",
+      meta: "product-meta", search: "product-search", searchResults: "product-search-results",
+    },
+    filter: responseHasSpatialMap,
+    persist: true,
+    seedFromUrl: true,
+    defaultView: DEFAULT_MAP_VIEW,
+    onChange: onMapSelectionChanged,
   });
-  document.getElementById("product-select").addEventListener("change", (event) => {
-    mapPickerState.product = event.target.value;
-    populateMapResponseSelect();
-  });
-  document.getElementById("response-select").addEventListener("change", (event) => {
-    mapPickerState.response = event.target.value;
-    onMapSelectionChanged();
-  });
-  wireProductSearch("product-search", "product-search-results", (category, product, response) => {
-    pendingSharedMapView = { category, product, response };
-    selectMapCategory(category);
-  });
+  mapPicker.init();
   window.addEventListener("hashchange", applySharedMapView);
-}
-
-function renderMapCategoryTabs() {
-  const select = document.getElementById("ol-category-select");
-  select.innerHTML = "";
-  manifest.category_order.filter(categoryHasSpatialMap).forEach((category) => {
-    const option = document.createElement("option");
-    option.value = category;
-    option.textContent = categoryLabelWithIcon(category);
-    select.appendChild(option);
-  });
-}
-
-function selectMapCategory(category) {
-  mapPickerState.category = category;
-  document.getElementById("ol-category-select").value = category;
-  populateMapProductSelect();
 }
 
 // A response gets a spatial map only if its manifest entry actually carries
@@ -121,62 +125,6 @@ function setMapControlPanelsVisible(visible) {
   const display = visible ? "" : "none";
   document.getElementById("ol-time-panel").style.display = display;
   document.getElementById("ol-display-panel").style.display = display;
-}
-
-function populateMapProductSelect() {
-  const select = document.getElementById("product-select");
-  select.innerHTML = "";
-  const products = Object.keys(manifest.categories[mapPickerState.category]).filter((product) =>
-    Object.keys(manifest.categories[mapPickerState.category][product]).some((r) => responseHasSpatialMap(mapPickerState.category, product, r)));
-  products.forEach((product) => {
-    const option = document.createElement("option");
-    option.value = product;
-    option.textContent = product;
-    select.appendChild(option);
-  });
-  const preferredProduct = pendingSharedMapView?.product || lastMapSelection?.product;
-  mapPickerState.product = (preferredProduct && products.includes(preferredProduct))
-    ? preferredProduct : products[0];
-  select.value = mapPickerState.product;
-  populateMapResponseSelect();
-}
-
-function populateMapResponseSelect() {
-  const select = document.getElementById("response-select");
-  select.innerHTML = "";
-  const responses = Object.keys(manifest.categories[mapPickerState.category][mapPickerState.product])
-    .filter((response) => responseHasSpatialMap(mapPickerState.category, mapPickerState.product, response));
-  responses.forEach((response) => {
-    const option = document.createElement("option");
-    option.value = response;
-    option.textContent = response;
-    select.appendChild(option);
-  });
-  const preferredResponse = pendingSharedMapView?.response || lastMapSelection?.response;
-  mapPickerState.response = (preferredResponse && responses.includes(preferredResponse))
-    ? preferredResponse : responses[0];
-  select.value = mapPickerState.response;
-
-  if (pendingSharedMapView) {
-    if (pendingSharedMapView.period) olMapState.period = pendingSharedMapView.period;
-    if (pendingSharedMapView.mode) {
-      olMapState.mode = pendingSharedMapView.mode;
-      document.querySelectorAll("#ol-mode-toggle button").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.mode === pendingSharedMapView.mode);
-      });
-    }
-    if (pendingSharedMapView.year) olMapState.year = parseInt(pendingSharedMapView.year, 10);
-    pendingSharedMapView = null; // restore only on initial load, never again
-  }
-  lastMapSelection = null; // consumed as a one-time fallback, same as pendingSharedMapView
-  onMapSelectionChanged();
-}
-
-function onMapSelectionChanged() {
-  const entry = currentResponseEntry();
-  document.getElementById("product-meta").innerHTML = productMetaHtml(entry);
-  saveLastSelection(mapPickerState.category, mapPickerState.product, mapPickerState.response);
-  renderInteractiveMap();
 }
 
 const olMapState = {

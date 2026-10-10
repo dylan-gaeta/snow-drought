@@ -28,67 +28,45 @@ function nonEmptyCategories() {
   return manifest.category_order.filter((cat) => Object.keys(manifest.categories[cat]).length > 0);
 }
 
-function populateCategorySelect(slot) {
-  const select = document.getElementById(`compare-${slot}-category`);
-  select.innerHTML = "";
-  nonEmptyCategories().forEach((cat) => {
-    const option = document.createElement("option");
-    option.value = cat;
-    option.textContent = categoryLabelWithIcon(cat);
-    select.appendChild(option);
-  });
-  compareState[slot].category = select.value;
-  populateProductSelect(slot);
+const comparePickers = { a: null, b: null };
+let compareReady = false;
+
+// Each panel owns an independent pivot picker (the shared createProductPicker).
+// persist is off: the shared last-selection memory is single-product, so writing
+// both panels into it would clobber it. A panel's onChange mirrors its choice
+// into compareState and redraws -- but only once BOTH pickers exist, since each
+// picker fires its onChange during init (before the other panel is built) and
+// renderCompare needs both slots populated.
+function onSlotChanged(slot, entry, selection) {
+  compareState[slot].category = selection.category;
+  compareState[slot].product = selection.product;
+  compareState[slot].response = selection.response;
+  if (compareReady) renderCompare();
 }
 
-function populateProductSelect(slot) {
-  const select = document.getElementById(`compare-${slot}-product`);
-  select.innerHTML = "";
-  Object.keys(manifest.categories[compareState[slot].category]).forEach((product) => {
-    const option = document.createElement("option");
-    option.value = product;
-    option.textContent = product;
-    select.appendChild(option);
+function setupSlots() {
+  // A opens on climate / 2 m air temperature; B on the first variable of a
+  // different category, so the page starts as a real cross-variable comparison
+  // rather than two of the same.
+  const cats = nonEmptyCategories();
+  const bCategory = cats.find((c) => c !== DEFAULT_PICKER_VIEW.category) || cats[0];
+  const bProduct = Object.keys(manifest.categories[bCategory])[0];
+  const bResponse = Object.keys(manifest.categories[bCategory][bProduct])[0];
+  comparePickers.a = createProductPicker({
+    ids: { pivot: "compare-a-pivot", product: "compare-a-product", response: "compare-a-response" },
+    persist: false,
+    defaultView: DEFAULT_PICKER_VIEW,
+    onChange: (entry, sel) => onSlotChanged("a", entry, sel),
   });
-  compareState[slot].product = select.value;
-  populateResponseSelect(slot);
-}
-
-function populateResponseSelect(slot) {
-  const select = document.getElementById(`compare-${slot}-response`);
-  select.innerHTML = "";
-  const { category, product } = compareState[slot];
-  Object.keys(manifest.categories[category][product]).forEach((response) => {
-    const option = document.createElement("option");
-    option.value = response;
-    option.textContent = response;
-    select.appendChild(option);
+  comparePickers.b = createProductPicker({
+    ids: { pivot: "compare-b-pivot", product: "compare-b-product", response: "compare-b-response" },
+    persist: false,
+    defaultView: { category: bCategory, product: bProduct, response: bResponse },
+    onChange: (entry, sel) => onSlotChanged("b", entry, sel),
   });
-  compareState[slot].response = select.value;
-}
-
-function setSlotCategory(slot, category) {
-  document.getElementById(`compare-${slot}-category`).value = category;
-  compareState[slot].category = category;
-  populateProductSelect(slot);
-}
-
-function setupSlot(slot) {
-  populateCategorySelect(slot);
-  document.getElementById(`compare-${slot}-category`).addEventListener("change", (event) => {
-    compareState[slot].category = event.target.value;
-    populateProductSelect(slot);
-    renderCompare();
-  });
-  document.getElementById(`compare-${slot}-product`).addEventListener("change", (event) => {
-    compareState[slot].product = event.target.value;
-    populateResponseSelect(slot);
-    renderCompare();
-  });
-  document.getElementById(`compare-${slot}-response`).addEventListener("change", (event) => {
-    compareState[slot].response = event.target.value;
-    renderCompare();
-  });
+  comparePickers.a.init();
+  comparePickers.b.init();
+  compareReady = true;
 }
 
 function populateStartYearSelect() {
@@ -115,13 +93,7 @@ function initCompareView() {
 
   populateRegionSelect(document.getElementById("compare-region-select"), compareState.region);
   populateStartYearSelect();
-  setupSlot("a");
-  setupSlot("b");
-
-  // Default B to a different category than A so the page opens on an actual
-  // cross-variable comparison, not two snow products.
-  const cats = nonEmptyCategories();
-  if (cats.length > 1) setSlotCategory("b", cats[1]);
+  setupSlots();
 
   document.getElementById("compare-region-select").addEventListener("change", (event) => {
     compareState.region = event.target.value;

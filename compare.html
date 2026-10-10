@@ -50,14 +50,14 @@
       &sigma; to put both on one standardized scale.</p>
     <div class="selector-row">
       <span class="compare-slot-label">A</span>
-      <select id="compare-a-category" aria-label="Panel A category"></select>
-      <select id="compare-a-product" aria-label="Panel A product"></select>
+      <div class="picker-pivot" id="compare-a-pivot"></div>
+      <select id="compare-a-product" aria-label="Panel A dataset"></select>
       <select id="compare-a-response" aria-label="Panel A variable"></select>
     </div>
     <div class="selector-row">
       <span class="compare-slot-label">B</span>
-      <select id="compare-b-category" aria-label="Panel B category"></select>
-      <select id="compare-b-product" aria-label="Panel B product"></select>
+      <div class="picker-pivot" id="compare-b-pivot"></div>
+      <select id="compare-b-product" aria-label="Panel B dataset"></select>
       <select id="compare-b-response" aria-label="Panel B variable"></select>
     </div>
     <div class="selector-row">
@@ -92,6 +92,7 @@
 </footer>
 
 <script src="js/common.js"></script>
+<script src="js/product-picker.js"></script>
 <script src="js/compare.js"></script>
 </body>
 </html>
