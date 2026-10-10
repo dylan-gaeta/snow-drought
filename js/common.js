@@ -546,7 +546,7 @@ function regionalSummaryNote(data) {
   const nativeNote = data.aggregation === "native_index"
     ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
     : "";
-  return `Cells are shaded gold = stress, blue = relief in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} values = more stress); the σ sign stays native (+ above / − below normal), so a stressed cell can read as a negative σ. Rank 1 = the most drought-stressed year of record for this response's own stress direction; higher ranks are progressively closer to relief.${nativeNote}`;
+  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = stress, the wettest third blue = relief, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively closer to relief.${nativeNote}`;
 }
 
 function regionalSummaryRowsHtml(data, windowKey, year) {
@@ -561,8 +561,15 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       const region = data.regions[code];
       const result = region ? computeWindowValue(data, region, windowKey, year) : null;
       if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
-      const cls = result.sigma === null ? ""
-        : (data.drier_is_high ? (result.sigma > 0 ? "stress" : "relief") : (result.sigma < 0 ? "stress" : "relief"));
+      // Color reflects standing ON RECORD (rank), not which side of the
+      // climatological mean a value falls -- the mean is not the line between
+      // drought and no-drought. Driest third of years on record read stress,
+      // wettest third relief, the middle third is left uncolored.
+      let cls = "";
+      if (result.stressRank !== null && result.nRecord) {
+        const frac = result.stressRank / result.nRecord; // rank 1 = most drought-stressed
+        cls = frac <= 1 / 3 ? "stress" : frac > 2 / 3 ? "relief" : "";
+      }
       const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
       // Normal = this window's baseline (climatology) mean in native units; since
       // the anomaly is the mean-centered departure, mean = raw - anomaly. Not
@@ -570,9 +577,13 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       const hasNormal = result.anomaly !== null && !result.isNativeIndex;
       const normal = hasNormal ? result.rawValue - result.anomaly : null;
       const normalText = normal === null ? "&mdash;" : `${normal.toFixed(2)} ${data.units}`;
-      // % of normal only makes sense where the baseline mean is positive (ratio
-      // scale, e.g. precip/SWE/soil moisture); shown as "—" otherwise.
-      const pctText = (normal === null || normal <= 0) ? "&mdash;"
+      // % of normal only makes sense for a non-negative physical AMOUNT (precip,
+      // SWE, soil moisture, evaporation...), not an interval-scale quantity like
+      // temperature/dewpoint/VPD where raw/mean is meaningless and runs past
+      // 100%. data.pct_of_normal_ok carries that distinction from the pipeline
+      // (not thermal-family, not a native standardized index); also require a
+      // positive baseline mean.
+      const pctText = (!data.pct_of_normal_ok || normal === null || normal <= 0) ? "&mdash;"
         : `${(result.rawValue / normal * 100).toFixed(0)}%`;
       const rawAnomText = (result.anomaly === null || result.isNativeIndex)
         ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;

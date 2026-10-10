@@ -150,7 +150,7 @@ async function renderLimitation() {
     // so pinning the axis to the full 0-1 range flattened all three lines against
     // the bottom and hid their variation (Dylan, 2026-10). The title still states
     // the 0-1 convention.
-    yaxis: { title: isAnom ? "stress-function anomaly" : "stress function (0-1, 1 = unstressed)", zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: isAnom ? "stress-function anomaly" : "stress function", zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     legend: { orientation: "h", y: -0.18 }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
