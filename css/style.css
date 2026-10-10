@@ -405,6 +405,31 @@ table.headline-table tr.group-row td {
   box-shadow: var(--shadow-sm);
 }
 
+/* Dataset/Variable pivot: a compact segmented toggle that replaced the old
+   per-category tab column (categories now live only on the summary heatmaps). */
+.picker-pivot {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border, #d4d9e0);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+}
+.picker-pivot-btn {
+  border: none;
+  background: var(--bg-panel);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.picker-pivot-btn + .picker-pivot-btn { border-left: 1px solid var(--border, #d4d9e0); }
+.picker-pivot-btn:hover { background: #eef1f5; }
+.picker-pivot-btn.active { background: var(--blue); color: #fff; }
+
 .product-search-wrap { position: relative; max-width: 480px; margin-bottom: 1.1rem; }
 .product-search-wrap input[type="search"] {
   width: 100%;
