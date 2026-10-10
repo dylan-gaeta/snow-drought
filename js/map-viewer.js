@@ -651,14 +651,6 @@ async function renderRegionValuesTable(entry) {
   const heading = document.getElementById("ol-region-table-heading");
   const note = document.getElementById("ol-region-table-note");
   const body = document.getElementById("ol-region-table-body");
-  if (olMapState.year === null) {
-    heading.textContent = "Regional values";
-    body.innerHTML = "";
-    note.textContent = olMapState.mode === "climatology"
-      ? "Regional values are year-specific — switch to Raw units or Anomaly (and pick a year) to see them."
-      : "No years available for this selection.";
-    return;
-  }
   if (!entry.aggregation) {
     heading.textContent = "Regional values";
     body.innerHTML = "";
@@ -666,13 +658,35 @@ async function renderRegionValuesTable(entry) {
     return;
   }
   const period = olMapState.period;
-  const year = olMapState.year;
-  heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const data = await fetchTimeseriesJson(`${mapPickerState.product}_${mapPickerState.response}`);
+  // The table is mode-independent (raw value / normal / anomaly / sigma / rank
+  // for one year), so it should populate even on a fresh load in Climatology
+  // mode -- whose year CONTROL is hidden but whose target year is still
+  // meaningful. Default to the latest year the data covers when none is chosen.
+  if (olMapState.year === null) olMapState.year = latestYearInData(data);
+  const year = olMapState.year;
+  if (year === null) {
+    heading.textContent = "Regional values";
+    body.innerHTML = "";
+    note.textContent = "No years available for this selection.";
+    return;
+  }
+  heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
   const rawHeader = document.getElementById("ol-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, period);
   body.innerHTML = regionalSummaryRowsHtml(data, period, year);
   note.textContent = regionalSummaryNote(data);
+}
+
+function latestYearInData(data) {
+  let maxYear = null;
+  for (const code in data.regions) {
+    const dates = data.regions[code].dates;
+    if (!dates || !dates.length) continue;
+    const y = parseInt(dates[dates.length - 1].slice(0, 4), 10);
+    if (maxYear === null || y > maxYear) maxYear = y;
+  }
+  return maxYear;
 }
 
 async function updateInteractiveMapLayer() {

@@ -556,20 +556,30 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
     { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
   ];
   return regionGroups.flatMap(({ label: groupLabel, entries }) => {
-    const groupRow = `<tr class="group-row"><td colspan="5">${groupLabel}</td></tr>`;
+    const groupRow = `<tr class="group-row"><td colspan="7">${groupLabel}</td></tr>`;
     const dataRows = entries.map(({ code, label }) => {
       const region = data.regions[code];
       const result = region ? computeWindowValue(data, region, windowKey, year) : null;
-      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
       const cls = result.sigma === null ? ""
         : (data.drier_is_high ? (result.sigma > 0 ? "stress" : "relief") : (result.sigma < 0 ? "stress" : "relief"));
       const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+      // Normal = this window's baseline (climatology) mean in native units; since
+      // the anomaly is the mean-centered departure, mean = raw - anomaly. Not
+      // defined for native standardized indices (the value already is a departure).
+      const hasNormal = result.anomaly !== null && !result.isNativeIndex;
+      const normal = hasNormal ? result.rawValue - result.anomaly : null;
+      const normalText = normal === null ? "&mdash;" : `${normal.toFixed(2)} ${data.units}`;
+      // % of normal only makes sense where the baseline mean is positive (ratio
+      // scale, e.g. precip/SWE/soil moisture); shown as "—" otherwise.
+      const pctText = (normal === null || normal <= 0) ? "&mdash;"
+        : `${(result.rawValue / normal * 100).toFixed(0)}%`;
       const rawAnomText = (result.anomaly === null || result.isNativeIndex)
         ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;
       const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
       const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
         : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${result.stressRank}/${result.nRecord}</span>`;
-      return `<tr><td>${label}</td><td>${rawText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+      return `<tr><td>${label}</td><td>${rawText}</td><td>${normalText}</td><td>${pctText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
     });
     return [groupRow, ...dataRows];
   }).join("");

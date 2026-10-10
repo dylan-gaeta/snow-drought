@@ -39,6 +39,11 @@ const REGIME_LABELS = {
   dry: "Dry snow drought", warm_dry: "Warm & dry snow drought",
   warm: "Warm snow drought", other: "Other snow drought", none: "No snow drought",
 };
+// Short legend labels so the horizontal legend stays on a single row (the full
+// labels wrap and overlap the plot); hover text and the table keep REGIME_LABELS.
+const REGIME_LEGEND_LABELS = {
+  dry: "Dry", warm_dry: "Warm & dry", warm: "Warm", other: "Other", none: "No drought",
+};
 // NCL precip_diff_12lev diverging ramp -- used when points are colored by a
 // driver variable's anomaly (centered at 0), matching the rest of the site.
 const PRECIP_DIFF = [
@@ -191,7 +196,7 @@ function renderQuadrantChart() {
         const pr = points.filter((p) => p.regime === regime);
         return {
           x: pr.map((p) => p[x]), y: pr.map((p) => p[y]),
-          mode: "markers", type: "scatter", name: REGIME_LABELS[regime],
+          mode: "markers", type: "scatter", name: REGIME_LEGEND_LABELS[regime],
           marker: {
             size: pr.map((p) => (p.winter_year === 2026 ? 16 : 9)),
             color: REGIME_COLORS[regime], line: { color: "#333", width: 0.8 },
