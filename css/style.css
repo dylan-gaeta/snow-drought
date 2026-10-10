@@ -374,6 +374,19 @@ table.headline-table tr.group-row td {
   gap: 1rem;
   align-items: start;
 }
+/* The heatmaps panel keeps a left category-tab sidebar (categories remain a
+   user-facing filter only here), unlike the picker pages whose category column
+   was removed -- so it uses its own two-column grid. */
+.heatmap-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.heatmap-layout > div { min-width: 0; }
+@media (max-width: 820px) {
+  .heatmap-layout { grid-template-columns: 1fr; }
+}
 /* Grid items default to min-width:auto -- the 1fr column refuses to shrink
    below its content's natural width (the Plotly chart) instead of fitting
    the available space, pushing the whole layout past the viewport edge. */
