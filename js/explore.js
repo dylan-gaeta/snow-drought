@@ -74,12 +74,30 @@ async function renderTimeseries() {
   const startYear = Math.max(DASHBOARD_MIN_YEAR, timeseriesStartYear || DASHBOARD_MIN_YEAR);
   const dates = region.dates.filter((d) => parseInt(d.slice(0, 4), 10) >= startYear);
   const y = fullY.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear);
-  const traces = [{
+  const traces = [];
+  // Formal one-sigma measurement uncertainty band, where the product publishes
+  // it (GRACE mascon sigma, SMAP/SMOS retrieval error). It is in the value's own
+  // units, so it is only meaningful on the raw-value view -- not anomaly/sigma.
+  if (!isDeparture && region.uncertainty) {
+    const unc = region.uncertainty.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear);
+    const upper = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v + unc[i]));
+    const lower = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v - unc[i]));
+    traces.push({
+      x: dates, y: upper, type: "scatter", mode: "lines",
+      line: { width: 0 }, hoverinfo: "skip", showlegend: false,
+    });
+    traces.push({
+      x: dates, y: lower, type: "scatter", mode: "lines",
+      line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(27,27,27,0.15)",
+      name: "±1σ measurement uncertainty", hoverinfo: "skip",
+    });
+  }
+  traces.push({
     x: dates, y, type: "scatter", mode: "lines",
     line: { color: "#1b1b1b", width: 1.4 },
     name: yTitle,
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
-  }];
+  });
   document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
