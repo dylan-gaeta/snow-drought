@@ -370,8 +370,8 @@ table.headline-table tr.group-row td {
 /* --- Explorer page --- */
 .explorer-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   align-items: start;
 }
 /* Grid items default to min-width:auto -- the 1fr column refuses to shrink

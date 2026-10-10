@@ -49,12 +49,12 @@
     </div>
 
     <div class="explorer-layout">
-      <nav class="category-tabs" id="category-tabs" aria-label="Dataset category"></nav>
+      <div class="picker-pivot" id="picker-pivot" role="group" aria-label="Browse by dataset or by variable"></div>
 
       <div>
         <div class="selector-row">
-          <select id="product-select" aria-label="Product"></select>
-          <select id="response-select" aria-label="Variable"></select>
+          <label class="select-field">Dataset <select id="product-select" aria-label="Product"></select></label>
+          <label class="select-field">Variable <select id="response-select" aria-label="Variable"></select></label>
         </div>
         <div id="region-toggle" style="display:none;"></div>
         <div class="product-meta" id="product-meta"></div>
