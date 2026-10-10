@@ -24,7 +24,7 @@
 const QUADRANT_VARIABLES = {
   t_anom: { label: "ERA5-Land Temperature", unit: "°C", stress_high: true, stress: "warm", benign: "cold" },
   ppt_anom: { label: "PRISM Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
-  swe_anom: { label: "SNOTEL Snowpack", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
+  swe_anom: { label: "SNOTEL Peak SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   vpd_anom: { label: "PRISM Max VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
   vpdmin_anom: { label: "PRISM Min VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
   sca_terra_anom: { label: "MODIS-Terra Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
@@ -34,15 +34,18 @@ const QUADRANT_VARIABLES = {
   era5_swe_anom: { label: "ERA5-Land SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   era5_sca_anom: { label: "ERA5-Land Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
-const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", other: "#998ec3", none: "#92c5de" };
+// Exactly three snow-drought types plus "none" (peak SWE at/above its mean, so
+// not a drought) -- no "other" regime (mirrors 94_context_SnowDroughtQuadrants_
+// analyze.py's REGIMES).
+const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", none: "#92c5de" };
 const REGIME_LABELS = {
   dry: "Dry snow drought", warm_dry: "Warm & dry snow drought",
-  warm: "Warm snow drought", other: "Other snow drought", none: "No snow drought",
+  warm: "Warm snow drought", none: "No snow drought",
 };
 // Short legend labels so the horizontal legend stays on a single row (the full
 // labels wrap and overlap the plot); hover text and the table keep REGIME_LABELS.
 const REGIME_LEGEND_LABELS = {
-  dry: "Dry", warm_dry: "Warm & dry", warm: "Warm", other: "Other", none: "No drought",
+  dry: "Dry", warm_dry: "Warm & dry", warm: "Warm", none: "No drought",
 };
 // NCL precip_diff_12lev diverging ramp -- used when points are colored by a
 // driver variable's anomaly (centered at 0), matching the rest of the site.
@@ -52,7 +55,7 @@ const PRECIP_DIFF = [
   [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"], [1, "#b66a28"],
 ];
 
-const quadrantState = { region: "ALL", x: "t_anom", y: "ppt_anom", color: "regime", rows: [] };
+const quadrantState = { region: "ALL", x: "ppt_anom", y: "t_anom", color: "regime", rows: [] };
 
 async function initQuadrantView() {
   const xSelect = document.getElementById("quadrant-x-select");
@@ -133,37 +136,64 @@ function renderQuadrantChart() {
   const ymax = Math.max(...points.map((p) => Math.abs(p[y]))) * 1.12;
   const shapes = [];
   const annotations = [];
-  // Stress-quadrant shading, identical for every axis pair including the
-  // Dierauer temperature-vs-precip default: tint each quadrant by how many of
-  // the two axes point toward drought stress, and label the fully-stressed and
-  // fully-benign corners by AXIS POSITION (e.g. "dry + warm", "wet + cold").
-  // The actual snow-drought regime is SWE-gated (SWE is on neither axis), so
-  // it is shown per point via color-by-regime + hover -- never implied by the
-  // quadrant, which would mislabel the ~25% of winters whose regime differs
-  // from their temperature/precipitation position.
-  const sx = xMeta.stress_high ? 1 : -1;
-  const sy = yMeta.stress_high ? 1 : -1;
-  const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
-  [1, -1].forEach((xs) => {
-    const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
-    [1, -1].forEach((ys) => {
-      const [y0, y1] = ys > 0 ? [0, ymax] : [-ymax, 0];
-      const n = (xs === sx ? 1 : 0) + (ys === sy ? 1 : 0);
-      shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: tint[n], opacity: 0.13, line: { width: 0 }, layer: "below" });
+  // Quadrant shading. On the Dierauer default pair (x = precipitation, y =
+  // temperature) the three snow-drought TYPES partition the plane exactly as
+  // classify() keys them on precipitation: adequate precip (right half) = warm;
+  // a precip deficit splits by temperature into warm & dry (upper left) and dry
+  // (lower left). The below-mean-peak-SWE gate (SWE on neither axis) decides
+  // whether a winter is a drought at all, so it is shown per point via
+  // color-by-regime + hover -- the tint only names the type a drought winter's
+  // precip/temperature would imply, never which winters are droughts. Any other
+  // axis pair has no such partition, so fall back to generic stress shading:
+  // tint each quadrant by how many axes point toward drought stress and label
+  // the fully-stressed / fully-benign corners by axis position.
+  const dierauerPair = x === "ppt_anom" && y === "t_anom";
+  if (dierauerPair) {
+    const regions = {
+      warm: [0, xmax, -ymax, ymax],
+      warm_dry: [-xmax, 0, 0, ymax],
+      dry: [-xmax, 0, -ymax, 0],
+    };
+    const corners = {
+      warm: [xmax, ymax, "right", "top"],
+      warm_dry: [-xmax, ymax, "left", "top"],
+      dry: [-xmax, -ymax, "left", "bottom"],
+    };
+    Object.entries(regions).forEach(([regime, [x0, x1, y0, y1]]) => {
+      shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: REGIME_COLORS[regime], opacity: 0.13, line: { width: 0 }, layer: "below" });
     });
-  });
-  const sxp = sx > 0 ? xmax : -xmax;
-  const syp = sy > 0 ? ymax : -ymax;
-  annotations.push({
-    x: sxp * 0.96, y: syp * 0.96, text: `${yMeta.stress} + ${xMeta.stress}`, showarrow: false,
-    font: { size: 12, color: "#955910", weight: 700 },
-    xanchor: sx > 0 ? "right" : "left", yanchor: sy > 0 ? "top" : "bottom",
-  });
-  annotations.push({
-    x: -sxp * 0.96, y: -syp * 0.96, text: `${yMeta.benign} + ${xMeta.benign}`, showarrow: false,
-    font: { size: 12, color: "#0570b0", weight: 700 },
-    xanchor: sx > 0 ? "left" : "right", yanchor: sy > 0 ? "bottom" : "top",
-  });
+    Object.entries(corners).forEach(([regime, [cx, cy, xa, ya]]) => {
+      annotations.push({
+        x: cx * 0.96, y: cy * 0.96, text: REGIME_LABELS[regime], showarrow: false,
+        font: { size: 12, color: REGIME_COLORS[regime], weight: 700 },
+        xanchor: xa, yanchor: ya,
+      });
+    });
+  } else {
+    const sx = xMeta.stress_high ? 1 : -1;
+    const sy = yMeta.stress_high ? 1 : -1;
+    const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
+    [1, -1].forEach((xs) => {
+      const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
+      [1, -1].forEach((ys) => {
+        const [y0, y1] = ys > 0 ? [0, ymax] : [-ymax, 0];
+        const n = (xs === sx ? 1 : 0) + (ys === sy ? 1 : 0);
+        shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: tint[n], opacity: 0.13, line: { width: 0 }, layer: "below" });
+      });
+    });
+    const sxp = sx > 0 ? xmax : -xmax;
+    const syp = sy > 0 ? ymax : -ymax;
+    annotations.push({
+      x: sxp * 0.96, y: syp * 0.96, text: `${yMeta.stress} + ${xMeta.stress}`, showarrow: false,
+      font: { size: 12, color: "#955910", weight: 700 },
+      xanchor: sx > 0 ? "right" : "left", yanchor: sy > 0 ? "top" : "bottom",
+    });
+    annotations.push({
+      x: -sxp * 0.96, y: -syp * 0.96, text: `${yMeta.benign} + ${xMeta.benign}`, showarrow: false,
+      font: { size: 12, color: "#0570b0", weight: 700 },
+      xanchor: sx > 0 ? "left" : "right", yanchor: sy > 0 ? "bottom" : "top",
+    });
+  }
 
   // Year labels on every point with a short leader line, matching the static
   // classification figures (Dylan, #3); 2026 is bold and larger. On a phone the

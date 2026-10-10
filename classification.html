@@ -44,13 +44,16 @@
       <h2>Snow drought classification by winter type</h2>
       <p class="finding-note">
         Dierauer, Allen &amp; Whitfield (2019, <em>Water Resources
-        Research</em>) classification of each below-normal-snow winter by its
-        drivers: <strong>dry</strong> (precip deficit), <strong>warm</strong>
-        (adequate precip but above-normal temperature), <strong>warm &amp;
-        dry</strong>, or <strong>other</strong> (neither &mdash; cold with
-        adequate precip). One point per DJFM winter (1991&ndash;2026); color =
-        classification. The table below lists every winter's values for the
-        selected region.
+        Research</em>) classification. A winter is a <strong>snow drought</strong>
+        when its annual peak SWE falls below the climatological mean peak SWE
+        (this flags more than half of winters, as in the paper). Each
+        snow-drought winter is then typed by its Oct&ndash;Apr drivers, keyed on
+        precipitation: <strong>warm</strong> (adequate precipitation, so the snow
+        deficit is temperature/phase-driven), <strong>dry</strong> (precipitation
+        deficit without above-normal warmth), or <strong>warm &amp; dry</strong>
+        (precipitation deficit with above-normal temperature). One point per
+        winter (1991&ndash;2026); color = classification. The table below lists
+        every winter's values for the selected region.
       </p>
       <div class="selector-row">
         <label class="select-field">Region <select id="quadrant-region-select" aria-label="Region"></select></label>
@@ -63,7 +66,7 @@
       <h3 class="figure-title" id="quadrant-table-heading">Classification by winter</h3>
       <div class="table-scroll">
         <table class="headline-table" id="quadrant-table">
-          <thead><tr><th>Winter</th><th>Classification</th><th>Temp anomaly (&deg;C)</th><th>Precip anomaly (mm)</th><th>Snowpack anomaly (mm)</th></tr></thead>
+          <thead><tr><th>Winter</th><th>Classification</th><th>Temp anomaly (&deg;C)</th><th>Precip anomaly (mm)</th><th>Peak SWE anomaly (mm)</th></tr></thead>
           <tbody id="quadrant-table-body"></tbody>
         </table>
       </div>
