@@ -29,8 +29,16 @@ const SIB4_CORRESPONDENCE = {
   GPP: [["MODIS-Terra", "GPP"], ["MODIS-Aqua", "GPP"], ["FluxSat", "GPP"], ["GOSIF-GPP", "GPP"], ["AmeriFlux", "GPP"]],
   NEE: [["CarbonTracker", "NEE"], ["MiCASA", "NEE"], ["CAMS", "LAND_CARBON_EXCHANGE"], ["NEON", "NEE"], ["AmeriFlux", "NEE"]],
   RECO: [["MiCASA", "RH"]],
+  RESP_HET: [["MiCASA", "RH"]],
   SIF: [["TROPOSIF", "SIF"], ["GOSIF", "SIF"], ["OCO-2", "SIF"]],
   LAI: [["MODIS-Terra", "LAI"], ["MODIS-Aqua", "LAI"], ["MODIS-Terra", "NDVI"], ["VIIRS-NDVI", "NDVI"]],
+  // SiB4's modeled evapotranspiration, soil water, and canopy VPD against their
+  // satellite / reanalysis / land-model observational counterparts. The compare
+  // panel standardizes every series to its own sigma and flips by stress
+  // direction, so the differing physical units (W m-2, kg m-2, hPa) are fine.
+  ET: [["MODIS-Terra", "ET"], ["MODIS-Aqua", "ET"], ["ERA5-Land", "ET"], ["NLDAS-Noah", "ET"], ["NLDAS-Mosaic", "ET"], ["NLDAS-VIC", "ET"]],
+  SOIL_WATER: [["SMAP", "SM"], ["SMOS", "SM"], ["ERA5-Land", "ROOT_SM"], ["ERA5-Land", "SURFACE_SM"], ["NLDAS-Noah", "SOIL_MOISTURE"], ["NLDAS-Mosaic", "SOIL_MOISTURE"], ["NLDAS-VIC", "SOIL_MOISTURE"], ["GRACE-L4", "RTZSM"], ["GRACE-L4", "SFSM"]],
+  VPD: [["ERA5-Land", "VPD"], ["PRISM", "VPDMAX"], ["PRISM", "VPDMIN"]],
 };
 
 const SIB4_NAVY = "#023858";
@@ -162,8 +170,10 @@ function afterStart(dates, values) {
 const SIB4_DEFAULT_PFT_COUNT = 4;
 function checkedPfts(orderedPfts) {
   const region = sib4State.region;
+  // Default: no individual PFTs checked -- the chart opens as just the net
+  // (all-PFTs) mean so the per-PFT breakdown doesn't muddle it; PFTs are opt-in.
   if (!sib4State.tsPfts[region]) {
-    sib4State.tsPfts[region] = new Set(orderedPfts.slice(0, SIB4_DEFAULT_PFT_COUNT));
+    sib4State.tsPfts[region] = new Set();
   }
   return sib4State.tsPfts[region];
 }
@@ -171,6 +181,19 @@ function checkedPfts(orderedPfts) {
 function renderPftCheckboxes(orderedPfts, checked) {
   const box = document.getElementById("sib4-pft-checkboxes");
   box.innerHTML = "";
+  // "Net (all PFTs)" -- the region area-weighted mean -- lives in the same
+  // checkbox row as the individual PFTs (navy swatch) so the net line toggles
+  // the same way, and defaults on with no PFTs checked so the chart opens as a
+  // single clean line instead of a tangle of per-PFT breakdowns.
+  const net = document.createElement("label");
+  net.className = "compare-legend-item";
+  const netCb = document.createElement("input");
+  netCb.type = "checkbox"; netCb.checked = sib4State.tsAggregate;
+  netCb.addEventListener("change", (e) => { sib4State.tsAggregate = e.target.checked; renderPftTimeseries(); });
+  const netSw = document.createElement("span");
+  netSw.className = "compare-legend-swatch"; netSw.style.background = SIB4_NAVY;
+  net.appendChild(netCb); net.appendChild(netSw); net.appendChild(document.createTextNode("Net (all PFTs)"));
+  box.appendChild(net);
   orderedPfts.forEach((code) => {
     const label = document.createElement("label");
     label.className = "compare-legend-item";
@@ -391,7 +414,10 @@ function populateVariableSelect(id, variables, selected) {
   sel.innerHTML = "";
   variables.forEach((v) => {
     const o = document.createElement("option");
-    o.value = v.key; o.textContent = v.long_name;
+    // Append the SiB4 internal variable code (netcdf name) so the modeled
+    // quantity is explicit, e.g. "Gross primary productivity (assim)". NEE has
+    // no single source variable (computed resp_tot - assim), so it has no code.
+    o.value = v.key; o.textContent = v.code ? `${v.long_name} (${v.code})` : v.long_name;
     if (v.key === selected) o.selected = true;
     sel.appendChild(o);
   });
@@ -477,7 +503,6 @@ async function init() {
   document.getElementById("sib4-ts-variable").addEventListener("change", (e) => { sib4State.tsVariable = e.target.value; renderPftTimeseries(); });
   document.getElementById("sib4-ts-toggle").addEventListener("click", (e) => { const b = e.target.closest("button[data-series]"); if (!b) return; sib4State.tsSeries = b.dataset.series; document.querySelectorAll("#sib4-ts-toggle button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
   document.getElementById("sib4-ts-view").addEventListener("click", (e) => { const b = e.target.closest("button[data-view]"); if (!b) return; sib4State.tsView = b.dataset.view; document.querySelectorAll("#sib4-ts-view button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
-  document.getElementById("sib4-ts-aggregate").addEventListener("change", (e) => { sib4State.tsAggregate = e.target.checked; renderPftTimeseries(); });
   document.getElementById("sib4-limitation-toggle").addEventListener("click", (e) => { const b = e.target.closest("button[data-series]"); if (!b) return; sib4State.limitationSeries = b.dataset.series; document.querySelectorAll("#sib4-limitation-toggle button").forEach((x) => x.classList.toggle("active", x === b)); renderLimitation(); });
   renderStressFactorButtons();
   document.getElementById("sib4-limitation-factors").addEventListener("click", (e) => {
