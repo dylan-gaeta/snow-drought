@@ -27,6 +27,28 @@ const RESPONSE_COLORS = {
   GPP: "#238b45", NEE: "#d7301f",
 };
 
+// Flux towers lead this page: AmeriFlux + NEON are listed first, shown on by
+// default, and the page opens on one of their stations. PhenoCam's ~200 cameras
+// are secondary (hidden until toggled on) so the tower network isn't buried in
+// camera dots.
+const FLUX_NETWORKS = ["AmeriFlux", "NEON"];
+function orderedNetworks(networks) {
+  const rank = (k) => { const i = FLUX_NETWORKS.indexOf(k); return i === -1 ? FLUX_NETWORKS.length : i; };
+  return networks.slice().sort((a, b) => rank(a.key) - rank(b.key));
+}
+// Open on a flux tower (prefer one carrying 2026 data) so the page leads with a
+// GPP/NEE record instead of an empty "click a station" prompt.
+function selectDefaultFluxSite() {
+  for (const key of FLUX_NETWORKS) {
+    const net = sitesState.networks[key];
+    if (!net || !net.sites.length) continue;
+    const has2026 = (s) => (net.responses || []).some((r) => s.series[r] && s.series[r].dates.some((d) => String(d).startsWith("2026")));
+    const site = net.sites.find(has2026) || net.sites[0];
+    selectSite(key, site.site);
+    return;
+  }
+}
+
 function buildSitesMap() {
   const boundary = new ol.layer.Vector({
     source: new ol.source.Vector({ url: assetUrl("data/western_states.geojson"), format: new ol.format.GeoJSON() }),
@@ -173,11 +195,11 @@ function renderSiteChart() {
 function buildNetworkToggles(index) {
   const row = document.getElementById("sites-network-toggles");
   row.innerHTML = "";
-  index.networks.forEach((n) => {
+  orderedNetworks(index.networks).forEach((n) => {
     const label = document.createElement("label");
     label.className = "boundary-toggle sites-network-toggle";
     const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.checked = true;
+    cb.type = "checkbox"; cb.checked = FLUX_NETWORKS.includes(n.key);
     cb.addEventListener("change", () => {
       if (cb.checked) sitesState.visible.add(n.key); else sitesState.visible.delete(n.key);
       if (sitesState.layers[n.key]) sitesState.layers[n.key].setVisible(cb.checked);
@@ -207,12 +229,16 @@ async function init() {
     fetch(assetUrl(`data/sites/${n.key}.json`)).then((r) => r.json())));
   loaded.forEach((net) => {
     sitesState.networks[net.network] = net;
-    sitesState.visible.add(net.network);
+    if (FLUX_NETWORKS.includes(net.network)) sitesState.visible.add(net.network);
     buildNetworkLayer(net.network);
+    if (!FLUX_NETWORKS.includes(net.network) && sitesState.layers[net.network]) {
+      sitesState.layers[net.network].setVisible(false);
+    }
   });
 
   populateSiteStateSelect();
   populateSiteSelect();
+  selectDefaultFluxSite();
   document.getElementById("sites-state-select").addEventListener("change", (e) => { sitesState.stateFilter = e.target.value; populateSiteSelect(); });
   document.getElementById("sites-site-select").addEventListener("change", (e) => {
     if (!e.target.value) return;
