@@ -3,9 +3,10 @@
 // manifest fetch and the small set of constants/helpers every page needs.
 // No page-specific state lives here.
 
-// 8 nav items collapse into a toggled dropdown below 900px (see
-// .nav-toggle/.site-nav.open in style.css) -- wires the hamburger button
-// every page's header includes. A no-op if a page has no #nav-toggle.
+// The two-tier nav (primary + secondary rows) collapses into one stacked
+// toggled dropdown below 900px (see .nav-toggle/.site-nav.open in style.css)
+// -- wires the hamburger button every page's header includes. A no-op if a
+// page has no #nav-toggle.
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.getElementById("nav-toggle");
   const nav = document.getElementById("site-nav");

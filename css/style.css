@@ -119,24 +119,41 @@ a:hover { color: var(--navy); }
   text-transform: uppercase;
   margin-top: 2px;
 }
+/* Two-tier nav: primary views (Home/Map/Time Series/Seasonal/Compare) on the
+   top row, the specialized and reference pages on a smaller muted row below,
+   both right-aligned beside the wordmark. Twelve items never fit one flat
+   inline row on a normal desktop, and splitting by role reads better than a
+   ragged wrap. */
+.site-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+.nav-primary, .nav-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 1.4rem;
+}
+.nav-secondary {
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
 .site-nav a {
   color: #dce4f0;
   text-decoration: none;
-  margin-left: 1.5rem;
-  font-size: 0.95rem;
   font-weight: 600;
-  padding-bottom: 4px;
+  padding-bottom: 3px;
   border-bottom: 3px solid transparent;
 }
-.site-nav a:first-child { margin-left: 0; }
+.nav-primary a { font-size: 1rem; }
+.nav-secondary a { font-size: 0.85rem; color: #aebbd2; }
 .site-nav a:hover, .site-nav a.active {
   color: #fff;
   border-bottom-color: var(--gold);
 }
 
-/* 10 nav items (Home + one per figure type) don't fit a flat inline row past
-   a fairly wide viewport -- collapse into a toggled dropdown below that
-   point instead of letting it wrap raggedly across 2-3 lines. */
 .nav-toggle {
   display: none;
   width: 34px;
@@ -162,18 +179,24 @@ a:hover { color: var(--navy); }
   .site-nav {
     display: none;
     flex-basis: 100%;
-    flex-direction: column;
-    gap: 0.1rem;
+    align-items: stretch;
+    gap: 0;
     margin-top: 0.6rem;
     padding-top: 0.6rem;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
   }
   .site-nav.open { display: flex; }
+  /* Collapse both tiers into one stacked list -- display:contents drops the
+     tier wrappers so every link becomes a direct column child. */
+  .nav-primary, .nav-secondary {
+    display: contents;
+  }
   .site-nav a {
-    margin-left: 0;
     padding: 0.6rem 0.2rem;
+    font-size: 0.95rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
+  .nav-secondary a { color: #dce4f0; }
   .site-nav a.active { border-bottom-color: var(--gold); }
 }
 
