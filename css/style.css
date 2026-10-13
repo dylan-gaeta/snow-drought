@@ -267,6 +267,18 @@ table.headline-table tbody tr:not(.group-row) { transition: background var(--tra
 table.headline-table td.stress { color: #955910; font-weight: 600; }
 table.headline-table td.relief { color: #0570b0; font-weight: 600; }
 
+/* Regional values tables (Time Series / Seasonal / Map): center every data
+   column and leave only the Region name left-aligned. The :nth-child(2)
+   selector ties the base rule's specificity so the raw-value column -- left
+   for the other headline tables -- centers here too. */
+table.region-values-table th, table.region-values-table td,
+table.region-values-table th:nth-child(2), table.region-values-table td:nth-child(2) {
+  text-align: center;
+}
+table.region-values-table th:first-child, table.region-values-table td:first-child {
+  text-align: left;
+}
+
 /* Map page's below-map regional summary -- raw value, standardized
    anomaly, AND rank on record together, one of the dashboard's key
    findings (Dylan, 2026-09-29: "should be displayed and integrated more
