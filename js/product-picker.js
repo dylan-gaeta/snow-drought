@@ -29,6 +29,12 @@
 // Map/Compare build their own createProductPicker instances and do not use it.
 const pickerState = { pivot: "dataset", category: null, product: null, response: null, region: "ALL" };
 
+// The manifest entry for the shared pickerState selection. Used by the pages
+// that read pickerState directly (Gallery reads its figures off this).
+function currentPickerEntry() {
+  return manifest.categories[pickerState.category][pickerState.product][pickerState.response];
+}
+
 // Build the manifest-derived indexes, keeping only (category, product, response)
 // triples the filter accepts. category_order's first-seen order is preserved.
 function buildPickerIndexes(filter) {
