@@ -23,6 +23,12 @@
 //   defaultView: { category, product, response }  -- first-visit fallback.
 //   onChange(entry, selection)  -- selection = { category, product, response, region }.
 
+// Shared current selection for the single-product pages (Time Series, Seasonal
+// Cycle, Gallery) that read it directly as `pickerState.{product,response,region}`.
+// The initProductPicker wrapper keeps this in sync with its one instance;
+// Map/Compare build their own createProductPicker instances and do not use it.
+const pickerState = { pivot: "dataset", category: null, product: null, response: null, region: "ALL" };
+
 // Build the manifest-derived indexes, keeping only (category, product, response)
 // triples the filter accepts. category_order's first-seen order is preserved.
 function buildPickerIndexes(filter) {
@@ -231,7 +237,14 @@ function initProductPicker(onSelectionChanged) {
     persist: true,
     seedFromUrl: true,
     defaultView: DEFAULT_PICKER_VIEW,
-    onChange: (entry) => onSelectionChanged(entry),
+    onChange: (entry, selection) => {
+      // Keep the shared pickerState in sync for the pages that read it directly.
+      pickerState.category = selection.category;
+      pickerState.product = selection.product;
+      pickerState.response = selection.response;
+      pickerState.region = selection.region;
+      onSelectionChanged(entry);
+    },
   });
   if (picker) picker.init();
   return picker;
