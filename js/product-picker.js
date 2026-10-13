@@ -73,12 +73,12 @@ function parseSharedPickerViewFromUrl() {
   }
 }
 
-function fillPickerSelect(select, options, value) {
+function fillPickerSelect(select, options, value, displayFn) {
   select.innerHTML = "";
   options.forEach((opt) => {
     const option = document.createElement("option");
     option.value = opt;
-    option.textContent = opt;
+    option.textContent = displayFn ? displayFn(opt) : opt;
     select.appendChild(option);
   });
   select.value = value;
@@ -105,9 +105,9 @@ function createProductPicker(opts) {
   function renderSelects() {
     if (state.pivot === "dataset") {
       fillPickerSelect(datasetSelect, allDatasets, state.product);
-      fillPickerSelect(variableSelect, datasetVariables[state.product], state.response);
+      fillPickerSelect(variableSelect, datasetVariables[state.product], state.response, responseDisplay);
     } else {
-      fillPickerSelect(variableSelect, allVariables, state.response);
+      fillPickerSelect(variableSelect, allVariables, state.response, responseDisplay);
       fillPickerSelect(datasetSelect, variableDatasets[state.response], state.product);
     }
   }

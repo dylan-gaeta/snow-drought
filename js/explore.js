@@ -98,7 +98,7 @@ async function renderTimeseries() {
     name: yTitle,
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   });
-  document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
+  document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
     sigmaNote.textContent = (isSigma && data.aggregation !== "native_index" && manifest.value_type_glossary)
@@ -122,7 +122,7 @@ async function renderTimeseriesRegionTable() {
   if (!body) return;
   const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
   document.getElementById("timeseries-region-table-heading").textContent =
-    `Regional values — ${pickerState.product} · ${data.response}, ${periodLabel(tsTableWindow)} ${tsTableYear}`;
+    `Regional values — ${pickerState.product} · ${responseDisplay(data.response)}, ${periodLabel(tsTableWindow)} ${tsTableYear}`;
   const rawHeader = document.getElementById("timeseries-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, tsTableWindow);
   const note = document.getElementById("timeseries-region-table-note");

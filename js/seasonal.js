@@ -133,7 +133,7 @@ async function renderSeasonal() {
   // the viewport width with illegible, crammed two-line month/year tick
   // labels (confirmed live, 375px). Below the chart, horizontal, instead --
   // same breakpoint map.html's own side-panel-to-stacked layout already uses.
-  document.getElementById("seasonal-title").textContent = `${pickerState.product} · ${data.response} — ${regionLabelFor(pickerState.region)}`;
+  document.getElementById("seasonal-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const layout = {
     margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },
     yaxis: { title: isAnomaly ? `${data.response} anomaly (${data.units})` : `${data.response} (${data.units})`, zeroline: isAnomaly, ...PLOTLY_AXIS_LINE },
@@ -168,7 +168,7 @@ async function renderSeasonalRegionTable() {
   if (!body) return;
   const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
   document.getElementById("seasonal-region-table-heading").textContent =
-    `Regional values — ${pickerState.product} · ${data.response}, ${periodLabel(seasonalTableWindow)} ${seasonalTableYear}`;
+    `Regional values — ${pickerState.product} · ${responseDisplay(data.response)}, ${periodLabel(seasonalTableWindow)} ${seasonalTableYear}`;
   const rawHeader = document.getElementById("seasonal-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, seasonalTableWindow);
   const note = document.getElementById("seasonal-region-table-note");

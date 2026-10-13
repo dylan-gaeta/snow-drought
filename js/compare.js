@@ -123,7 +123,7 @@ function slotSeries(slot, data) {
   return {
     dates: region.dates.filter((_, i) => keep[i]),
     values: raw.filter((_, i) => keep[i]).map((v) => (v === null || v === undefined ? null : v)),
-    name: `${compareState[slot].product} · ${data.response}`,
+    name: `${compareState[slot].product} · ${responseDisplay(data.response)}`,
     units: data.units,
   };
 }
@@ -153,7 +153,7 @@ async function renderCompare() {
     ? `${label}: ${state.product} ${state.response} · units ${entry.units || "n/a"} · baseline ${baselineText(entry)}`
     : "";
   document.getElementById("compare-title").textContent =
-    `${compareState.a.product} · ${compareState.a.response} vs ${compareState.b.product} · ${compareState.b.response} — ${regionLabelFor(compareState.region)}`;
+    `${compareState.a.product} · ${responseDisplay(compareState.a.response)} vs ${compareState.b.product} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;
   let metaHtml = `${metaLine("A", compareState.a, aEntry)}<br>${metaLine("B", compareState.b, bEntry)}`;
   if (isSigma) {
     metaHtml += "<br>σ is native-direction (positive = above that variable's own baseline, not necessarily stress).";

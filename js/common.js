@@ -17,6 +17,62 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// Full name for an abbreviated variable code, shown in parentheses after the
+// code in the variable dropdowns and chart/map titles, e.g. "Et (transpiration)"
+// -- disambiguates look-alikes like GLEAM's Et (transpiration) vs ET
+// (evapotranspiration). Keyed by response code; codes absent here (notably the
+// drought indices EDDI/SPI/SPEI/PDSI/ESI/ForDRI/VegDRI/USDM, which read fine
+// abbreviated) render as the bare code. Names are product-agnostic per code.
+const VARIABLE_FULL_NAME = {
+  // snow / cryosphere
+  SWE: "snow water equivalent", swe: "snow water equivalent", MONTHLY_SWE: "snow water equivalent",
+  SNOW_DEPTH: "snow depth", MONTHLY_SNOW_DEPTH: "snow depth",
+  SCA: "snow-covered area", SNOW_COVER: "snow cover", SNOWFALL: "snowfall", SNOWMELT: "snowmelt",
+  CLEAR_FRACTION: "clear-sky fraction", CLOUD_FRACTION: "cloud fraction",
+  // climate / temperature / evaporative demand
+  E: "actual evaporation", ET: "evapotranspiration", Eb: "bare-soil evaporation",
+  Ei: "interception loss", Ep: "potential evaporation", Es: "snow sublimation",
+  Et: "transpiration", Ew: "open-water evaporation", TRANSP: "transpiration", S: "evaporative stress",
+  T2m: "2 m air temperature", TAIR: "air temperature", TD2m: "2 m dewpoint", TDMEAN: "mean dewpoint",
+  TMAX: "maximum temperature", TMEAN: "mean temperature", TMIN: "minimum temperature",
+  VPD: "vapor pressure deficit", VPDMAX: "maximum vapor pressure deficit", VPDMIN: "minimum vapor pressure deficit",
+  SURFACE_TEMP: "surface temperature", SURFACE_TEMP_AM: "surface temperature (AM)", SURFACE_TEMP_PM: "surface temperature (PM)",
+  LST_DAY: "daytime land-surface temperature", LST_NIGHT: "nighttime land-surface temperature",
+  LST_DAY_TERRA: "daytime land-surface temperature", LST_NIGHT_TERRA: "nighttime land-surface temperature",
+  LST_DAY_AQUA: "daytime land-surface temperature", LST_NIGHT_AQUA: "nighttime land-surface temperature",
+  SOIL_TEMP_L1: "soil temperature, layer 1", SOIL_TEMP_L2: "soil temperature, layer 2",
+  SOIL_TEMP_L3: "soil temperature, layer 3", SOIL_TEMP_L4: "soil temperature, layer 4",
+  // precipitation / runoff
+  PPT: "precipitation", RAINFALL: "rainfall", RUNOFF: "runoff",
+  SURFACE_RUNOFF: "surface runoff", SUBSURFACE_RUNOFF: "subsurface runoff",
+  // soil moisture / water storage
+  SM: "soil moisture", SM_AM: "soil moisture (AM)", SM_PM: "soil moisture (PM)",
+  SMrz: "root-zone soil moisture", SMs: "surface soil moisture",
+  ROOT_SM: "root-zone soil moisture", SURFACE_SM: "surface soil moisture",
+  RTZSM: "root-zone soil moisture percentile", SFSM: "surface soil moisture percentile", GWS: "groundwater storage percentile",
+  SOIL_MOISTURE: "column soil moisture", SOIL_MOISTURE_0_100: "soil moisture, 0-100 cm",
+  SOIL_WATER: "soil water", CANOPY_WATER: "canopy water", TWSA: "terrestrial water storage anomaly",
+  LSWI: "land-surface water index",
+  // vegetation / carbon
+  NDVI: "normalized difference vegetation index", EVI: "enhanced vegetation index",
+  LAI: "leaf area index", GCC: "green chromatic coordinate", SIF: "solar-induced fluorescence",
+  GPP: "gross primary productivity", NPP: "net primary productivity", NEE: "net ecosystem exchange",
+  RECO: "ecosystem respiration", RH: "heterotrophic respiration", LAND_CARBON_EXCHANGE: "net ecosystem exchange",
+  VOD: "vegetation optical depth", VOD_AM: "vegetation optical depth (AM)", VOD_PM: "vegetation optical depth (PM)",
+  VWC_AM: "vegetation water content (AM)", VWC_PM: "vegetation water content (PM)",
+  // fire
+  BI: "burning index", ERC: "energy release component", FM100: "100-hour fuel moisture",
+  FM1000: "1000-hour fuel moisture", BURNED_AREA: "burned area", CARBON_EMISSIONS: "fire carbon emissions",
+  FIRE: "fire carbon emissions",
+};
+
+// "CODE (full name)" for a response code, or the bare code when it has no mapped
+// name (drought indices, or codes that are already a full word).
+function responseDisplay(code) {
+  const name = VARIABLE_FULL_NAME[code];
+  return name ? `${code} (${name})` : code;
+}
+
 // Solid black axis border on every Plotly chart (Compare, Time Series,
 // Seasonal Cycle) -- Plotly's own default draws no axis line at all, just
 // gridlines, which read as an unstyled/default chart (Dylan, 2026-09-30:
