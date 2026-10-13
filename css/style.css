@@ -441,30 +441,49 @@ table.headline-table tr.group-row td {
   box-shadow: var(--shadow-sm);
 }
 
-/* Dataset/Variable pivot: a compact segmented toggle that replaced the old
-   per-category tab column (categories now live only on the summary heatmaps). */
+/* Dataset/Variable pivot: a segmented "pill" toggle (inset track + a raised
+   active segment), replacing the old per-category tab column -- categories now
+   live only on the summary heatmaps. Styled as a labelled control so it reads
+   as "browse the catalog by dataset, or by variable", not two loose buttons. */
 .picker-pivot {
   display: inline-flex;
-  gap: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: #e9edf2;
   border: 1px solid var(--border, #d4d9e0);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-radius: 999px;
   margin-bottom: 0.9rem;
+}
+/* "Browse by" lead-in, injected without touching the JS or markup. */
+.picker-pivot::before {
+  content: "Browse by";
+  padding: 0 0.6rem 0 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted, #566069);
 }
 .picker-pivot-btn {
   border: none;
-  background: var(--bg-panel);
-  padding: 0.5rem 1rem;
+  background: transparent;
+  padding: 0.42rem 1.05rem;
   font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--muted, #566069);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  border-radius: 999px;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
 }
-.picker-pivot-btn + .picker-pivot-btn { border-left: 1px solid var(--border, #d4d9e0); }
-.picker-pivot-btn:hover { background: #eef1f5; }
-.picker-pivot-btn.active { background: var(--blue); color: #fff; }
+.picker-pivot-btn:hover { color: var(--text); }
+.picker-pivot-btn.active {
+  background: #fff;
+  color: var(--blue-dark, #1b4965);
+  box-shadow: 0 1px 2px rgba(16, 32, 56, 0.16), 0 0 0 1px rgba(16, 32, 56, 0.04);
+}
 
 .product-search-wrap { position: relative; max-width: 480px; margin-bottom: 1.1rem; }
 .product-search-wrap input[type="search"] {

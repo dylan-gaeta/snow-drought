@@ -123,7 +123,7 @@ function createProductPicker(opts) {
   function renderPivot() {
     if (!pivotEl) return;
     pivotEl.innerHTML = "";
-    [["dataset", "By dataset"], ["variable", "By variable"]].forEach(([mode, label]) => {
+    [["dataset", "Dataset"], ["variable", "Variable"]].forEach(([mode, label]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "picker-pivot-btn";
