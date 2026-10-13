@@ -606,7 +606,7 @@ function periodLabel(period) {
 // product at one window+year) is shown identically on the Map, Time Series, and
 // Seasonal pages. These pure helpers are the single source of that table's
 // design; each page just drops the rows/note/header into its own markup, so the
-// four data columns, number formats, stress/relief coloring, and glossary never
+// four data columns, number formats, stress-direction coloring, and glossary never
 // drift between pages.
 
 // "Raw value" header: a single month is that month's value; a multi-month window
@@ -620,7 +620,7 @@ function regionalSummaryNote(data) {
   const nativeNote = data.aggregation === "native_index"
     ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
     : "";
-  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = stress, the wettest third blue = relief, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively closer to relief.${nativeNote}`;
+  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = more stress, the wettest third blue = less stress, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 
 function regionalSummaryRowsHtml(data, windowKey, year) {
@@ -638,7 +638,7 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       // Color reflects standing ON RECORD (rank), not which side of the
       // climatological mean a value falls -- the mean is not the line between
       // drought and no-drought. Driest third of years on record read stress,
-      // wettest third relief, the middle third is left uncolored.
+      // wettest third least stress, the middle third is left uncolored.
       let cls = "";
       if (result.stressRank !== null && result.nRecord) {
         const frac = result.stressRank / result.nRecord; // rank 1 = most drought-stressed

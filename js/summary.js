@@ -3,7 +3,7 @@
 // new statistics invented here. Each response's multi-month aggregation
 // rule (sum / mean / day_weighted_mean / native_index) comes from
 // code/dashboard_export.py's AGGREGATION_RULE, audited against each
-// product's actual reducer/analyzer code, not guessed. "Stress vs relief"
+// product's actual reducer/analyzer code, not guessed. "More vs less stress"
 // coloring uses drier_is_high, straight from config.py's own
 // response_drier_is_high() -- the same function the canonical multi-product
 // heatmap uses -- not a locally invented sign convention.

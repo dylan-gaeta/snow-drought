@@ -202,7 +202,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
       // Flip sign so red always means "more stress" and blue always means
       // "less stress" on every row, regardless of each variable's own raw
       // sign convention (a positive temperature anomaly IS the stress
-      // direction, but a positive snowpack anomaly is relief, the opposite)
+      // direction, but a positive snowpack anomaly is less stress, the opposite)
       // -- same drier_is_high-driven flip the Compare view's "By category"
       // mode already applies for the same reason (see about.html).
       const sign = data.drier_is_high ? 1 : -1;
@@ -289,7 +289,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     // rather than just the two teal/brown extremes. Red stays reserved for the
     // "no data" state. White is pinned exactly at zero via zmid, so the
     // midpoint is neutral rather than BrBG's natural pale-tan. Order: blue
-    // (relief) low -> white (neutral) -> brown (stress) high.
+    // (less stress) low -> white (neutral) -> brown (more stress) high.
     colorscale: [
       [0, "#023858"], [0.0833, "#0570b0"], [0.1667, "#6eaac8"], [0.25, "#53bd9f"],
       [0.3333, "#99f0b2"], [0.4167, "#cdffcd"], [0.5, "#ffffff"], [0.5833, "#fff5ba"],
@@ -308,7 +308,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
       len: 0.55, thickness: 16,
       tickmode: "array",
       tickvals: [-zAbs, 0, zAbs],
-      ticktext: ["Relief", "0", "Stress"],
+      ticktext: ["Less stress", "0", "More stress"],
       tickfont: { size: 12 },
       title: { text: "Standardized anomaly (σ)", side: "top", font: { size: 13 } },
     },

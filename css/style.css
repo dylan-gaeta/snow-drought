@@ -260,10 +260,11 @@ table.headline-table thead th {
 }
 table.headline-table tbody tr:not(.group-row):hover td { background: #f7f9fb; }
 table.headline-table tbody tr:not(.group-row) { transition: background var(--transition); }
-/* Stress = this variable's own physical direction of drought/heat stress
-   (not raw arithmetic sign -- e.g. EDDI/VPD/temperature are "stress" when
-   POSITIVE, snow/soil-moisture/precip are "stress" when NEGATIVE). Relief =
-   the opposite direction for that same variable. */
+/* The .stress class = this variable's own physical direction of drought/heat
+   stress (not raw arithmetic sign -- e.g. EDDI/VPD/temperature stress POSITIVE,
+   snow/soil-moisture/precip stress NEGATIVE); the .relief class is the opposite
+   (less-stress) direction. Both are internal class names; the UI labels this
+   axis "more stress" / "less stress". */
 table.headline-table td.stress { color: #955910; font-weight: 600; }
 table.headline-table td.relief { color: #0570b0; font-weight: 600; }
 
