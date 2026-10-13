@@ -1,13 +1,21 @@
 // Heatmap page (heatmaps.html). Product x time standardized-anomaly matrix,
 // computed dynamically from the same data every other chart on this
-// dashboard uses -- not a static image. "monthly" is a fixed special case
-// (direct per-month sigma, the most recent 12 calendar months available,
-// for comparing products along one shared recent timeline). Every other
-// family is "this window, by year" -- the same season/month windows and
-// the same computeWindowValue() aggregation the interactive map's period
-// select and the summary table already use, so a heatmap row and the
-// matching map/table value are always computed the same way.
-const HEATMAP_FAMILIES = { monthly: { label: "Monthly anomalies (most recent 12 months)" } };
+// dashboard uses -- not a static image. The "wy_<year>" families are a fixed
+// special case (direct per-month sigma across one water year, Oct-Sep, for
+// comparing products along one shared recent timeline). Every other family is
+// "this window, by year" -- the same season/month windows and the same
+// computeWindowValue() aggregation the interactive map's period select and the
+// summary table already use, so a heatmap row and the matching map/table value
+// are always computed the same way.
+
+// Water-year monthly families, newest first, back to this floor -- a per-month
+// heatmap older than ~15 years is rarely the question on a current-conditions
+// dashboard, and the list stays scannable.
+const HEATMAP_WATER_YEAR_FLOOR = 2010;
+const HEATMAP_FAMILIES = {};
+for (let wy = currentWaterYear(); wy >= HEATMAP_WATER_YEAR_FLOOR; wy--) {
+  HEATMAP_FAMILIES[`wy_${wy}`] = { label: `WY${wy} (Oct ${wy - 1} – Sep ${wy})`, waterYear: wy };
+}
 SEASON_ORDER.forEach((key) => {
   HEATMAP_FAMILIES[`window_${key}`] = { label: `${key} (${SEASON_LABELS[key]}), by year`, window: key };
 });
@@ -20,10 +28,10 @@ MONTH_NAMES.forEach((name, i) => {
 // for a wide column count -- see .heatmap-chart-scroll -- so unlike Time
 // Series' single continuous line, there's no "solid smear" problem with
 // defaulting to the full history here). Only meaningful for the "by year"
-// families; "monthly" is always a fixed most-recent-12-months window
-// (Dylan, 2026-10-01: "you should be able to specify the start year from a
-// dropdown menu for these heatmaps").
-const heatmapState = { family: "monthly", category: "all", region: "ALL", startYear: null };
+// families; the "wy_<year>" water-year families are always a fixed Oct-Sep
+// window, so the start-year control doesn't apply to them. Default to the
+// current water year.
+const heatmapState = { family: `wy_${currentWaterYear()}`, category: "all", region: "ALL", startYear: null };
 
 function initHeatmapStartYearControl() {
   const select = document.getElementById("heatmap-start-year-select");
@@ -47,13 +55,13 @@ function initHeatmapStartYearControl() {
   });
 }
 
-// "monthly" is always a fixed most-recent-12-months window -- startYear has
-// no effect on it, so disable the control rather than leave it silently
-// inert (picking a year and seeing nothing change reads as broken).
+// The water-year families are a fixed Oct-Sep window -- startYear has no
+// effect on them, so disable the control rather than leave it silently inert
+// (picking a year and seeing nothing change reads as broken).
 function updateStartYearAvailability() {
   const select = document.getElementById("heatmap-start-year-select");
   if (!select) return;
-  select.disabled = heatmapState.family === "monthly";
+  select.disabled = heatmapState.family.startsWith("wy_");
 }
 
 function initHeatmaps() {
@@ -129,14 +137,14 @@ function heatmapPairs(category, family) {
     const products = manifest.categories[cat] || {};
     for (const [product, responses] of Object.entries(products)) {
       for (const [response, entry] of Object.entries(responses)) {
-        // "monthly" reads each stored per-month sigma directly -- no
-        // aggregation involved, so it's fine even for products (e.g. NEON
+        // The water-year families read each stored per-month sigma directly --
+        // no aggregation involved, so they're fine even for products (e.g. NEON
         // NEE) with no established multi-month aggregation rule. Every other
         // family aggregates across a season/month window via
         // computeWindowValue(), same as js/summary.js -- exclude those
         // products here too, for the same reason summary.js does (see its
         // own "no established aggregation rule" comment).
-        if (family !== "monthly" && !entry.aggregation) continue;
+        if (!family.startsWith("wy_") && !entry.aggregation) continue;
         pairs.push({ product, response, category: cat });
       }
     }
@@ -144,26 +152,14 @@ function heatmapPairs(category, family) {
   return pairs;
 }
 
-// Every product's own record_end differs; derive the shared 12-month window
-// from whichever record extends furthest, rather than a hardcoded date.
-function latestRecordEndMonth() {
-  let latest = null;
-  for (const products of Object.values(manifest.categories)) {
-    for (const responses of Object.values(products)) {
-      for (const entry of Object.values(responses)) {
-        if (entry.record_end && (!latest || entry.record_end > latest)) latest = entry.record_end;
-      }
-    }
-  }
-  return latest; // "YYYY-MM-DD"
-}
-
 async function renderHeatmap() {
   const chart = document.getElementById("heatmap-chart");
   const titleEl = document.getElementById("heatmap-title");
   if (titleEl) {
     const cat = heatmapState.category === "all" ? "All products" : categoryLabelWithIcon(heatmapState.category);
-    titleEl.textContent = `${cat} — ${regionLabelFor(heatmapState.region)}`;
+    const fam = HEATMAP_FAMILIES[heatmapState.family];
+    const when = fam && fam.waterYear ? ` — WY${fam.waterYear}` : "";
+    titleEl.textContent = `${cat}${when} — ${regionLabelFor(heatmapState.region)}`;
   }
   const pairs = heatmapPairs(heatmapState.category, heatmapState.family);
   if (pairs.length === 0) {
@@ -189,16 +185,12 @@ async function renderHeatmapUnsafe(chart, pairs) {
   );
 
   let xLabels, computeRow;
-  if (heatmapState.family === "monthly") {
-    const endDate = latestRecordEndMonth();
-    const endYear = parseInt(endDate.slice(0, 4), 10);
-    const endMonth = parseInt(endDate.slice(5, 7), 10);
+  if (heatmapState.family.startsWith("wy_")) {
+    const wy = HEATMAP_FAMILIES[heatmapState.family].waterYear;
+    // One water year: Oct (wy-1) through Sep (wy).
     const months = [];
-    for (let i = 11; i >= 0; i--) {
-      let m = endMonth - i, y = endYear;
-      if (m <= 0) { m += 12; y -= 1; }
-      months.push({ year: y, month: m });
-    }
+    for (let m = WATER_YEAR_START_MONTH; m <= 12; m++) months.push({ year: wy - 1, month: m });
+    for (let m = 1; m < WATER_YEAR_START_MONTH; m++) months.push({ year: wy, month: m });
     // Two-row tick label (month above, year below) instead of one rotated
     // "Jan 2026" string -- easier to read at the narrow per-column width a
     // 12-column heatmap has, and each column here really is its own

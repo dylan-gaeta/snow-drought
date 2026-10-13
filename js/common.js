@@ -128,6 +128,22 @@ function categoryLabelWithIcon(category) {
 // would be a bug if this one ever floored BELOW 1979 (data that doesn't exist).
 const DASHBOARD_MIN_YEAR = 1990;
 
+// Western US water year: Oct 1 - Sep 30, named for the calendar year it ends
+// in (WY2026 = Oct 2025 - Sep 2026). One definition for the whole dashboard so
+// every page frames "the water year" the same way.
+const WATER_YEAR_START_MONTH = 10;
+function waterYearOf(year, month) {
+  return month >= WATER_YEAR_START_MONTH ? year + 1 : year;
+}
+// The most recent COMPLETE water year, anchored on the last complete calendar
+// month -- today rounded back to the end of the previous month -- so a
+// brand-new month that nothing has reported into yet never defines it.
+function currentWaterYear() {
+  const now = new Date();
+  const lastCompleteMonth = new Date(now.getFullYear(), now.getMonth(), 0); // last day of previous month
+  return waterYearOf(lastCompleteMonth.getFullYear(), lastCompleteMonth.getMonth() + 1);
+}
+
 // The year range spanning every product's actual record_start/record_end,
 // floored at DASHBOARD_MIN_YEAR -- a handful of products (e.g. PRISM back to
 // 1895) would otherwise push the range's start back nearly a century for a
