@@ -57,7 +57,8 @@ const VARIABLE_FULL_NAME = {
   NDVI: "normalized difference vegetation index", EVI: "enhanced vegetation index",
   LAI: "leaf area index", GCC: "green chromatic coordinate", SIF: "solar-induced fluorescence",
   GPP: "gross primary productivity", NPP: "net primary productivity", NEE: "net ecosystem exchange",
-  RECO: "ecosystem respiration", RH: "heterotrophic respiration", LAND_CARBON_EXCHANGE: "net ecosystem exchange",
+  RECO: "ecosystem respiration", RH: "heterotrophic respiration",
+  LAND_CARBON_EXCHANGE: "net land-atmosphere CO2 flux, incl. fire",
   VOD: "vegetation optical depth", VOD_AM: "vegetation optical depth (AM)", VOD_PM: "vegetation optical depth (PM)",
   VWC_AM: "vegetation water content (AM)", VWC_PM: "vegetation water content (PM)",
   // fire
