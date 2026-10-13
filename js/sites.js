@@ -24,7 +24,10 @@ const SITES_PAN_EXTENT = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "
 // network marker color.
 const RESPONSE_COLORS = {
   GCC: "#238b45", RCC: "#cb181d",
-  GPP: "#238b45", NEE: "#d7301f",
+  // GPP (uptake) green vs NEE blue -- a strongly distinct, colorblind-safe pair
+  // (not the old green/red), and NEE no longer shares the AmeriFlux network's
+  // own red marker color.
+  GPP: "#238b45", NEE: "#2171b5",
 };
 
 // Flux towers lead this page: AmeriFlux + NEON are listed first, shown on by
@@ -183,12 +186,14 @@ function renderSiteChart() {
     : responses.length === 1 ? `${responses[0]} (${yUnits})` : `Value (${yUnits})`;
   Plotly.newPlot(el, traces, {
     margin: { t: 10, r: 16, b: responses.length > 1 ? 70 : 44, l: 60 },
-    yaxis: { title: yTitle, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    // Solid zero line whenever 0 is in view -- NEE (and anomalies) cross it, so
+    // the sign (uptake below 0 / release above) reads at a glance; for GCC/RCC
+    // (~0.3-0.6, 0 off-axis) Plotly simply doesn't draw it.
+    yaxis: { title: yTitle, ...PLOTLY_AXIS_LINE, zeroline: true, zerolinecolor: "#888", zerolinewidth: 1.5 },
     xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     showlegend: responses.length > 1,
     legend: { orientation: "h", x: 0.5, xanchor: "center", y: -0.2, yanchor: "top" },
-    shapes: isAnom ? [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }] : [],
   }, { responsive: true, displaylogo: false });
 }
 

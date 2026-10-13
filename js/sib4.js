@@ -95,27 +95,35 @@ async function renderComposition() {
   document.getElementById("sib4-composition-title").textContent = `PFT land cover — ${regionLabelFor(sib4State.region)}`;
   if (!region) { el.innerHTML = '<p class="chart-empty">No composition for this region.</p>'; return; }
   // Desert & Bare Ground (dbg) is ~40% of the Western US and dwarfs every
-  // vegetated PFT; excluding it lets the plant types be read. The remaining
-  // segments keep their true land-share %, so the axis just autoscales to their
-  // sum rather than renormalizing (which would misstate each fraction).
+  // vegetated PFT; the Exclude-DBG button drops its wedge so the plant types
+  // read at a usable scale. A pie renormalizes the remaining wedges to fill the
+  // circle, so with DBG out the shares are of VEGETATED cover rather than of
+  // total land -- the note below the chart says which.
   const codes = sib4State.excludeDBG ? region.pft_order.filter((c) => c !== "dbg") : region.pft_order;
-  const traces = codes.map((code) => ({
-    x: [region.pft[code].area_fraction * 100], y: ["land cover"], name: pftLabel(code),
-    type: "bar", orientation: "h", marker: { color: pftFillColor(code), line: { color: "#fff", width: 0.5 } },
-    hovertemplate: `${pftLabel(code)}: %{x:.1f}%<extra></extra>`,
-  }));
-  // On a phone the ~19-entry horizontal legend needs far more room than the
-  // 280px desktop box, or ~12 entries clip; give it a taller chart and a deep
-  // bottom margin there.
+  const trace = {
+    type: "pie", sort: false, direction: "clockwise",
+    labels: codes.map((code) => pftLabel(code)),
+    values: codes.map((code) => region.pft[code].area_fraction * 100),
+    marker: { colors: codes.map((code) => pftFillColor(code)), line: { color: "#fff", width: 1 } },
+    textinfo: "percent", textfont: { size: 12 },
+    hovertemplate: "%{label}: %{percent}<extra></extra>",
+  };
+  // On a phone the ~19-entry legend needs the full width below the pie; on
+  // desktop it sits to the right.
   const isNarrow = window.innerWidth < 600;
-  el.style.height = isNarrow ? "500px" : "280px";
-  Plotly.newPlot(el, traces, {
-    barmode: "stack", showlegend: true,
-    legend: { orientation: "h", y: isNarrow ? -0.12 : -0.55, yanchor: "top", font: { size: 12 } },
-    margin: { t: 6, r: 12, b: isNarrow ? 260 : 48, l: 12 },
-    xaxis: { title: "share of land (%)", range: sib4State.excludeDBG ? undefined : [0, 100], ...PLOTLY_AXIS_LINE },
-    yaxis: { showticklabels: false }, ...PLOTLY_BASE,
+  el.style.height = isNarrow ? "480px" : "360px";
+  Plotly.newPlot(el, [trace], {
+    showlegend: true,
+    legend: isNarrow
+      ? { orientation: "h", x: 0.5, xanchor: "center", y: -0.05, yanchor: "top", font: { size: 12 } }
+      : { orientation: "v", x: 1.02, xanchor: "left", y: 0.5, yanchor: "middle", font: { size: 12 } },
+    margin: { t: 6, r: isNarrow ? 12 : 8, b: isNarrow ? 150 : 12, l: 12 },
+    ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
+  const note = document.getElementById("sib4-composition-note");
+  if (note) note.textContent = sib4State.excludeDBG
+    ? "Shares are of vegetated cover (Desert & Bare Ground excluded)."
+    : "Shares are of total land cover.";
 }
 
 // --------------------------------------------------- 2. SiB4 stress functions
@@ -499,7 +507,11 @@ async function init() {
   const monthSel = document.getElementById("sib4-diurnal-month");
   MONTH_NAMES.forEach((name, i) => { const o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; if (i + 1 === sib4State.diurnalMonth) o.selected = true; monthSel.appendChild(o); });
 
-  document.getElementById("sib4-exclude-dbg").addEventListener("change", (e) => { sib4State.excludeDBG = e.target.checked; renderComposition(); });
+  document.getElementById("sib4-exclude-dbg").addEventListener("click", (e) => {
+    sib4State.excludeDBG = !sib4State.excludeDBG;
+    e.currentTarget.classList.toggle("active", sib4State.excludeDBG);
+    renderComposition();
+  });
   document.getElementById("sib4-ts-variable").addEventListener("change", (e) => { sib4State.tsVariable = e.target.value; renderPftTimeseries(); });
   document.getElementById("sib4-ts-toggle").addEventListener("click", (e) => { const b = e.target.closest("button[data-series]"); if (!b) return; sib4State.tsSeries = b.dataset.series; document.querySelectorAll("#sib4-ts-toggle button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
   document.getElementById("sib4-ts-view").addEventListener("click", (e) => { const b = e.target.closest("button[data-view]"); if (!b) return; sib4State.tsView = b.dataset.view; document.querySelectorAll("#sib4-ts-view button").forEach((x) => x.classList.toggle("active", x === b)); renderPftTimeseries(); });
