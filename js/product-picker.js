@@ -41,6 +41,7 @@ function buildPickerIndexes(filter) {
   const datasetVariables = {};   // product  -> [response, ...]
   const variableDatasets = {};   // response -> [product, ...]
   const entryCategoryByPair = {}; // `${product} ${response}` -> category
+  const variableCategory = {};    // response -> primary category (first in category_order)
   manifest.category_order.forEach((category) => {
     const products = manifest.categories[category] || {};
     Object.keys(products).forEach((product) => {
@@ -49,6 +50,7 @@ function buildPickerIndexes(filter) {
         (datasetVariables[product] = datasetVariables[product] || []).push(response);
         (variableDatasets[response] = variableDatasets[response] || []).push(product);
         entryCategoryByPair[product + " " + response] = category;
+        if (!(response in variableCategory)) variableCategory[response] = category;
       });
     });
   });
@@ -59,7 +61,7 @@ function buildPickerIndexes(filter) {
   Object.keys(variableDatasets).forEach((r) => { variableDatasets[r] = Array.from(new Set(variableDatasets[r])); });
   const allDatasets = Object.keys(datasetVariables).sort((a, b) => a.localeCompare(b));
   const allVariables = Object.keys(variableDatasets).sort((a, b) => a.localeCompare(b));
-  return { datasetVariables, variableDatasets, entryCategoryByPair, allDatasets, allVariables };
+  return { datasetVariables, variableDatasets, entryCategoryByPair, variableCategory, allDatasets, allVariables };
 }
 
 function parseSharedPickerViewFromUrl() {
@@ -84,6 +86,37 @@ function fillPickerSelect(select, options, value, displayFn) {
   select.value = value;
 }
 
+// Fill the Variable dropdown grouped into <optgroup>s by physical-domain
+// category (snow, climate, ...), in manifest.category_order, each alphabetical
+// within. The long "By variable" list is otherwise a flat alphabetical wall;
+// grouping makes it scannable. Option values stay the bare response code.
+function fillVariableSelect(select, options, value, variableCategory) {
+  select.innerHTML = "";
+  const order = manifest.category_order || [];
+  const labels = manifest.category_labels || {};
+  const byCat = {};
+  options.forEach((code) => {
+    const cat = variableCategory[code] || "other";
+    (byCat[cat] = byCat[cat] || []).push(code);
+  });
+  const cats = [
+    ...order.filter((cat) => byCat[cat]),
+    ...Object.keys(byCat).filter((cat) => !order.includes(cat)),
+  ];
+  cats.forEach((cat) => {
+    const group = document.createElement("optgroup");
+    group.label = labels[cat] || cat;
+    byCat[cat].sort((a, b) => a.localeCompare(b)).forEach((code) => {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = responseDisplay(code);
+      group.appendChild(option);
+    });
+    select.appendChild(group);
+  });
+  select.value = value;
+}
+
 function createProductPicker(opts) {
   const ids = opts.ids;
   const datasetSelect = document.getElementById(ids.product);
@@ -94,7 +127,7 @@ function createProductPicker(opts) {
   const regionEl = ids.region ? document.getElementById(ids.region) : null;
 
   const index = buildPickerIndexes(opts.filter);
-  const { datasetVariables, variableDatasets, entryCategoryByPair, allDatasets, allVariables } = index;
+  const { datasetVariables, variableDatasets, entryCategoryByPair, variableCategory, allDatasets, allVariables } = index;
   const state = { pivot: "dataset", category: null, product: null, response: null, region: "ALL" };
 
   function currentEntry() {
@@ -105,9 +138,9 @@ function createProductPicker(opts) {
   function renderSelects() {
     if (state.pivot === "dataset") {
       fillPickerSelect(datasetSelect, allDatasets, state.product);
-      fillPickerSelect(variableSelect, datasetVariables[state.product], state.response, responseDisplay);
+      fillVariableSelect(variableSelect, datasetVariables[state.product], state.response, variableCategory);
     } else {
-      fillPickerSelect(variableSelect, allVariables, state.response, responseDisplay);
+      fillVariableSelect(variableSelect, allVariables, state.response, variableCategory);
       fillPickerSelect(datasetSelect, variableDatasets[state.response], state.product);
     }
   }
