@@ -70,15 +70,12 @@
             <button data-series="raw" class="active">Raw units</button>
             <button data-series="anomaly">Anomaly (raw)</button>
           </div>
-          <label class="boundary-toggle" for="seasonal-add-year-select">Add year
-            <select id="seasonal-add-year-select" aria-label="Add a year to the seasonal chart"></select>
-          </label>
-          <button type="button" id="seasonal-add-year-btn">Add</button>
         </div>
-        <div id="seasonal-extra-years" class="year-chip-row"></div>
         <h3 class="figure-title" id="seasonal-title"></h3>
         <div class="product-meta" id="product-meta"></div>
         <div id="seasonal-chart" style="height:480px;"></div>
+        <p class="value-glossary">Check a winter year to overlay it. The highlighted years are shown by default.</p>
+        <div id="seasonal-legend" class="checkbox-legend" role="group" aria-label="Winter years"></div>
 
         <div class="region-table-card" id="seasonal-region-table-wrap">
           <h3 id="seasonal-region-table-heading">Regional values</h3>

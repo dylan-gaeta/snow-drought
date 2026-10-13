@@ -199,4 +199,213 @@ async function renderCompare() {
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }
 
-loadManifest().then(initCompareView);
+// ---------------------------------------------------------------------------
+// Overlay panel: one variable, every dataset that measures it, on one shared
+// axis. Unlike the A-vs-B panel above (two different variables, dual units),
+// this holds the variable fixed and overlays all its datasets so they are
+// level-comparable. The legend is a set of checkboxes rather than Plotly's
+// click-to-toggle legend, so several datasets can be shown/hidden at will.
+// Three views: raw value (shared units), the raw-unit anomaly, and the
+// standardized sigma anomaly.
+
+// Distinct line colors cycled by dataset. The first eight are the Okabe-Ito
+// colorblind-safe set; a few more distinct hues follow for variables carried
+// by many datasets (ET has nine).
+const OVERLAY_COLORS = [
+  "#0072b2", "#d55e00", "#009e73", "#cc79a7", "#e69f00",
+  "#56b4e9", "#000000", "#8b4513", "#6a3d9a", "#1b9e77",
+  "#a6761d", "#e7298a",
+];
+
+const overlayState = {
+  response: null,
+  region: "ALL",
+  startYear: null,
+  series: "value", // value | anomaly | sigma
+  datasets: [],    // products offering overlayState.response, sorted
+  hidden: {},      // product -> true when its legend box is unchecked
+};
+
+let overlayIndex = null; // buildPickerIndexes(null): the full manifest index
+
+function overlayColor(product) {
+  return OVERLAY_COLORS[overlayState.datasets.indexOf(product) % OVERLAY_COLORS.length];
+}
+
+// Only variables carried by at least two datasets belong in this panel -- a
+// one-dataset "overlay" is just the Time Series page. Default to SWE (the
+// snow-drought headline variable, now carried by six datasets) when present,
+// else the variable with the most datasets.
+function overlayVariableOptions() {
+  return overlayIndex.allVariables.filter((r) => overlayIndex.variableDatasets[r].length >= 2);
+}
+
+function pickDefaultOverlayVariable(options) {
+  if (options.includes("SWE")) return "SWE";
+  return options.reduce((best, r) =>
+    (overlayIndex.variableDatasets[r].length > overlayIndex.variableDatasets[best].length ? r : best), options[0]);
+}
+
+function populateOverlayStartYear() {
+  const { minYear, maxYear } = fullRecordYearRange();
+  const select = document.getElementById("overlay-start-year-select");
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = `All years (from ${minYear})`;
+  select.appendChild(allOption);
+  for (let y = minYear; y <= maxYear; y++) {
+    const option = document.createElement("option");
+    option.value = String(y);
+    option.textContent = String(y);
+    select.appendChild(option);
+  }
+  overlayState.startYear = Math.max(minYear, COMPARE_DEFAULT_START_YEAR);
+  select.value = String(overlayState.startYear);
+}
+
+function initOverlayPanel() {
+  const chart = document.getElementById("overlay-chart");
+  if (!chart) return;
+  overlayIndex = buildPickerIndexes(null);
+
+  const variableSelect = document.getElementById("overlay-variable-select");
+  const options = overlayVariableOptions();
+  fillVariableSelect(variableSelect, options, pickDefaultOverlayVariable(options), overlayIndex.variableCategory);
+  overlayState.response = variableSelect.value;
+
+  populateRegionSelect(document.getElementById("overlay-region-select"), overlayState.region);
+  populateOverlayStartYear();
+
+  variableSelect.addEventListener("change", (event) => {
+    overlayState.response = event.target.value;
+    overlayState.hidden = {}; // a new variable has its own datasets; start all-on
+    renderOverlay();
+  });
+  document.getElementById("overlay-region-select").addEventListener("change", (event) => {
+    overlayState.region = event.target.value;
+    renderOverlay();
+  });
+  document.getElementById("overlay-start-year-select").addEventListener("change", (event) => {
+    overlayState.startYear = event.target.value ? parseInt(event.target.value, 10) : null;
+    renderOverlay();
+  });
+  document.getElementById("overlay-series-toggle").addEventListener("click", (event) => {
+    const btn = event.target.closest("button[data-series]");
+    if (!btn) return;
+    overlayState.series = btn.dataset.series;
+    document.querySelectorAll("#overlay-series-toggle button").forEach((x) => x.classList.toggle("active", x === btn));
+    renderOverlay();
+  });
+
+  renderOverlay();
+}
+
+async function renderOverlay() {
+  const chart = document.getElementById("overlay-chart");
+  const response = overlayState.response;
+  overlayState.datasets = (overlayIndex.variableDatasets[response] || []).slice().sort((a, b) => a.localeCompare(b));
+
+  const jsons = await Promise.all(overlayState.datasets.map((product) => fetchTimeseriesJson(`${product}_${response}`)));
+  const field = overlayState.series; // "value" | "anomaly" | "sigma"
+  const isSigma = field === "sigma";
+  const isAnomaly = field === "anomaly";
+  const startYear = Math.max(DASHBOARD_MIN_YEAR, overlayState.startYear || DASHBOARD_MIN_YEAR);
+
+  // One trace per dataset, in overlayState.datasets order (even when a dataset
+  // has no data for this region -- an empty trace keeps trace index aligned
+  // with the dataset order, so the legend checkboxes restyle the right line).
+  const traces = [];
+  const unitsSeen = new Set();
+  let anyData = false;
+  overlayState.datasets.forEach((product, i) => {
+    const data = jsons[i];
+    if (!isSigma) unitsSeen.add(data.units || "");
+    const region = data.regions[overlayState.region];
+    let dates = [];
+    let values = [];
+    if (region) {
+      const keep = region.dates.map((d) => parseInt(d.slice(0, 4), 10) >= startYear);
+      dates = region.dates.filter((_, j) => keep[j]);
+      values = region[field].filter((_, j) => keep[j]).map((v) => (v === null || v === undefined ? null : v));
+      if (values.some((v) => v !== null)) anyData = true;
+    }
+    traces.push({
+      x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
+      name: product, line: { color: overlayColor(product), width: 2 },
+      visible: overlayState.hidden[product] ? "legendonly" : true,
+      hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${product}</extra>`,
+    });
+  });
+
+  const varName = responseDisplay(response);
+  document.getElementById("overlay-title").textContent =
+    `${varName} across datasets — ${regionLabelFor(overlayState.region)}`;
+
+  const units = [...unitsSeen].filter(Boolean);
+  let yTitle;
+  if (isSigma) yTitle = "Standardized anomaly (σ)";
+  else if (isAnomaly) yTitle = units.length === 1 ? `Anomaly (${units[0]})` : "Anomaly";
+  else yTitle = units.length === 1 ? units[0] : "";
+
+  // In raw / anomaly views the lines only sit on one scale if the datasets
+  // share units; warn (like the A-vs-B baseline note) when they don't. σ is
+  // always comparable, but against each dataset's own baseline.
+  let meta = "";
+  if (isSigma) {
+    meta = "σ is native-direction (positive = above each dataset's own baseline). Each dataset is standardized against its own record.";
+    const sigmaGlossary = (manifest.value_type_glossary || {}).sigma;
+    if (sigmaGlossary) meta += `<br>σ: ${sigmaGlossary}`;
+  } else if (units.length > 1) {
+    meta = `<strong>Note:</strong> the datasets report this variable in different units (${units.join(", ")}), so their raw values are not on one scale &mdash; switch to σ, or uncheck the datasets whose units differ.`;
+  }
+  document.getElementById("overlay-meta").innerHTML = meta;
+
+  if (!anyData) {
+    chart.innerHTML = `<p class="chart-empty">No data for ${regionLabelFor(overlayState.region)}.</p>`;
+    renderOverlayLegend();
+    return;
+  }
+
+  const layout = {
+    margin: { t: 10, r: 20, b: 45, l: 66 },
+    font: { family: "Source Sans Pro, sans-serif", size: 13 },
+    showlegend: false,
+    hovermode: "x unified",
+    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
+    yaxis: { title: yTitle, zeroline: isSigma || isAnomaly, ...PLOTLY_AXIS_LINE },
+  };
+  Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
+  renderOverlayLegend();
+}
+
+// Checkbox legend: one toggle per dataset, color-swatched to its line. Hiding a
+// box sets that trace to "legendonly" (kept in the figure, just not drawn) via
+// restyle, so toggling never refetches or rebuilds the plot.
+function renderOverlayLegend() {
+  const legend = document.getElementById("overlay-legend");
+  legend.innerHTML = "";
+  overlayState.datasets.forEach((product, index) => {
+    const item = document.createElement("label");
+    item.className = "checkbox-legend-item";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = !overlayState.hidden[product];
+    box.addEventListener("change", () => {
+      overlayState.hidden[product] = !box.checked;
+      Plotly.restyle(document.getElementById("overlay-chart"), { visible: box.checked ? true : "legendonly" }, [index]);
+    });
+    const swatch = document.createElement("span");
+    swatch.className = "checkbox-legend-swatch";
+    swatch.style.background = overlayColor(product);
+    const name = document.createElement("span");
+    name.textContent = product;
+    item.append(box, swatch, name);
+    legend.appendChild(item);
+  });
+}
+
+loadManifest().then(() => {
+  initCompareView();
+  initOverlayPanel();
+});

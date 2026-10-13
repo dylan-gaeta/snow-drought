@@ -44,7 +44,7 @@
 <main>
 
   <section id="compare">
-    <h2>Compare</h2>
+    <h2>Compare two variables</h2>
     <p class="finding-note">Any two variables on a shared time axis &mdash; in
       raw units each reads on its own y-axis (A left, B right); switch to
       &sigma; to put both on one standardized scale.</p>
@@ -73,6 +73,32 @@
     <h3 id="compare-title" class="figure-title"></h3>
     <p id="compare-meta" class="value-glossary"></p>
     <div id="compare-chart" style="height:460px;"></div>
+  </section>
+
+  <section id="overlay">
+    <h2>Overlay datasets for one variable</h2>
+    <p class="finding-note">Pick one variable and overlay every dataset that
+      measures it on a single shared axis. Toggle datasets with the legend
+      checkboxes below the chart. View the raw value, the raw-unit anomaly, or
+      the standardized &sigma; anomaly.</p>
+    <div class="selector-row">
+      <label class="boundary-toggle" for="overlay-variable-select">Variable
+        <select id="overlay-variable-select" aria-label="Variable"></select>
+      </label>
+      <select id="overlay-region-select" aria-label="Region"></select>
+      <label class="boundary-toggle" for="overlay-start-year-select">Start year
+        <select id="overlay-start-year-select" aria-label="Start year"></select>
+      </label>
+      <div class="series-toggle" id="overlay-series-toggle">
+        <button type="button" data-series="value" class="active">Raw value</button>
+        <button type="button" data-series="anomaly">Anomaly</button>
+        <button type="button" data-series="sigma">&sigma;</button>
+      </div>
+    </div>
+    <h3 id="overlay-title" class="figure-title"></h3>
+    <p id="overlay-meta" class="value-glossary"></p>
+    <div id="overlay-chart" style="height:460px;"></div>
+    <div id="overlay-legend" class="checkbox-legend" role="group" aria-label="Datasets"></div>
   </section>
 
 </main>
