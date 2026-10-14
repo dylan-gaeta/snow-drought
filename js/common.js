@@ -210,7 +210,7 @@ const PRODUCT_OBSERVATION_KIND = {
   "FluxSat": "model", "GOSIF": "model", "GOSIF-GPP": "model", "MiCASA": "model",
   "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
   "MODIS-Terra-SCA": "observation", "MODIS-Aqua-SCA": "observation",
-  "TROPOSIF": "observation", "SPI": "observation", "SPEI": "observation",
+  "TROPOMI": "observation", "SPI": "observation", "SPEI": "observation",
   "EDDI": "model", "PDSI": "model", "ForDRI": "model", "ESI": "observation",
   "VegDRI": "observation", "USDM": "observation", "VIIRS": "observation",
   "VIIRS-LST": "observation", "VIIRS-NDVI": "observation", "GRACE-L4": "model",
@@ -222,8 +222,9 @@ const PRODUCT_OBSERVATION_KIND = {
 // its baseline mean clears this fraction of the seasonal amplitude above the
 // dormant trough -- otherwise a tiny winter absolute anomaly divided by a
 // near-zero dormant-season spread explodes the standardized value. Kept for
-// reference only: this dashboard's rank-based window statistics don't apply the
-// amplitude mask, so nothing client-side reads this constant today.
+// reference only: this dashboard's z-score window statistics guard the
+// near-zero-SD case directly (return 0/blank) rather than an amplitude mask, so
+// nothing client-side reads this constant today.
 const COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION = 0.15;
 
 // ---------------------------------------------------------- Window statistics
@@ -328,19 +329,16 @@ function meanStd(values) {
 
 // Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex,
 // stressRank, n } for one product/response/region/window/year.
-// sigma/percentile rank the window-aggregated anomaly against the baseline
-// years' own aggregated-anomaly distribution (Weibull plotting position), then
-// map that percentile through the inverse normal CDF -- non-parametric, like
-// common/detrend.py's normal_score_transform, so it stays meaningful for
-// skewed/bounded fields instead of assuming the baseline years are normally
-// distributed. It ranks the SAME anomaly basis the pipeline exports (an OLS
-// trend residual where a real secular trend exists, else mean-centered by
-// calendar month -- see common/detrend.py), not a separate "raw" value. This
-// window sigma can still differ slightly from the stored per-month Time Series
-// sigma because it aggregates the anomaly across the season window first; the
-// rank line below now uses the same mid-rank tie rule and Weibull plotting
-// position as the pipeline (common/detrend.py::normal_score_transform), so the
-// standardization convention itself matches.
+// sigma is a classic z-score of the window-aggregated anomaly against the
+// baseline years' own aggregated-anomaly mean/SD, matching the pipeline's
+// per-month z-score (common/detrend.py::normal_score_transform). It uses the
+// SAME anomaly basis the pipeline exports (an OLS trend residual where a real
+// secular trend exists, else mean-centered by calendar month -- see
+// common/detrend.py), not a separate "raw" value. This window z-score can
+// differ slightly from the stored per-month Time Series sigma because it
+// aggregates the anomaly across the season window first. percentile stays an
+// empirical percentile of the target among the baseline years (a percentile is
+// inherently a rank), reported alongside the z-score.
 // percentOfNormal is null wherever the baseline mean is too close to zero to
 // divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
 // or for native standardized indices (already a departure statistic, not a
@@ -393,7 +391,15 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const atOrBelow = baselineAnomalies.filter((a) => a <= targetAnomaly).length;
   const rank = 0.5 * (below + atOrBelow);
   const percentile = ((rank + 0.5) / (n + 1)) * 100;
-  const sigma = normInv(percentile / 100);
+  // Classic z-score: the window anomaly in units of the baseline years' own
+  // window-anomaly standard deviation, matching the pipeline's per-month z-score
+  // (common/detrend.py). A degenerate baseline (SD ~ 0, e.g. a desert cell with
+  // SCA = 0 every year) can't be put in SD units, so a matching target reads 0
+  // and a departing one is left out (null).
+  const { mean: meanAnom, std: stdAnom } = meanStd(baselineAnomalies);
+  const sigma = stdAnom < 1e-9
+    ? (Math.abs(targetAnomaly - meanAnom) < 1e-9 ? 0 : null)
+    : (targetAnomaly - meanAnom) / stdAnom;
 
   // The displayed "rank on record" badge is a separate statistic from sigma:
   // sigma/percentile stay anchored to the fixed baseline_start_year..

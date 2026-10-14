@@ -30,7 +30,7 @@ const SIB4_CORRESPONDENCE = {
   NEE: [["CarbonTracker", "NEE"], ["MiCASA", "NEE"], ["CAMS", "LAND_CARBON_EXCHANGE"], ["NEON", "NEE"], ["AmeriFlux", "NEE"]],
   RECO: [["MiCASA", "RH"]],
   RESP_HET: [["MiCASA", "RH"]],
-  SIF: [["TROPOSIF", "SIF"], ["GOSIF", "SIF"], ["OCO-2", "SIF"]],
+  SIF: [["TROPOMI", "SIF"], ["GOSIF", "SIF"], ["OCO-2", "SIF"]],
   LAI: [["MODIS-Terra", "LAI"], ["MODIS-Aqua", "LAI"], ["MODIS-Terra", "NDVI"], ["VIIRS-NDVI", "NDVI"]],
   // SiB4's modeled evapotranspiration, soil water, and canopy VPD against their
   // satellite / reanalysis / land-model observational counterparts. The compare
