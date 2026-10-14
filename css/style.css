@@ -1108,6 +1108,16 @@ table.headline-table tr.group-row td {
 .sib4-pft-checks .compare-legend-item { font-size: 0.88rem; }
 .ol-period-group#sib4-limitation-factors, #sib4-limitation-factors { display: inline-flex; flex-wrap: wrap; }
 
+/* PFT land-cover pie: a fixed-size pie beside a 2-column HTML legend (Plotly's
+   own legend can't do a fixed 2-column layout and its long PFT names run off
+   the plot). Wraps to pie-above-legend on narrow screens. */
+.sib4-composition-layout { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: center; margin-top: 0.5rem; }
+.sib4-composition-layout #sib4-composition { flex: 0 0 340px; max-width: 100%; }
+.sib4-pie-legend { flex: 1 1 360px; display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.2rem; align-content: center; }
+.sib4-pie-legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; line-height: 1.25; }
+.sib4-pie-legend-swatch { width: 0.9em; height: 0.9em; border-radius: 2px; flex-shrink: 0; }
+@media (max-width: 560px) { .sib4-pie-legend { grid-template-columns: 1fr; } }
+
 /* Horizontal year scrubber in the map's year control: drag across the record
    to step through the years that have a COG (indices into availableYears). */
 .ol-year-slider-wrap { flex: 1 1 auto; min-width: 0; }

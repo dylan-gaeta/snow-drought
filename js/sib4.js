@@ -100,26 +100,40 @@ async function renderComposition() {
   // circle, so with DBG out the shares are of VEGETATED cover rather than of
   // total land -- the note below the chart says which.
   const codes = sib4State.excludeDBG ? region.pft_order.filter((c) => c !== "dbg") : region.pft_order;
+  const pct = codes.map((code) => region.pft[code].area_fraction * 100);
+  // Plotly's own legend can't do a fixed 2-column layout and its long,
+  // near-duplicate PFT names run off-screen, so the pie carries no built-in
+  // legend -- a custom 2-column HTML legend (below) sits beside it.
   const trace = {
     type: "pie", sort: false, direction: "clockwise",
-    labels: codes.map((code) => pftLabel(code)),
-    values: codes.map((code) => region.pft[code].area_fraction * 100),
+    labels: codes.map((code, i) => `${pftLabel(code)} — ${pct[i].toFixed(1)}%`),
+    values: pct,
     marker: { colors: codes.map((code) => pftFillColor(code)), line: { color: "#fff", width: 1 } },
-    textinfo: "percent", textfont: { size: 12 },
-    hovertemplate: "%{label}: %{percent}<extra></extra>",
+    // Only wedges >=4% get an on-pie number; smaller ones would stack into an
+    // unreadable fan at the top. Every share is in the HTML legend regardless.
+    text: pct.map((v) => (v >= 4 ? `${v.toFixed(1)}%` : "")),
+    textinfo: "text", textposition: "inside", insidetextorientation: "horizontal",
+    textfont: { size: 12 },
+    hovertemplate: "%{label}<extra></extra>",
   };
-  // On a phone the ~19-entry legend needs the full width below the pie; on
-  // desktop it sits to the right.
-  const isNarrow = window.innerWidth < 600;
-  el.style.height = isNarrow ? "480px" : "360px";
+  el.style.height = "340px";
   Plotly.newPlot(el, [trace], {
-    showlegend: true,
-    legend: isNarrow
-      ? { orientation: "h", x: 0.5, xanchor: "center", y: -0.05, yanchor: "top", font: { size: 12 } }
-      : { orientation: "v", x: 1.02, xanchor: "left", y: 0.5, yanchor: "middle", font: { size: 12 } },
-    margin: { t: 6, r: isNarrow ? 12 : 8, b: isNarrow ? 150 : 12, l: 12 },
+    showlegend: false,
+    margin: { t: 6, r: 6, b: 6, l: 6 },
     ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
+  const legendEl = document.getElementById("sib4-composition-legend");
+  legendEl.innerHTML = "";
+  codes.forEach((code, i) => {
+    const item = document.createElement("div");
+    item.className = "sib4-pie-legend-item";
+    const sw = document.createElement("span");
+    sw.className = "sib4-pie-legend-swatch";
+    sw.style.background = pftFillColor(code);
+    item.appendChild(sw);
+    item.appendChild(document.createTextNode(`${pftLabel(code)} — ${pct[i].toFixed(1)}%`));
+    legendEl.appendChild(item);
+  });
   const note = document.getElementById("sib4-composition-note");
   if (note) note.textContent = sib4State.excludeDBG
     ? "Shares are of vegetated cover (Desert & Bare Ground excluded)."

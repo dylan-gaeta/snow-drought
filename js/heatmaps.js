@@ -252,10 +252,14 @@ async function renderHeatmapUnsafe(chart, pairs) {
     return;
   }
 
-  // Symmetric diverging range so 0 sits dead-center (white) and the two ends
-  // are equal-magnitude; the colorbar ends are then labeled by direction.
-  const finite = z.flat().filter((v) => Number.isFinite(v));
-  const zAbs = finite.length ? Math.max(...finite.map((v) => Math.abs(v))) : 1;
+  // Fixed symmetric diverging range (not auto-scaled to the matrix max): a
+  // cell's color then means the same z-score on every heatmap, and one genuine
+  // extreme -- a real fire or soil-moisture record can run past +/-10 -- no
+  // longer stretches the scale and washes every other cell to white. Values
+  // beyond the bound saturate the end color; the true z is in the hover. (A
+  // dormant/degenerate cell is no-data, not a spike -- see
+  // common.js::DORMANT_SD_FRACTION.)
+  const zAbs = 4;
 
   // In the combined "all products" view, separate the stacked category groups
   // with a black rule and label each section (rotated) on the right.

@@ -60,7 +60,6 @@ const VARIABLE_FULL_NAME = {
   RECO: "ecosystem respiration", RH: "heterotrophic respiration",
   LAND_CARBON_EXCHANGE: "net land-atmosphere CO2 flux, incl. fire",
   VOD: "vegetation optical depth", VOD_AM: "vegetation optical depth (AM)", VOD_PM: "vegetation optical depth (PM)",
-  VWC_AM: "vegetation water content (AM)", VWC_PM: "vegetation water content (PM)",
   // fire
   BI: "burning index", ERC: "energy release component", FM100: "100-hour fuel moisture",
   FM1000: "1000-hour fuel moisture", BURNED_AREA: "burned area", CARBON_EMISSIONS: "fire carbon emissions",
@@ -126,6 +125,19 @@ function categoryLabelWithIcon(category) {
 // the JSON in the first place; this one floors the narrower display window
 // applied on top of that already-exported data. Not a bug if they diverge;
 // would be a bug if this one ever floored BELOW 1979 (data that doesn't exist).
+// A window whose baseline spread is below this fraction of the series' overall
+// anomaly spread is climatologically dormant/absent (e.g. summer snow) and
+// reads as no-data for z-score, matching the pipeline
+// (common/detrend.py::DORMANT_SD_FRACTION). Genuine extremes against a
+// real-variance baseline are untouched and keep their full, uncapped z.
+const DORMANT_SD_FRACTION = 0.02;
+// Off-season dormancy floor: a window whose baseline anomaly spread is below
+// this fraction of the variable's seasonal amplitude (the spread of its 12
+// climatological monthly raw means) is off-season/dormant for that quantity
+// (e.g. summer snowpack, winter photosynthesis) and reads as no-data, matching
+// the pipeline (common/detrend.py::SEASONAL_DORMANT_FRACTION). A spread-vs-
+// spread ratio, so temperature (K or C) is never flagged.
+const SEASONAL_DORMANT_FRACTION = 0.03;
 const DASHBOARD_MIN_YEAR = 1990;
 
 // Western US water year: Oct 1 - Sep 30, named for the calendar year it ends
@@ -291,6 +303,13 @@ function nativeIndexPercentile(sigma) {
 
 // Mirrors common/detrend.py's MIN_BASELINE_YEARS -- must stay in sync.
 const MIN_BASELINE_YEARS = 3;
+// Mirrors common/detrend.py's MIN_BASELINE_YEARS_SIGMA: a z-score from fewer
+// than this many baseline years has an unreliable (under-estimated) SD, so a
+// modest departure reads as a spurious 5-7 sigma -- short satellite records
+// (SMAP, TROPOMI, OCO-2) would otherwise light up the summary table with
+// impossible outliers. Below it, sigma reads as no-data; percentile and rank
+// (robust to small samples) are still shown.
+const MIN_BASELINE_YEARS_SIGMA = 8;
 
 function windowMonthYearPairs(windowKey, targetYear) {
   const months = SEASON_MONTHS[windowKey] || [parseInt(windowKey, 10)];
@@ -397,8 +416,34 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // SCA = 0 every year) can't be put in SD units, so a matching target reads 0
   // and a departing one is left out (null).
   const { mean: meanAnom, std: stdAnom } = meanStd(baselineAnomalies);
-  const sigma = stdAnom < 1e-9
-    ? (Math.abs(targetAnomaly - meanAnom) < 1e-9 ? 0 : null)
+  // Dormant/absent window -- baseline spread negligible vs the series' overall
+  // anomaly spread (e.g. summer snow) -- has no climatology to standardize
+  // against, so it reads as no-data, matching the pipeline
+  // (common/detrend.py::DORMANT_SD_FRACTION). A genuine extreme against a
+  // real-variance baseline keeps its full, uncapped z.
+  const allAnoms = region.anomaly.filter((a) => a !== null && Number.isFinite(a));
+  const overallAnomStd = allAnoms.length > 1 ? meanStd(allAnoms).std : 0;
+  // Seasonal amplitude = spread of the 12 climatological monthly raw means; a
+  // window whose baseline anomaly spread is a tiny fraction of it is
+  // off-season/dormant (common/detrend.py::SEASONAL_DORMANT_FRACTION).
+  const monthlyMeans = [];
+  for (let m = 1; m <= 12; m++) {
+    const monthVals = [];
+    for (let i = 0; i < region.dates.length; i++) {
+      const y = parseInt(region.dates[i].slice(0, 4), 10);
+      const mo = parseInt(region.dates[i].slice(5, 7), 10);
+      const v = region.value[i];
+      if (mo === m && y >= region.baseline_start_year && y <= region.baseline_end_year
+          && v !== null && Number.isFinite(v)) monthVals.push(v);
+    }
+    if (monthVals.length) monthlyMeans.push(meanStd(monthVals).mean);
+  }
+  const seasonalScale = monthlyMeans.length > 1 ? meanStd(monthlyMeans).std : 0;
+  const seasonalFloor = SEASONAL_DORMANT_FRACTION * seasonalScale;
+  const sigma = (baselineAnomalies.length < MIN_BASELINE_YEARS_SIGMA
+                 || stdAnom <= DORMANT_SD_FRACTION * overallAnomStd
+                 || (seasonalFloor > 0 && stdAnom < seasonalFloor))
+    ? null
     : (targetAnomaly - meanAnom) / stdAnom;
 
   // The displayed "rank on record" badge is a separate statistic from sigma:
