@@ -67,7 +67,7 @@ async function renderTimeseries() {
   // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
   // a standardized departure -- their sigma series is identical to raw, not
   // a re-standardization (see common/canonical.py::_load_drought_index).
-  const sigmaLabel = data.aggregation === "native_index"
+  const sigmaLabel = data.native_standardized
     ? `${data.response} (native standardized index)`
     : "Standardized anomaly (σ)";
   const yTitle = isSigma ? sigmaLabel
@@ -105,7 +105,7 @@ async function renderTimeseries() {
   document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
-    sigmaNote.textContent = (isSigma && data.aggregation !== "native_index" && manifest.value_type_glossary)
+    sigmaNote.textContent = (isSigma && !data.native_standardized && manifest.value_type_glossary)
       ? `σ: ${manifest.value_type_glossary.sigma || ""}`
       : "";
   }

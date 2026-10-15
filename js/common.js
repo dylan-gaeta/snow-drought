@@ -404,18 +404,27 @@ function meanStd(values) {
 // same baseline sample sigma/percentile already rank against, just reported
 // as a plain ordinal instead of a standardized score.
 function computeWindowValue(data, region, windowKey, targetYear) {
-  if (data.aggregation === "native_index") {
-    // A native index (e.g. SPI-03) is already its own trailing N-month
-    // statistic, so it can't be re-aggregated across a season window -- but
-    // it's still meaningful for one: show its reading as of the window's
-    // own last month (e.g. DJFM -> its March value, which for a 3-month
-    // index already reflects Jan-Mar).
-    const pairs = windowMonthYearPairs(windowKey, targetYear);
-    const { month, year } = pairs[pairs.length - 1];
-    const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
-    const idx = region.dates.indexOf(dateStr);
-    if (idx === -1) return null;
-    const v = region.value[idx];
+  // Detect native standardized indices by the authoritative native_standardized
+  // flag, NOT by aggregation === "native_index": USDM is native_standardized but
+  // carries aggregation "mean", and keying off the aggregation alone sent it
+  // through the non-native branch below, where it was wrongly re-standardized
+  // (z-scored) and relabelled instead of shown as its own 0-5 severity.
+  if (data.native_standardized) {
+    // The value already IS the standardized index, so it is never
+    // re-standardized. A fixed-timescale index (SPI-03 etc., aggregation
+    // "native_index") already reflects its trailing months, so a season window
+    // reads its last month (DJFM -> March). USDM carries a real window rule
+    // ("mean"), so its window combines the months by that rule.
+    let v;
+    if (data.aggregation === "native_index") {
+      const pairs = windowMonthYearPairs(windowKey, targetYear);
+      const { month, year } = pairs[pairs.length - 1];
+      const idx = region.dates.indexOf(`${year}-${String(month).padStart(2, "0")}-01`);
+      v = idx === -1 ? null : region.value[idx];
+    } else {
+      v = aggregateWindow(region, windowKey, targetYear, data.aggregation, "value");
+    }
+    if (v === null || v === undefined) return null;
     return {
       sigma: v, percentile: null, rawValue: v, anomaly: null, percentOfNormal: null,
       isNativeIndex: true, stressRank: null, n: null, nRecord: null,
@@ -704,7 +713,7 @@ function rawValueHeaderLabel(data, windowKey) {
 }
 
 function regionalSummaryNote(data) {
-  const nativeNote = data.aggregation === "native_index"
+  const nativeNote = data.native_standardized
     ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
     : "";
   return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = more stress, the wettest third blue = less stress, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
