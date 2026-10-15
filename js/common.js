@@ -119,12 +119,13 @@ function categoryLabelWithIcon(category) {
 // Hard floor across every page (Dylan, 2026-09): a handful of products
 // (SPI/SPEI/PRISM-based) have a real record back to 1895, which compresses
 // this whole dashboard's actual 1990-2026 baseline era into a sliver
-// whenever a chart shares one axis/dropdown across many products. Same name
-// as config.py's own DASHBOARD_MIN_YEAR, but deliberately a different value
-// (1979 there) -- that one floors what 14_dashboard_export.py writes into
-// the JSON in the first place; this one floors the narrower display window
-// applied on top of that already-exported data. Not a bug if they diverge;
-// would be a bug if this one ever floored BELOW 1979 (data that doesn't exist).
+// whenever a chart shares one axis/dropdown across many products. This mirrors
+// the pipeline's EXTENDED_BASELINE_START_YEAR (1990, the anomaly-baseline
+// start); it floors only the narrower DISPLAY window, applied on top of the
+// already-exported data -- whose own export floor is the earlier
+// SATELLITE_ERA_START_YEAR (1979), applied in dashboard_export.py. Not a bug if
+// they diverge; would be a bug if this one ever floored BELOW 1979 (data that
+// doesn't exist).
 // A window whose baseline spread is below this fraction of the series' overall
 // anomaly spread is climatologically dormant/absent (e.g. summer snow) and
 // reads as no-data for z-score, matching the pipeline
@@ -467,8 +468,19 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // against, so it reads as no-data, matching the pipeline
   // (common/detrend.py::DORMANT_SD_FRACTION). A genuine extreme against a
   // real-variance baseline keeps its full, uncapped z.
-  const allAnoms = region.anomaly.filter((a) => a !== null && Number.isFinite(a));
-  const overallAnomStd = allAnoms.length > 1 ? meanStd(allAnoms).std : 0;
+  // Overall baseline spread: SD of the raw value over the baseline years -- the
+  // same reference the pipeline's dormant floor uses (detrend.py standardizes
+  // column='value', sd_floor = fraction * std of baseline values), NOT the
+  // deseasonalized anomaly over the whole record, so the client floors the same
+  // months the stored per-month σ / monthly heatmap do.
+  const baselineVals = [];
+  for (let i = 0; i < region.dates.length; i++) {
+    const y = parseInt(region.dates[i].slice(0, 4), 10);
+    const v = region.value[i];
+    if (y >= region.baseline_start_year && y <= region.baseline_end_year
+        && v !== null && Number.isFinite(v)) baselineVals.push(v);
+  }
+  const overallBaselineStd = baselineVals.length > 1 ? meanStd(baselineVals).std : 0;
   // Seasonal amplitude = spread of the 12 climatological monthly raw means; a
   // window whose baseline anomaly spread is a tiny fraction of it is
   // off-season/dormant (common/detrend.py::SEASONAL_DORMANT_FRACTION).
@@ -487,7 +499,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const seasonalScale = monthlyMeans.length > 1 ? meanStd(monthlyMeans).std : 0;
   const seasonalFloor = SEASONAL_DORMANT_FRACTION * seasonalScale;
   const sigma = (baselineAnomalies.length < MIN_BASELINE_YEARS_SIGMA
-                 || stdAnom <= DORMANT_SD_FRACTION * overallAnomStd
+                 || stdAnom <= DORMANT_SD_FRACTION * overallBaselineStd
                  || (seasonalFloor > 0 && stdAnom < seasonalFloor))
     ? null
     : (targetAnomaly - meanAnom) / stdAnom;

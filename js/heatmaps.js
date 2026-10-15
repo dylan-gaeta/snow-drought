@@ -203,8 +203,9 @@ async function renderHeatmapUnsafe(chart, pairs) {
       // "less stress" on every row, regardless of each variable's own raw
       // sign convention (a positive temperature anomaly IS the stress
       // direction, but a positive snowpack anomaly is less stress, the opposite)
-      // -- same drier_is_high-driven flip the Compare view's "By category"
-      // mode already applies for the same reason (see about.html).
+      // -- same drier_is_high-driven flip the Summary table applies; the Compare
+      // view instead keeps σ native-direction (positive = above that variable's
+      // own baseline, not necessarily stress), see about.html.
       const sign = data.drier_is_high ? 1 : -1;
       let hasData = false;
       const z = months.map(({ year, month }) => {
