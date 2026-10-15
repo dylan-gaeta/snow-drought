@@ -99,10 +99,14 @@ function initSummaryTable() {
 
 function formatSummaryValue(result, units, valueType) {
   const sign = result.sigma >= 0 ? "+" : "";
-  if (valueType === "raw") return `${result.rawValue.toFixed(2)} ${units}`;
+  // Raw value + raw-unit anomaly display in the canonical unit (e.g. kg m-2 -> mm).
+  const factor = canonicalUnitFactor(units);
+  const dispUnits = canonicalUnit(units);
+  if (valueType === "raw") return `${(result.rawValue * factor).toFixed(2)} ${dispUnits}`;
   if (valueType === "anomaly_raw") {
     if (result.anomaly === null || result.isNativeIndex) return "&mdash;";
-    return `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${units}`;
+    const anom = result.anomaly * factor;
+    return `${anom >= 0 ? "+" : ""}${anom.toFixed(2)} ${dispUnits}`;
   }
   if (valueType === "percentile") {
     const percentile = result.isNativeIndex ? nativeIndexPercentile(result.sigma) : result.percentile;

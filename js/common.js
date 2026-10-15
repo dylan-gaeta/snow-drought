@@ -140,6 +140,42 @@ const DORMANT_SD_FRACTION = 0.02;
 const SEASONAL_DORMANT_FRACTION = 0.03;
 const DASHBOARD_MIN_YEAR = 1990;
 
+// Canonical display units. Physically-equivalent units reported by different
+// products under different strings are normalized to one scale so a variable's
+// datasets read on a common axis (and overlay correctly). Keyed on the native
+// unit string, since the conversion is a property of the unit, not the product:
+//  - water mass/depth -> mm water-equivalent depth (1 kg m-2 of water = 1 mm;
+//    1 cm = 10 mm; 1 m (snow DEPTH length) = 1000 mm). Chosen over kg per Dylan.
+//  - SIF spectral radiance per-micrometre -> per-nanometre (x1e-3), so OCO-2 /
+//    GOSIF (per-µm) sit on the same scale as TROPOMI (per-nm).
+// Deliberately NOT converted (no single physically-meaningful common scale was
+// adopted): volumetric soil moisture (m3 m-3) stays its own group; ET energy
+// flux (W m-2) is not latent-heat-converted to the water-flux products; and
+// standardized/unitless quantities (sigma, percentile, %, index) are untouched.
+// NOTE: SiB4 SIF is labelled "W m-2 nm-1 sr-1" but its values sit at the mW
+// scale -- a suspected mislabel, left as-is here pending confirmation rather
+// than wrongly multiplied by 1000.
+const UNIT_CONVERSIONS = {
+  "kg m-2": { unit: "mm", factor: 1 },
+  "cm": { unit: "mm", factor: 10 },
+  "m": { unit: "mm", factor: 1000 },
+  "mW m-2 sr-1 µm-1": { unit: "mW m-2 sr-1 nm-1", factor: 0.001 },
+};
+function canonicalUnit(unit) {
+  const conversion = UNIT_CONVERSIONS[unit];
+  return conversion ? conversion.unit : (unit || "");
+}
+function canonicalUnitFactor(unit) {
+  const conversion = UNIT_CONVERSIONS[unit];
+  return conversion ? conversion.factor : 1;
+}
+// Scale a raw value (or raw-unit anomaly) from its native unit into the
+// canonical unit; null/undefined/non-finite pass through unchanged.
+function toCanonicalValue(value, unit) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return value;
+  return value * canonicalUnitFactor(unit);
+}
+
 // Western US water year: Oct 1 - Sep 30, named for the calendar year it ends
 // in (WY2026 = Oct 2025 - Sep 2026). One definition for the whole dashboard so
 // every page frames "the water year" the same way.
@@ -675,6 +711,10 @@ function regionalSummaryNote(data) {
 }
 
 function regionalSummaryRowsHtml(data, windowKey, year) {
+  // Raw value / normal / raw-unit anomaly display in the canonical unit
+  // (e.g. kg m-2 -> mm); % of normal stays a native ratio below.
+  const unitFactor = canonicalUnitFactor(data.units);
+  const dispUnits = canonicalUnit(data.units);
   const regionGroups = [
     { label: "Regions", entries: regionEntries() },
     { label: "States", entries: manifest.western_states.map((code) => ({ code, label: manifest.state_labels[code] })) },
@@ -695,13 +735,13 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
         const frac = result.stressRank / result.nRecord; // rank 1 = most drought-stressed
         cls = frac <= 1 / 3 ? "stress" : frac > 2 / 3 ? "relief" : "";
       }
-      const rawText = `${result.rawValue.toFixed(2)} ${data.units}`;
+      const rawText = `${(result.rawValue * unitFactor).toFixed(2)} ${dispUnits}`;
       // Normal = this window's baseline (climatology) mean in native units; since
       // the anomaly is the mean-centered departure, mean = raw - anomaly. Not
       // defined for native standardized indices (the value already is a departure).
       const hasNormal = result.anomaly !== null && !result.isNativeIndex;
-      const normal = hasNormal ? result.rawValue - result.anomaly : null;
-      const normalText = normal === null ? "&mdash;" : `${normal.toFixed(2)} ${data.units}`;
+      const normal = hasNormal ? result.rawValue - result.anomaly : null; // native units (used for % of normal)
+      const normalText = normal === null ? "&mdash;" : `${(normal * unitFactor).toFixed(2)} ${dispUnits}`;
       // % of normal only makes sense for a non-negative physical AMOUNT (precip,
       // SWE, soil moisture, evaporation...), not an interval-scale quantity like
       // temperature/dewpoint/VPD where raw/mean is meaningless and runs past
@@ -711,7 +751,7 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       const pctText = (!data.pct_of_normal_ok || normal === null || normal <= 0) ? "&mdash;"
         : `${(result.rawValue / normal * 100).toFixed(0)}%`;
       const rawAnomText = (result.anomaly === null || result.isNativeIndex)
-        ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${result.anomaly.toFixed(2)} ${data.units}`;
+        ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${(result.anomaly * unitFactor).toFixed(2)} ${dispUnits}`;
       const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
       const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
         : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${result.stressRank}/${result.nRecord}</span>`;

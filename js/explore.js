@@ -58,9 +58,12 @@ async function renderTimeseries() {
   // views, where unifying every product's stress direction aids
   // comparison, but it misleads here (Dylan, 2026-10-02: SCA depletion was
   // showing as +sigma). Raw values are unaffected either way.
+  // Raw value + raw-unit anomaly display in the canonical unit (e.g. kg m-2 -> mm).
+  const unitFactor = canonicalUnitFactor(data.units);
+  const dispUnits = canonicalUnit(data.units);
   const fullY = isSigma
     ? region.sigma.map((v) => (v === null || v === undefined ? null : v))
-    : isAnomaly ? region.anomaly : region.value;
+    : (isAnomaly ? region.anomaly : region.value).map((v) => (v === null || v === undefined ? null : v * unitFactor));
   // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
   // a standardized departure -- their sigma series is identical to raw, not
   // a re-standardization (see common/canonical.py::_load_drought_index).
@@ -68,8 +71,8 @@ async function renderTimeseries() {
     ? `${data.response} (native standardized index)`
     : "Standardized anomaly (σ)";
   const yTitle = isSigma ? sigmaLabel
-    : isAnomaly ? `${data.response} anomaly (${data.units})`
-    : `${data.response} (${data.units})`;
+    : isAnomaly ? `${data.response} anomaly (${dispUnits})`
+    : `${data.response} (${dispUnits})`;
   const isDeparture = isSigma || isAnomaly;
   const startYear = Math.max(DASHBOARD_MIN_YEAR, timeseriesStartYear || DASHBOARD_MIN_YEAR);
   const dates = region.dates.filter((d) => parseInt(d.slice(0, 4), 10) >= startYear);
@@ -79,7 +82,8 @@ async function renderTimeseries() {
   // it (GRACE mascon sigma, SMAP/SMOS retrieval error). It is in the value's own
   // units, so it is only meaningful on the raw-value view -- not anomaly/sigma.
   if (!isDeparture && region.uncertainty) {
-    const unc = region.uncertainty.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear);
+    const unc = region.uncertainty.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear)
+      .map((v) => (v === null || v === undefined ? null : v * unitFactor));
     const upper = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v + unc[i]));
     const lower = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v - unc[i]));
     traces.push({

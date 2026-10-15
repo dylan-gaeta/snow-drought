@@ -99,9 +99,13 @@ async function renderSeasonal() {
   const tickText = isNarrow ? x : x.map((month, i) => `${month}<br>${i < 3 ? referenceYear - 1 : referenceYear}`);
   const isAnomaly = seasonalSeries === "anomaly";
   const teal = manifest.climatology_color;
-  const upper = isAnomaly ? region.anomaly_upper : region.climatology_upper;
-  const lower = isAnomaly ? region.anomaly_lower : region.climatology_lower;
-  const mean = isAnomaly ? upper.map(() => 0) : region.climatology_mean;
+  // Raw value / climatology band / anomaly display in the canonical unit (e.g. kg m-2 -> mm).
+  const unitFactor = canonicalUnitFactor(data.units);
+  const dispUnits = canonicalUnit(data.units);
+  const scaleUnit = (arr) => (arr || []).map((v) => (v === null || v === undefined ? null : v * unitFactor));
+  const upper = scaleUnit(isAnomaly ? region.anomaly_upper : region.climatology_upper);
+  const lower = scaleUnit(isAnomaly ? region.anomaly_lower : region.climatology_lower);
+  const mean = isAnomaly ? upper.map(() => 0) : scaleUnit(region.climatology_mean);
 
   const traces = [
     { x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
@@ -130,7 +134,7 @@ async function renderSeasonal() {
       const curve = highlightCurve || (tsRegion && computeWaterYearCurve(tsRegion, year));
       if (!curve) return;
       traces.push({
-        x, y: isAnomaly ? curve.anomaly : curve.raw, type: "scatter", mode: "lines",
+        x, y: scaleUnit(isAnomaly ? curve.anomaly : curve.raw), type: "scatter", mode: "lines",
         line: { color: seasonalYearColor[year], width: 2, dash: highlightCurve ? undefined : "dot" },
         name: waterYearLabel(year), showlegend: false,
       });
@@ -143,7 +147,7 @@ async function renderSeasonal() {
   document.getElementById("seasonal-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const layout = {
     margin: { t: 20, r: 20, b: isNarrow ? 90 : 55, l: 60 },
-    yaxis: { title: isAnomaly ? `${data.response} anomaly (${data.units})` : `${data.response} (${data.units})`, zeroline: isAnomaly, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: isAnomaly ? `${data.response} anomaly (${dispUnits})` : `${data.response} (${dispUnits})`, zeroline: isAnomaly, ...PLOTLY_AXIS_LINE },
     xaxis: { type: "category", tickvals: x, ticktext: tickText, showgrid: false, ...PLOTLY_AXIS_LINE },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     showlegend: false, // the HTML checkbox legend below the chart replaces Plotly's

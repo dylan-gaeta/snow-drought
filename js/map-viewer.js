@@ -437,8 +437,11 @@ function initInteractiveMap() {
         readout.textContent = "No data at this point.";
         return;
       }
-      const value = raw / olMapState.currentScale; // undo this file's own Int16 scale (varies per file, read from its style JSON entry)
-      const unitSuffix = currentResponseEntry().units || "";
+      const nativeUnits = currentResponseEntry().units || "";
+      // undo this file's own Int16 scale, then convert to the canonical unit
+      // (e.g. kg m-2 -> mm) so the map reads in the same unit as everywhere else.
+      const value = (raw / olMapState.currentScale) * canonicalUnitFactor(nativeUnits);
+      const unitSuffix = canonicalUnit(nativeUnits);
       const lonLat = ol.proj.toLonLat(event.coordinate);
       readout.textContent = `${value.toFixed(2)}${unitSuffix ? " " + unitSuffix : ""} at ${lonLat[1].toFixed(3)}°N, ${lonLat[0].toFixed(3)}°E`;
     } catch (err) {
@@ -777,7 +780,9 @@ async function updateInteractiveMapLayer() {
   );
 
   const legend = document.getElementById("ol-legend");
-  const units = entry.units || "";
+  const nativeUnits = entry.units || "";
+  const units = canonicalUnit(nativeUnits);
+  const unitFactor = canonicalUnitFactor(nativeUnits);
   const palette = currentPalette(style);
   const unitSuffix = units ? ` [${units}]` : "";
   const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
@@ -806,11 +811,15 @@ async function updateInteractiveMapLayer() {
     const barWidth = document.getElementById("ol-map").clientWidth || 700;
     const targetCount = Math.max(5, Math.min(12, Math.round(barWidth / 70)));
     const tickValues = niceTickValues(vmin, vmax, targetCount);
-    const decimals = pickTickDecimals(tickValues);
+    // Tick POSITIONS stay on the native [vmin,vmax] gradient (the color ramp is
+    // mapped on native values); the LABELS display in the canonical unit
+    // (x unitFactor, e.g. kg m-2 -> mm) to match the legend title + hover.
+    const canonicalTicks = tickValues.map((v) => v * unitFactor);
+    const decimals = pickTickDecimals(canonicalTicks);
     const gradient = `linear-gradient(to right, ${palette.join(", ")})`;
-    const ticks = tickValues.map((v) => {
+    const ticks = tickValues.map((v, k) => {
       const frac = (v - vmin) / (vmax - vmin);
-      return `<span class="ol-legend-tick" style="left:${(frac * 100).toFixed(2)}%">${v.toFixed(decimals)}</span>`;
+      return `<span class="ol-legend-tick" style="left:${(frac * 100).toFixed(2)}%">${canonicalTicks[k].toFixed(decimals)}</span>`;
     }).join("");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
       `<div class="ol-legend-scale-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +

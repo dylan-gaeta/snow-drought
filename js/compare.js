@@ -119,12 +119,17 @@ function slotSeries(slot, data) {
   if (!region) return null;
   const startYear = Math.max(DASHBOARD_MIN_YEAR, compareState.startYear || DASHBOARD_MIN_YEAR);
   const keep = region.dates.map((d) => parseInt(d.slice(0, 4), 10) >= startYear);
-  const raw = compareState.series === "sigma" ? region.sigma : region.value;
+  const isSigma = compareState.series === "sigma";
+  const raw = isSigma ? region.sigma : region.value;
   return {
     dates: region.dates.filter((_, i) => keep[i]),
-    values: raw.filter((_, i) => keep[i]).map((v) => (v === null || v === undefined ? null : v)),
+    // Raw values display in the canonical unit (e.g. kg m-2 -> mm); σ is unitless.
+    values: raw.filter((_, i) => keep[i]).map((v) => {
+      if (v === null || v === undefined) return null;
+      return isSigma ? v : toCanonicalValue(v, data.units);
+    }),
     name: `${compareState[slot].product} · ${responseDisplay(data.response)}`,
-    units: data.units,
+    units: canonicalUnit(data.units),
   };
 }
 
@@ -150,7 +155,7 @@ async function renderCompare() {
   const baselineText = (entry) => (entry && entry.baseline_start_year && entry.baseline_end_year)
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}` : "n/a";
   const metaLine = (label, state, entry) => entry
-    ? `${label}: ${state.product} ${state.response} · units ${entry.units || "n/a"} · baseline ${baselineText(entry)}`
+    ? `${label}: ${state.product} ${state.response} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
     : "";
   document.getElementById("compare-title").textContent =
     `${compareState.a.product} · ${responseDisplay(compareState.a.response)} vs ${compareState.b.product} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;
@@ -320,14 +325,20 @@ async function renderOverlay() {
   let anyData = false;
   overlayState.datasets.forEach((product, i) => {
     const data = jsons[i];
-    if (!isSigma) unitsSeen.add(data.units || "");
+    if (!isSigma) unitsSeen.add(canonicalUnit(data.units || ""));
     const region = data.regions[overlayState.region];
     let dates = [];
     let values = [];
     if (region) {
       const keep = region.dates.map((d) => parseInt(d.slice(0, 4), 10) >= startYear);
       dates = region.dates.filter((_, j) => keep[j]);
-      values = region[field].filter((_, j) => keep[j]).map((v) => (v === null || v === undefined ? null : v));
+      // Scale raw value + raw-unit anomaly into the canonical unit so datasets
+      // reporting the same quantity under different unit strings (e.g. SWE in
+      // kg m-2 vs mm, SIF per-µm vs per-nm) overlay on one scale; σ is unitless.
+      values = region[field].filter((_, j) => keep[j]).map((v) => {
+        if (v === null || v === undefined) return null;
+        return isSigma ? v : toCanonicalValue(v, data.units);
+      });
       if (values.some((v) => v !== null)) anyData = true;
     }
     traces.push({
