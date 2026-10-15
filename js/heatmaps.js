@@ -198,7 +198,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     xLabels = months.map(({ year, month }) => `${MONTH_NAMES[month - 1].slice(0, 3)}<br>${year}`);
     computeRow = (data) => {
       const region = data.regions[heatmapState.region];
-      if (!region) return months.map(() => null);
+      if (!region) return { z: months.map(() => null), hasData: false };
       // Flip sign so red always means "more stress" and blue always means
       // "less stress" on every row, regardless of each variable's own raw
       // sign convention (a positive temperature anomaly IS the stress
@@ -206,11 +206,16 @@ async function renderHeatmapUnsafe(chart, pairs) {
       // -- same drier_is_high-driven flip the Compare view's "By category"
       // mode already applies for the same reason (see about.html).
       const sign = data.drier_is_high ? 1 : -1;
-      return months.map(({ year, month }) => {
+      let hasData = false;
+      const z = months.map(({ year, month }) => {
         const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
         const idx = region.dates.indexOf(dateStr);
-        return idx === -1 ? null : sign * region.sigma[idx];
+        if (idx === -1) return null;
+        hasData = true; // the product has a value this month even if sigma is floored out
+        const s = region.sigma[idx];
+        return s === null ? null : sign * s;
       });
+      return { z, hasData };
     };
   } else {
     const windowKey = HEATMAP_FAMILIES[heatmapState.family].window;
@@ -221,13 +226,17 @@ async function renderHeatmapUnsafe(chart, pairs) {
     xLabels = years.map(String);
     computeRow = (data) => {
       const region = data.regions[heatmapState.region];
-      if (!region) return years.map(() => null);
+      if (!region) return { z: years.map(() => null), hasData: false };
       // Same stress-direction sign flip as the "monthly" branch above.
       const sign = data.drier_is_high ? 1 : -1;
-      return years.map((year) => {
+      let hasData = false;
+      const z = years.map((year) => {
         const result = computeWindowValue(data, region, windowKey, year);
-        return result ? sign * result.sigma : null;
+        if (!result) return null;
+        hasData = true; // the window has data even if its sigma is floored out
+        return result.sigma === null ? null : sign * result.sigma;
       });
+      return { z, hasData };
     };
   }
 
@@ -241,8 +250,12 @@ async function renderHeatmapUnsafe(chart, pairs) {
   // page's coverage chart for the same reason.
   [...pairs].reverse().forEach((pair, i) => {
     const data = dataList[pairs.length - 1 - i];
-    const row = computeRow(data);
-    if (row.every((v) => v === null)) return;
+    const { z: row, hasData } = computeRow(data);
+    // Keep a product that has data in the window but whose sigma is entirely
+    // floored out (e.g. a <8-year record like TROPOMI, below MIN_BASELINE_
+    // YEARS_SIGMA) -- render it as a gray no-sigma row rather than letting it
+    // silently vanish. Drop only products genuinely absent from the selection.
+    if (!hasData) return;
     yLabels.push(`${pair.product} ${pair.response}`);
     z.push(row);
     rowCategories.push(pair.category);
