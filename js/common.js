@@ -263,6 +263,7 @@ const PRODUCT_OBSERVATION_KIND = {
   "VegDRI": "observation", "USDM": "observation", "VIIRS": "observation",
   "VIIRS-LST": "observation", "VIIRS-NDVI": "observation", "GRACE-L4": "model",
   "NEON": "observation", "AmeriFlux": "observation",
+  "GLEAM": "model", "USDM-Extent": "observation",
 };
 
 // Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION. In the
