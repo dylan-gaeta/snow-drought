@@ -153,9 +153,8 @@ const DASHBOARD_MIN_YEAR = 1990;
 // adopted): volumetric soil moisture (m3 m-3) stays its own group; ET energy
 // flux (W m-2) is not latent-heat-converted to the water-flux products; and
 // standardized/unitless quantities (sigma, percentile, %, index) are untouched.
-// NOTE: SiB4 SIF is labelled "W m-2 nm-1 sr-1" but its values sit at the mW
-// scale -- a suspected mislabel, left as-is here pending confirmation rather
-// than wrongly multiplied by 1000.
+// SiB4 SIF is now correctly labelled mW m-2 sr-1 nm-1 (was a watt-magnitude
+// mislabel), so it lands in the per-nm SIF bucket alongside TROPOMI directly.
 const UNIT_CONVERSIONS = {
   "kg m-2": { unit: "mm", factor: 1 },
   "cm": { unit: "mm", factor: 10 },
