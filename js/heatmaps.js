@@ -213,7 +213,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
         const idx = region.dates.indexOf(dateStr);
         if (idx === -1) return null;
         hasData = true; // the product has a value this month even if sigma is floored out
-        const s = region.sigma[idx];
+        const s = monthlyStressSigma(data, region, idx);
         return s === null ? null : sign * s;
       });
       return { z, hasData };

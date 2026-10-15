@@ -383,6 +383,33 @@ function meanStd(values) {
   return { mean, std: Math.sqrt(variance) };
 }
 
+// Per-calendar-month stress σ for the monthly heatmap. The stored region.sigma
+// is already a σ for every product EXCEPT the non-σ native indices (USDM 0-5
+// severity, PDSI/VegDRI "Index"): those keep their native value in region.sigma
+// so the Time Series page can show it, so here they are standardized against
+// that same calendar month's own baseline instead (Dylan, 2026-10), the per-
+// month analog of computeWindowValue's non-σ-native branch. SPI/SPEI/EDDI/ESI/
+// ForDRI (units "σ") and all non-native products pass their stored σ through.
+function monthlyStressSigma(data, region, idx) {
+  const nonSigmaNative = data.native_standardized
+    && !(typeof data.units === "string" && data.units.trim() === "σ");
+  if (!nonSigmaNative) return region.sigma[idx];
+  const v = region.value[idx];
+  if (v === null || v === undefined || !Number.isFinite(v)) return null;
+  const month = parseInt(region.dates[idx].slice(5, 7), 10);
+  const sample = [];
+  for (let i = 0; i < region.dates.length; i++) {
+    const y = parseInt(region.dates[i].slice(0, 4), 10);
+    const mo = parseInt(region.dates[i].slice(5, 7), 10);
+    const val = region.value[i];
+    if (mo === month && y >= region.baseline_start_year && y <= region.baseline_end_year
+        && val !== null && Number.isFinite(val)) sample.push(val);
+  }
+  if (sample.length < MIN_BASELINE_YEARS_SIGMA) return null;
+  const { mean, std } = meanStd(sample);
+  return std <= 0 ? null : (v - mean) / std;
+}
+
 // Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex,
 // stressRank, n } for one product/response/region/window/year.
 // sigma is a classic z-score of the window-aggregated anomaly against the
@@ -411,24 +438,71 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // through the non-native branch below, where it was wrongly re-standardized
   // (z-scored) and relabelled instead of shown as its own 0-5 severity.
   if (data.native_standardized) {
-    // The value already IS the standardized index, so it is never
-    // re-standardized. A fixed-timescale index (SPI-03 etc., aggregation
-    // "native_index") already reflects its trailing months, so a season window
-    // reads its last month (DJFM -> March). USDM carries a real window rule
-    // ("mean"), so its window combines the months by that rule.
-    let v;
-    if (data.aggregation === "native_index") {
-      const pairs = windowMonthYearPairs(windowKey, targetYear);
-      const { month, year } = pairs[pairs.length - 1];
-      const idx = region.dates.indexOf(`${year}-${String(month).padStart(2, "0")}-01`);
-      v = idx === -1 ? null : region.value[idx];
-    } else {
-      v = aggregateWindow(region, windowKey, targetYear, data.aggregation, "value");
-    }
+    // A fixed-timescale index (SPI-03 etc., aggregation "native_index") already
+    // reflects its trailing months, so a season window reads its last month
+    // (DJFM -> March). USDM carries a real window rule ("mean"), so its window
+    // combines the months by that rule.
+    const aggregateNative = (year) => {
+      if (data.aggregation === "native_index") {
+        const pairs = windowMonthYearPairs(windowKey, year);
+        const { month, year: yr } = pairs[pairs.length - 1];
+        const idx = region.dates.indexOf(`${yr}-${String(month).padStart(2, "0")}-01`);
+        return idx === -1 ? null : region.value[idx];
+      }
+      return aggregateWindow(region, windowKey, year, data.aggregation, "value");
+    };
+    const v = aggregateNative(targetYear);
     if (v === null || v === undefined) return null;
+    // SPI/SPEI/EDDI/ESI/ForDRI publish in σ units: the value already IS a
+    // standardized departure, so it passes through unchanged -- never
+    // re-standardized or relabelled.
+    const sigmaNative = typeof data.units === "string" && data.units.trim() === "σ";
+    if (sigmaNative) {
+      return {
+        sigma: v, percentile: null, rawValue: v, anomaly: null, percentOfNormal: null,
+        isNativeIndex: true, stressRank: null, n: null, nRecord: null,
+      };
+    }
+    // A non-σ native index (USDM 0-5 severity, PDSI/VegDRI "Index") is NOT on a
+    // z scale: running its raw value through the stress-heatmap color and the
+    // normal-CDF percentile put an average USDM month at ~95th-percentile stress
+    // and "no drought" at the 50th. For the cross-product σ heatmap + percentile
+    // it is standardized against its OWN baseline years instead (Dylan, 2026-10);
+    // its native value is still what the Time Series / Map pages read (from the
+    // stored region.sigma, untouched). percentOfNormal stays null -- a drought
+    // index has no physical "normal" to take a percent of. isNativeIndex is
+    // false so the summary uses this empirical percentile, not the normal CDF.
+    const baseline = [];
+    for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
+      const b = aggregateNative(y);
+      if (b !== null) baseline.push(b);
+    }
+    if (baseline.length < MIN_BASELINE_YEARS) return null;
+    baseline.sort((a, b) => a - b);
+    const nB = baseline.length;
+    const belowB = baseline.filter((b) => b < v).length;
+    const atOrBelowB = baseline.filter((b) => b <= v).length;
+    const rankB = 0.5 * (belowB + atOrBelowB);
+    const percentileNative = ((rankB + 0.5) / (nB + 1)) * 100;
+    const { mean: meanB, std: stdB } = meanStd(baseline);
+    const sigmaNonSigma = (nB < MIN_BASELINE_YEARS_SIGMA || stdB <= 0) ? null : (v - meanB) / stdB;
+    const recordN = [];
+    const firstY = parseInt(region.dates[0].slice(0, 4), 10);
+    const lastY = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
+    for (let y = firstY; y <= lastY; y++) {
+      const b = aggregateNative(y);
+      if (b !== null) recordN.push(b);
+    }
+    recordN.sort((a, b) => a - b);
+    const nRecordNative = recordN.length;
+    const ltN = recordN.filter((b) => b < v).length;
+    const leN = recordN.filter((b) => b <= v).length;
+    const rankRecordNative = 0.5 * (ltN + leN);
+    const stressRankNative = data.drier_is_high ? nRecordNative - rankRecordNative + 1 : rankRecordNative;
     return {
-      sigma: v, percentile: null, rawValue: v, anomaly: null, percentOfNormal: null,
-      isNativeIndex: true, stressRank: null, n: null, nRecord: null,
+      sigma: sigmaNonSigma, percentile: percentileNative, rawValue: v, anomaly: null,
+      percentOfNormal: null, isNativeIndex: false, stressRank: stressRankNative,
+      n: nB, nRecord: nRecordNative,
     };
   }
   const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
