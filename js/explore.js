@@ -82,10 +82,15 @@ async function renderTimeseries() {
   // it (GRACE mascon sigma, SMAP/SMOS retrieval error). It is in the value's own
   // units, so it is only meaningful on the raw-value view -- not anomaly/sigma.
   if (!isDeparture && region.uncertainty) {
+    // Guard against a fill sentinel leaking through as a real uncertainty
+    // (SMAP ships -9999 for every month): only a finite, non-negative value is
+    // a valid ±1σ, otherwise the band would balloon to ±9999 and flatten the
+    // real trace to an invisible line.
     const unc = region.uncertainty.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear)
-      .map((v) => (v === null || v === undefined ? null : v * unitFactor));
+      .map((v) => (v === null || v === undefined || !Number.isFinite(v) || v < 0 ? null : v * unitFactor));
     const upper = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v + unc[i]));
     const lower = y.map((v, i) => (v === null || unc[i] === null || unc[i] === undefined ? null : v - unc[i]));
+    if (upper.some((v) => v !== null)) {
     traces.push({
       x: dates, y: upper, type: "scatter", mode: "lines",
       line: { width: 0 }, hoverinfo: "skip", showlegend: false,
@@ -95,6 +100,7 @@ async function renderTimeseries() {
       line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(27,27,27,0.15)",
       name: "±1σ measurement uncertainty", hoverinfo: "skip",
     });
+    }
   }
   traces.push({
     x: dates, y, type: "scatter", mode: "lines",

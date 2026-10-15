@@ -118,7 +118,7 @@ function formatSummaryValue(result, units, valueType) {
   }
   if (valueType === "rank") {
     if (result.stressRank === null || result.nRecord === null) return "&mdash;";
-    return `${result.stressRank}/${result.nRecord}`;
+    return `${Math.round(result.stressRank)}/${result.nRecord}`;
   }
   return `${sign}${result.sigma.toFixed(1)}`; // "sigma" default
 }

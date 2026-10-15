@@ -523,9 +523,18 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   }
   recordAnomalies.sort((a, b) => a - b);
   const nRecord = recordAnomalies.length;
-  const rankRecord = recordAnomalies.filter((a) => a <= targetAnomaly).length;
+  // Mid-rank tie handling, same as the percentile above: a value tied with a
+  // block of years takes the block's MIDDLE rank, not its extreme end. A
+  // one-sided <= count collapses a large tie group of zero-event off-season
+  // years (e.g. a winter with no fire) each onto the same extreme rank, so they
+  // all read as a near-record-extreme badge when they are really the unremarkable
+  // middle of the record.
+  const ltRecord = recordAnomalies.filter((a) => a < targetAnomaly).length;
+  const leRecord = recordAnomalies.filter((a) => a <= targetAnomaly).length;
+  const rankRecord = 0.5 * (ltRecord + leRecord);
   // rank counts from the driest/coolest (lowest-anomaly) end; drier_is_high
   // determines which end is actually the stressed one for this response.
+  // Fractional (mid-rank) -- rounded only where displayed as a badge.
   const stressRank = data.drier_is_high ? nRecord - rankRecord + 1 : rankRecord;
 
   let percentOfNormal = null;
@@ -775,7 +784,7 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
         ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${(result.anomaly * unitFactor).toFixed(2)} ${dispUnits}`;
       const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
       const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
-        : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${result.stressRank}/${result.nRecord}</span>`;
+        : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${Math.round(result.stressRank)}/${result.nRecord}</span>`;
       return `<tr><td>${label}</td><td>${rawText}</td><td>${normalText}</td><td>${pctText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
     });
     return [groupRow, ...dataRows];
