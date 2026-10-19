@@ -72,22 +72,6 @@
         </div>
       </div>
 
-      <div class="map-panel" id="ol-time-panel">
-        <div class="ol-period-slider" id="ol-period-slider">
-          <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
-          <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
-        </div>
-        <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
-          <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
-          <div class="ol-year-slider-wrap">
-            <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
-            <div class="ol-year-axis" id="ol-year-axis" aria-hidden="true"></div>
-          </div>
-          <select id="ol-year-select" aria-label="Year"></select>
-          <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
-        </div>
-      </div>
-
       <div class="map-panel map-panel-display" id="ol-display-panel">
         <div class="map-panel-row">
           <label class="select-field">Color theme
@@ -117,6 +101,21 @@
       <div class="map-stage">
         <h3 id="ol-map-title" class="figure-title"></h3>
         <div class="product-meta" id="product-meta"></div>
+        <div class="map-panel map-panel-time" id="ol-time-panel">
+          <div class="ol-period-slider" id="ol-period-slider">
+            <button type="button" id="ol-period-play" class="ol-period-play" aria-label="Play through the months" title="Play through the months">&#9654;</button>
+            <div class="ol-period-track" id="ol-period-track" role="group" aria-label="Month or season"></div>
+          </div>
+          <div class="year-control-wrap" id="ol-year-control-wrap" style="display:none;">
+            <button type="button" id="ol-year-prev-btn" aria-label="Previous year">&larr;</button>
+            <div class="ol-year-slider-wrap">
+              <input type="range" id="ol-year-slider" class="ol-year-slider" aria-label="Scrub year" min="0" max="0" step="1" value="0">
+              <div class="ol-year-axis" id="ol-year-axis" aria-hidden="true"></div>
+            </div>
+            <select id="ol-year-select" aria-label="Year"></select>
+            <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
+          </div>
+        </div>
         <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
         <div id="ol-map-wrap">
           <div id="ol-legend"></div>

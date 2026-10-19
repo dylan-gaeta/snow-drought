@@ -757,12 +757,15 @@ table.headline-table tr.group-row td {
 /* The stage map fills the stage width (no 620px cap) with a viewport-bounded
    height; ol.View.fit() frames the domain extent inside it. */
 .map-stage #ol-map-wrap { max-width: none; }
-/* Landscape map that fits on screen (title + colorbar sit above it): bounded
-   between 440 and 640px tall, following the viewport in between. */
-.map-stage #ol-map { height: clamp(440px, calc(100vh - 340px), 640px); aspect-ratio: auto; }
+/* The time controls sit full-width in the stage (the horizontal season / month /
+   year sliders need more room than the narrow sidebar gives). */
+.map-panel-time { margin: 0; }
+/* Landscape map that fits on screen (title, time bar + colorbar sit above it):
+   bounded between 400 and 600px tall, following the viewport in between. */
+.map-stage #ol-map { height: clamp(400px, calc(100vh - 430px), 600px); aspect-ratio: auto; }
 @media (max-width: 900px) {
   .map-layout { grid-template-columns: 1fr; }
-  .map-stage #ol-map { height: 62vh; min-height: 400px; }
+  .map-stage #ol-map { height: 58vh; min-height: 380px; }
 }
 .map-panel {
   border: 1px solid var(--border);
