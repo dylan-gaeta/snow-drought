@@ -45,6 +45,10 @@ function buildPickerIndexes(filter) {
   manifest.category_order.forEach((category) => {
     const products = manifest.categories[category] || {};
     Object.keys(products).forEach((product) => {
+      // Point-observation networks are multisite point averages, not gridded
+      // area means -- excluded from every picker-driven view (they live on the
+      // Sites / SNOTEL pages instead). See POINT_NETWORK_PRODUCTS in common.js.
+      if (POINT_NETWORK_PRODUCTS.has(product)) return;
       Object.keys(products[product]).forEach((response) => {
         if (filter && !filter(category, product, response)) return;
         (datasetVariables[product] = datasetVariables[product] || []).push(response);

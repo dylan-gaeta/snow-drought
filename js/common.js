@@ -266,6 +266,18 @@ const PRODUCT_OBSERVATION_KIND = {
   "GLEAM": "model", "USDM-Extent": "observation",
 };
 
+// Point-observation networks (stations / eddy-covariance towers / cameras):
+// their regional series is a MULTISITE AVERAGE of sparse point sites, NOT a
+// spatially-gridded area mean, so they are excluded from every gridded-mean
+// comparison view -- Time Series, Seasonal, Compare, Gallery, the cross-product
+// Heatmap, and the Summary table (Dylan, 2026-10: "only spatially gridded means
+// summed over area should be included"). They remain on their own point-network
+// pages (Sites, SNOTEL), which read data/sites + data/snotel directly, not
+// manifest.categories. Authoritative set = dashboard_export.py's SITE_NETWORKS
+// (AmeriFlux/NEON/PhenoCam) plus SNOTEL (its own page); USDM-Extent is NOT here
+// -- its D0-D4 are areal drought-extent fractions, a real area statistic.
+const POINT_NETWORK_PRODUCTS = new Set(["SNOTEL", "AmeriFlux", "NEON", "PhenoCam"]);
+
 // Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION. In the
 // pipeline a calendar month is kept in the vegetation group overlay only where
 // its baseline mean clears this fraction of the seasonal amplitude above the

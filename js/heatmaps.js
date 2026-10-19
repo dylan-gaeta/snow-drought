@@ -136,6 +136,9 @@ function heatmapPairs(category, family) {
   cats.forEach((cat) => {
     const products = manifest.categories[cat] || {};
     for (const [product, responses] of Object.entries(products)) {
+      // Point-observation networks are multisite point averages, not gridded
+      // area means -- never a heatmap row (see POINT_NETWORK_PRODUCTS, common.js).
+      if (POINT_NETWORK_PRODUCTS.has(product)) continue;
       for (const [response, entry] of Object.entries(responses)) {
         // The water-year families read each stored per-month sigma directly --
         // no aggregation involved, so they're fine even for products (e.g. NEON

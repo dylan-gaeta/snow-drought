@@ -137,6 +137,10 @@ async function renderSummaryTable() {
   for (const category of manifest.category_order) {
     const products = manifest.categories[category];
     for (const [product, responses] of Object.entries(products)) {
+      // Point-observation networks are multisite point averages, not gridded
+      // area means -- excluded from the regional summary table (see
+      // POINT_NETWORK_PRODUCTS, common.js); they live on the Sites/SNOTEL pages.
+      if (POINT_NETWORK_PRODUCTS.has(product)) continue;
       for (const [response, entry] of Object.entries(responses)) {
         if (!entry.aggregation) continue; // no established aggregation rule (e.g. NEON NEE) -- excluded, not guessed
         toFetch.push({ category, product, response, entry });

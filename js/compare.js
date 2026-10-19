@@ -50,7 +50,10 @@ function setupSlots() {
   // rather than two of the same.
   const cats = nonEmptyCategories();
   const bCategory = cats.find((c) => c !== DEFAULT_PICKER_VIEW.category) || cats[0];
-  const bProduct = Object.keys(manifest.categories[bCategory])[0];
+  // Skip point-observation networks (multisite averages) -- the picker excludes
+  // them, so the default overlay must not land on one either (POINT_NETWORK_PRODUCTS).
+  const bProduct = Object.keys(manifest.categories[bCategory]).find((p) => !POINT_NETWORK_PRODUCTS.has(p))
+    || Object.keys(manifest.categories[bCategory])[0];
   const bResponse = Object.keys(manifest.categories[bCategory][bProduct])[0];
   comparePickers.a = createProductPicker({
     ids: { pivot: "compare-a-pivot", product: "compare-a-product", response: "compare-a-response" },
