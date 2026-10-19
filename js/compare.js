@@ -328,19 +328,27 @@ async function renderOverlay() {
   let anyData = false;
   overlayState.datasets.forEach((product, i) => {
     const data = jsons[i];
-    if (!isSigma) unitsSeen.add(canonicalUnit(data.units || ""));
+    // Water-flux rates arrive in different time bases (GPCP & ERA5 mm/day,
+    // PRISM mm/month). Harmonize mm-based rates to a monthly total (mm/month)
+    // using each point's own month length so they overlay on one axis. Scoped
+    // to mm so a per-day carbon flux (g C m-2 d-1) isn't mislabeled as mm.
+    const mmPerDay = !isSigma && /mm/i.test(data.units || "") && /(\bd-1\b|day)/i.test(data.units || "");
+    const mmRate = mmPerDay || (!isSigma && /mm/i.test(data.units || "") && /month/i.test(data.units || ""));
+    if (!isSigma) unitsSeen.add(mmRate ? "mm month⁻¹" : canonicalUnit(data.units || ""));
     const region = data.regions[overlayState.region];
     let dates = [];
     let values = [];
     if (region) {
       const keep = region.dates.map((d) => parseInt(d.slice(0, 4), 10) >= startYear);
       dates = region.dates.filter((_, j) => keep[j]);
-      // Scale raw value + raw-unit anomaly into the canonical unit so datasets
-      // reporting the same quantity under different unit strings (e.g. SWE in
-      // kg m-2 vs mm, SIF per-µm vs per-nm) overlay on one scale; σ is unitless.
-      values = region[field].filter((_, j) => keep[j]).map((v) => {
+      // Scale into the canonical unit so datasets reporting the same quantity
+      // under different unit strings (SWE kg m-2 vs mm, SIF per-µm vs per-nm)
+      // overlay on one scale; mm/day rates additionally -> mm/month. σ unitless.
+      values = region[field].filter((_, j) => keep[j]).map((v, j) => {
         if (v === null || v === undefined) return null;
-        return isSigma ? v : toCanonicalValue(v, data.units);
+        if (isSigma) return v;
+        const cv = toCanonicalValue(v, data.units);
+        return mmPerDay ? cv * daysInMonth(dates[j]) : cv;
       });
       if (values.some((v) => v !== null)) anyData = true;
     }

@@ -73,6 +73,13 @@ function responseDisplay(code) {
   return name ? `${code} (${name})` : code;
 }
 
+// Days in the calendar month of a "YYYY-MM" / "YYYY-MM-DD" string -- used to
+// convert a per-day rate (mm/day) to that month's total (mm/month).
+function daysInMonth(dateStr) {
+  const [year, month] = dateStr.split("-").map(Number);
+  return new Date(year, month, 0).getDate();
+}
+
 // Solid black axis border on every Plotly chart (Compare, Time Series,
 // Seasonal Cycle) -- Plotly's own default draws no axis line at all, just
 // gridlines, which read as an unstyled/default chart (Dylan, 2026-09-30:
