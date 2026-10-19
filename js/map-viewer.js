@@ -144,7 +144,8 @@ const olMapState = {
   layerCache: {}, // COG url -> built ol.layer.WebGLTile, reused across mode/period/year revisits
   currentStyle: null,
   currentScale: null,
-  colormap: null, // null = the product's own NCL palette; else an NCL_COLORMAPS key
+  colormap: null, // null = the product's own default NCL palette; else a chosen NCL_COLORMAPS key
+  binned: false, // false = continuous ramp; true = discrete 11-bin (chosen via the dropdown)
   invert: false, // flip the color scale direction (legend gradient + raster)
 };
 
@@ -161,31 +162,54 @@ function lookupColormapColors(key) {
   return null;
 }
 
-const COLORMAP_GROUP_LABELS = { diverging: "Diverging", continuous: "Continuous", discrete: "Discrete" };
+// One dropdown, two groups: every NCL table as a Continuous (smooth ramp) OR
+// Discrete (11-bin) option -- picking a Discrete one auto-switches the map to
+// hard bins, same palette (Dylan, 2026-10: "both discrete and continuous
+// colorbars on the same dataset from just one dropdown"). Option value encodes
+// both: "cont:<name>" / "disc:<name>". The list is static (same for every mode/
+// product); the current product's own default is selected per-render by
+// syncColormapSelect, so there is no generic "Default (product)" placeholder.
+function allColormapNames() {
+  const names = [];
+  if (typeof NCL_COLORMAPS !== "undefined") {
+    for (const group of Object.values(NCL_COLORMAPS)) for (const k of Object.keys(group)) names.push(k);
+  }
+  return names;
+}
 function populateColormapSelect() {
   const sel = document.getElementById("ol-colormap-select");
   if (!sel || typeof NCL_COLORMAPS === "undefined") return;
-  let html = '<option value="">Default (product)</option>';
-  for (const [group, label] of Object.entries(COLORMAP_GROUP_LABELS)) {
-    if (!NCL_COLORMAPS[group]) continue;
-    html += `<optgroup label="${label}">` +
-      Object.keys(NCL_COLORMAPS[group]).map((k) => `<option value="${k}">${k}</option>`).join("") +
-      "</optgroup>";
-  }
-  sel.innerHTML = html;
-  if (olMapState.colormap && lookupColormapColors(olMapState.colormap)) sel.value = olMapState.colormap;
-  else { olMapState.colormap = null; sel.value = ""; }
+  const opts = (kind) => allColormapNames().map((k) => `<option value="${kind}:${k}">${k}</option>`).join("");
+  sel.innerHTML =
+    `<optgroup label="Continuous">${opts("cont")}</optgroup>` +
+    `<optgroup label="Discrete (11-bin)">${opts("disc")}</optgroup>`;
 }
 
-// The palette for the current mode: an NCL override if chosen, else the
-// product's own style palette (256-stop sequential / diverging anomaly).
+// Highlight whichever option the current view resolves to: the user's chosen
+// palette if any, else this product/mode's own default (modeDefaultCmapName).
+// Leaves the dropdown unset only for a default with no NCL match (USDM's
+// discrete category legend), which still renders from its own style colors.
+function syncColormapSelect(style) {
+  const sel = document.getElementById("ol-colormap-select");
+  if (!sel) return;
+  const name = olMapState.colormap || modeDefaultCmapName(style);
+  const want = `${olMapState.binned ? "disc" : "cont"}:${name}`;
+  sel.value = name && sel.querySelector(`option[value="${window.CSS ? CSS.escape(want) : want}"]`) ? want : "";
+}
+
+// The active palette's hex stops. olMapState.colormap is the user's chosen NCL
+// table name, or null = follow the product's own default for this mode (the
+// map_style's anomaly_cmap in Anomaly, baseline_cmap in Climatology/Raw). Falls
+// back to the style's own baked colors if the name doesn't resolve to an
+// NCL_COLORMAPS entry (e.g. USDM's discrete category legend).
+function modeDefaultCmapName(style) {
+  return olMapState.mode === "anomaly" ? style.anomaly_cmap : style.baseline_cmap;
+}
 function currentPalette(style) {
   const isDiverging = olMapState.mode === "anomaly";
-  let palette = isDiverging ? style.anomaly_colors : style.baseline_colors;
-  if (olMapState.colormap) {
-    const colors = lookupColormapColors(olMapState.colormap);
-    if (colors) palette = colors;
-  }
+  const name = olMapState.colormap || modeDefaultCmapName(style);
+  const palette = (name && lookupColormapColors(name))
+    || (isDiverging ? style.anomaly_colors : style.baseline_colors);
   return olMapState.invert ? palette.slice().reverse() : palette;
 }
 
@@ -245,6 +269,35 @@ function buildContinuousColorExpression(vmin, vmax, colors, scale) {
   // color (confirmed via getData(): nodata reads back as [0, 0]).
   return ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0],
     ["interpolate", ["linear"], value, ...stops]];
+}
+
+// Discrete 11-bin version of the same palette (Dylan, 2026-10: pick a "Discrete
+// (11-bin)" entry from the one Color-theme dropdown to switch any variable from
+// a smooth ramp to hard bins). [vmin,vmax] is cut into DISCRETE_BINS equal bins;
+// value in [edge_i, edge_{i+1}) takes the i-th of DISCRETE_BINS colors sampled
+// across the palette. For a symmetric anomaly (vmin=-vmax) the odd count leaves
+// one centre bin straddling zero, matching the pipeline's own BoundaryNorm maps.
+const DISCRETE_BINS = 11;
+function discreteBinColors(colors) {
+  const out = [];
+  for (let i = 0; i < DISCRETE_BINS; i++) {
+    out.push(colors[Math.round((i / (DISCRETE_BINS - 1)) * (colors.length - 1))]);
+  }
+  return out;
+}
+function buildDiscreteColorExpression(vmin, vmax, colors, scale) {
+  const value = ["/", ["band", 1], scale];
+  const bins = discreteBinColors(colors);
+  const expr = ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0]];
+  for (let i = 0; i < DISCRETE_BINS; i++) {
+    const [r, g, b] = hexToRgbTriple(bins[i]);
+    if (i < DISCRETE_BINS - 1) {
+      expr.push(["<", value, vmin + ((i + 1) / DISCRETE_BINS) * (vmax - vmin)], ["color", r, g, b]);
+    } else {
+      expr.push(["color", r, g, b]); // final bin = the "case" default
+    }
+  }
+  return expr;
 }
 
 // Smallest number of decimal places at which every boundary in a
@@ -357,13 +410,18 @@ function initInteractiveMap() {
     if (!button || button.disabled) return;
     olMapState.mode = button.dataset.mode;
     document.querySelectorAll("#ol-mode-toggle button").forEach((btn) => btn.classList.toggle("active", btn === button));
-    populateColormapSelect(); // diverging vs sequential list follows the mode
-    updateInteractiveMapLayer();
+    updateInteractiveMapLayer(); // re-syncs the colour-theme selection to the new mode's default
+
   });
   document.getElementById("ol-colormap-select").addEventListener("change", (event) => {
-    olMapState.colormap = event.target.value || null;
-    // Rebuild every cached layer with the new palette (WebGLTile's color style
-    // is fixed at construction); the COG bytes stay HTTP-cached so this is fast.
+    const val = event.target.value || "";
+    const i = val.indexOf(":");
+    // "cont:<name>" / "disc:<name>" -- the group chosen IS the continuous-vs-
+    // discrete switch, so picking a Discrete option auto-bins the map.
+    olMapState.binned = val.slice(0, i) === "disc";
+    olMapState.colormap = i >= 0 ? val.slice(i + 1) : null;
+    // Palette + binning are baked into each cached WebGLTile color style at
+    // construction, so a change needs fresh layers (COG bytes stay HTTP-cached).
     if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
     olMapState.layerCache = {};
     updateInteractiveMapLayer();
@@ -764,47 +822,58 @@ async function updateInteractiveMapLayer() {
   const units = canonicalUnit(nativeUnits);
   const unitFactor = canonicalUnitFactor(nativeUnits);
   const palette = currentPalette(style);
+  syncColormapSelect(style); // reflect the active palette + continuous/discrete in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
   const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
   const label = olMapState.mode === "climatology" ? `${pv} — climatology${unitSuffix}`
     : olMapState.mode === "raw" ? `${pv} — ${olMapState.year}${unitSuffix}`
     : `${pv} — ${olMapState.year} anomaly${unitSuffix}`;
   let boundaries = fileEntry.boundaries;
-  let binColors = palette;
   let colorExpr = null;
   if (!boundaries) {
     // Native standardized indices (SPI/SPEI/EDDI/...): value IS the anomaly,
     // no boundaries computed yet -- show units only, no color scale.
     legend.innerHTML = `<div class="ol-legend-label">${units}</div>`;
   } else {
-    // Continuous color ramp over [vmin, vmax] (Climatology/Raw ship exactly
-    // that pair; Anomaly's symmetric diverging boundaries give it as [first,
-    // last]). The palette renders as a smooth CSS gradient with a few evenly-
-    // spaced axis labels -- no discrete bins, break ticks, or extend arrows to
-    // align (Dylan, 2026-10). Values outside the range clamp to the end colors.
+    // Over [vmin, vmax] (Climatology/Raw ship exactly that pair; Anomaly's
+    // symmetric diverging boundaries give it as [first, last]). Continuous = a
+    // smooth gradient with round-number axis ticks; Discrete = the same palette
+    // as DISCRETE_BINS hard-stop bins with ticks on the bin edges -- both in the
+    // same legend element, chosen by the one Color-theme dropdown (Dylan, 2026-10).
     const vmin = boundaries[0];
     const vmax = boundaries[boundaries.length - 1];
-    // Aim for one round-number tick roughly every 70px of the bar's actual
-    // width, so a wide desktop colorbar gets a full axis of labels and a narrow
-    // phone one stays legible -- derived from the rendered width, not a fixed
-    // count (the old fixed 5 left the bar looking bare, Dylan 2026-10).
-    const barWidth = document.getElementById("ol-map").clientWidth || 700;
-    const targetCount = Math.max(5, Math.min(12, Math.round(barWidth / 70)));
-    const tickValues = niceTickValues(vmin, vmax, targetCount);
-    // Tick POSITIONS stay on the native [vmin,vmax] gradient (the color ramp is
-    // mapped on native values); the LABELS display in the canonical unit
-    // (x unitFactor, e.g. kg m-2 -> mm) to match the legend title + hover.
+    const span = vmax - vmin || 1;
+    let gradient, tickValues;
+    if (olMapState.binned) {
+      const bins = discreteBinColors(palette);
+      const steps = [];
+      for (let i = 0; i < DISCRETE_BINS; i++) {
+        steps.push(`${bins[i]} ${((i / DISCRETE_BINS) * 100).toFixed(2)}%`,
+          `${bins[i]} ${(((i + 1) / DISCRETE_BINS) * 100).toFixed(2)}%`);
+      }
+      gradient = `linear-gradient(to right, ${steps.join(", ")})`;
+      tickValues = [];
+      for (let i = 0; i <= DISCRETE_BINS; i++) tickValues.push(vmin + (i / DISCRETE_BINS) * span);
+      colorExpr = buildDiscreteColorExpression(vmin, vmax, palette, fileEntry.scale);
+    } else {
+      // One round-number tick roughly every 70px of the bar's actual width, so
+      // a wide desktop colorbar gets a full axis and a narrow phone one stays
+      // legible (derived from rendered width, not a fixed count, Dylan 2026-10).
+      const barWidth = document.getElementById("ol-map").clientWidth || 700;
+      tickValues = niceTickValues(vmin, vmax, Math.max(5, Math.min(12, Math.round(barWidth / 70))));
+      gradient = `linear-gradient(to right, ${palette.join(", ")})`;
+      colorExpr = buildContinuousColorExpression(vmin, vmax, palette, fileEntry.scale);
+    }
+    // Tick POSITIONS stay on the native [vmin,vmax] scale; LABELS display in the
+    // canonical unit (x unitFactor, e.g. kg m-2 -> mm) to match the title + hover.
     const canonicalTicks = tickValues.map((v) => v * unitFactor);
     const decimals = pickTickDecimals(canonicalTicks);
-    const gradient = `linear-gradient(to right, ${palette.join(", ")})`;
-    const ticks = tickValues.map((v, k) => {
-      const frac = (v - vmin) / (vmax - vmin);
-      return `<span class="ol-legend-tick" style="left:${(frac * 100).toFixed(2)}%">${canonicalTicks[k].toFixed(decimals)}</span>`;
-    }).join("");
+    const ticks = tickValues.map((v, k) =>
+      `<span class="ol-legend-tick" style="left:${(((v - vmin) / span) * 100).toFixed(2)}%">${canonicalTicks[k].toFixed(decimals)}</span>`
+    ).join("");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
       `<div class="ol-legend-scale-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +
       `<div class="ol-legend-ticks">${ticks}</div></div>`;
-    colorExpr = buildContinuousColorExpression(vmin, vmax, palette, fileEntry.scale);
   }
 
   if (!layer) {
