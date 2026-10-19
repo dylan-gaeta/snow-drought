@@ -699,11 +699,6 @@ table.headline-table tr.group-row td {
 .cm-option .cm-swatch { width: 62px; }
 .cm-option-name { flex: 1 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.82rem; }
 /* Continuous / Discrete render-mode toggle pinned at the top of the panel. */
-.cm-modes { display: flex; position: sticky; top: 0; z-index: 2; background: var(--bg-panel); padding: 2px 2px 6px; }
-.cm-mode { flex: 1 1 0; padding: 0.32rem 0.4rem; font: inherit; font-size: 0.74rem; font-weight: 600; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); cursor: pointer; }
-.cm-mode:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.cm-mode:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
-.cm-mode.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 /* Prominent dynamic caption over the Map / Heatmap (the Plotly charts set
    their title in the layout instead) -- names the current dataset/variable. */
 .figure-title { font-family: var(--font-heading); color: var(--navy); font-size: 1.15rem; font-weight: 700; margin: 0.6rem 0 0.5rem; }
@@ -762,10 +757,12 @@ table.headline-table tr.group-row td {
 /* The stage map fills the stage width (no 620px cap) with a viewport-bounded
    height; ol.View.fit() frames the domain extent inside it. */
 .map-stage #ol-map-wrap { max-width: none; }
-.map-stage #ol-map { height: calc(100vh - 260px); min-height: 480px; aspect-ratio: auto; }
+/* Landscape map that fits on screen (title + colorbar sit above it): bounded
+   between 440 and 640px tall, following the viewport in between. */
+.map-stage #ol-map { height: clamp(440px, calc(100vh - 340px), 640px); aspect-ratio: auto; }
 @media (max-width: 900px) {
   .map-layout { grid-template-columns: 1fr; }
-  .map-stage #ol-map { height: 68vh; min-height: 420px; }
+  .map-stage #ol-map { height: 62vh; min-height: 400px; }
 }
 .map-panel {
   border: 1px solid var(--border);
@@ -822,9 +819,12 @@ table.headline-table tr.group-row td {
 }
 .ol-period-play:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
 .ol-period-play.playing { background: var(--gold); border-color: var(--gold); }
-/* Seasons on top, months on their own row directly below (Dylan, 2026-10). */
-.ol-period-track { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
-.ol-period-group { display: inline-flex; gap: 2px; }
+/* Seasons on top, months on their own row directly below (Dylan, 2026-10).
+   The track fills the remaining width next to the play button and its season /
+   month pills wrap within it, so the slider fits the narrow control sidebar
+   (and any viewport) instead of overrunning the panel. */
+.ol-period-track { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; flex: 1 1 0; min-width: 0; }
+.ol-period-group { display: flex; flex-wrap: wrap; gap: 2px; }
 /* Seasons: a shaded, rounded band visually distinct from the month stops. */
 .ol-period-seasons {
   background: rgba(58, 134, 188, 0.12);

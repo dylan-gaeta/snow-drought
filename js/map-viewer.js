@@ -145,7 +145,6 @@ const olMapState = {
   currentStyle: null,
   currentScale: null,
   colormap: null, // null = the product's own default NCL palette; else a chosen NCL_COLORMAPS key
-  binned: false, // false = continuous ramp; true = discrete 11-bin (chosen via the dropdown)
   invert: false, // flip the color scale direction (legend gradient + raster)
 };
 
@@ -180,36 +179,25 @@ function colormapGradientCss(colors, binned, nBins) {
   return `linear-gradient(to right, ${steps.join(", ")})`;
 }
 
-// Build the custom colour-theme panel: a Continuous/Discrete(11-bin) toggle at
-// the top, then every palette listed ONCE (no per-mode duplication) as a
-// gradient swatch + name, grouped by theme (diverging / sequential / rainbow,
-// sequential hue-sorted). The swatch previews whichever mode is toggled; option
-// value is just the palette name. Rebuilt when the mode toggles; the active
-// entry is marked per-render by syncColormapSelect.
+// Build the custom colour-theme panel: every palette listed once as a gradient
+// swatch + name, grouped by theme (Diverging / Sequential continuous ramps,
+// Discrete stepped tables). A palette's continuous-vs-stepped nature is intrinsic
+// to its group -- continuous ones preview (and render) as smooth ramps, discrete
+// ones stepped at their own native level count -- so there's no separate
+// render-mode toggle. The active entry is marked per-render by syncColormapSelect.
 function populateColormapSelect() {
   const panel = document.getElementById("ol-colormap-panel");
   if (!panel || typeof NCL_COLORMAPS === "undefined") return;
-  const binned = olMapState.binned;
-  // A Continuous/Discrete toggle at the top is the render-mode switch; each
-  // palette is then listed ONCE (its swatch previews the chosen mode), grouped
-  // by theme with the sequential group hue-sorted. Rebuilt whenever the mode
-  // toggles so the swatches re-preview.
-  let html =
-    `<div class="cm-modes" role="group" aria-label="Colorbar style">` +
-    `<button type="button" class="cm-mode${binned ? "" : " active"}" data-binned="0">Continuous</button>` +
-    `<button type="button" class="cm-mode${binned ? " active" : ""}" data-binned="1">Discrete (11-bin)</button>` +
-    `</div>`;
+  let html = "";
   for (const [theme, themeLabel] of Object.entries(CM_THEME_LABELS)) {
     const group = NCL_COLORMAPS[theme];
     if (!group) continue;
     html += `<div class="cm-theme">${themeLabel}</div>`;
     for (const name of Object.keys(group)) {
       const entry = group[name];
-      // Native-discrete tables always preview stepped at their own level count;
-      // continuous ones follow the Continuous/Discrete toggle.
       const swatch = entry.discrete
         ? colormapGradientCss(entry.colors, true, entry.colors.length)
-        : colormapGradientCss(entry.colors, binned);
+        : colormapGradientCss(entry.colors, false);
       html += `<button type="button" role="option" class="cm-option" data-value="${name}">` +
         `<span class="cm-swatch" style="background-image:${swatch}"></span>` +
         `<span class="cm-option-name">${name}</span></button>`;
@@ -235,14 +223,11 @@ function syncColormapSelect(style) {
   });
   const colors = currentPalette(style);
   const disc = activeDiscreteEntry();
-  const swBinned = olMapState.binned || !!disc;
-  const swBins = disc ? disc.colors.length : DISCRETE_BINS;
   const sw = document.getElementById("ol-cm-current-swatch");
   const nm = document.getElementById("ol-cm-current-name");
-  if (sw) sw.style.backgroundImage = (colors && colors.length) ? colormapGradientCss(colors, swBinned, swBins) : "none";
-  if (nm) nm.textContent = baseName
-    ? (disc ? `${baseName} · ${disc.colors.length}-level` : (olMapState.binned ? `${baseName} · 11-bin` : baseName))
-    : "Product default";
+  if (sw) sw.style.backgroundImage = (colors && colors.length)
+    ? colormapGradientCss(colors, !!disc, disc ? disc.colors.length : undefined) : "none";
+  if (nm) nm.textContent = baseName ? (disc ? `${baseName} · ${disc.colors.length}-level` : baseName) : "Product default";
 }
 
 // The active palette's hex stops. olMapState.colormap is the user's chosen NCL
@@ -464,6 +449,19 @@ function initInteractiveMap() {
   olMapState.map.updateSize();
   olMapState.map.getView().fit(extent, { size: olMapState.map.getSize() || [800, 600] });
   olMapState.homeExtent = extent; // "Reset view" button re-fits to this after a user pans/zooms away
+  // The stage's final width isn't settled on the first frame (grid sizing + web
+  // fonts) and it also changes at the responsive breakpoint; OL keeps the center
+  // + resolution on resize but doesn't re-fit, which left the domain off-center
+  // and overscaled. Re-fit to the domain on size changes until the user takes
+  // control of the view.
+  const refitHome = () => {
+    if (olMapState.userMovedView) return;
+    olMapState.map.updateSize();
+    olMapState.map.getView().fit(olMapState.homeExtent, { size: olMapState.map.getSize() });
+  };
+  new ResizeObserver(refitHome).observe(document.getElementById("ol-map"));
+  olMapState.map.on("pointerdown", () => { olMapState.userMovedView = true; });
+  olMapState.map.getViewport().addEventListener("wheel", () => { olMapState.userMovedView = true; }, { passive: true });
 
   document.getElementById("ol-period-track").addEventListener("click", (event) => {
     const stop = event.target.closest("button[data-period]");
@@ -502,19 +500,7 @@ function initInteractiveMap() {
     updateInteractiveMapLayer();
   };
   cmPanel.addEventListener("click", (event) => {
-    // Keep in-panel clicks from reaching the document outside-click handler:
-    // the mode toggle rebuilds the panel (detaching the clicked node), which
-    // the document handler would otherwise read as an outside click and close.
-    event.stopPropagation();
-    const mode = event.target.closest(".cm-mode");
-    if (mode) {
-      // The Continuous/Discrete toggle: auto-switches the map and re-previews
-      // every swatch; the panel stays open so you can still pick a palette.
-      olMapState.binned = mode.dataset.binned === "1";
-      populateColormapSelect();
-      rebuildColormapLayers();
-      return;
-    }
+    event.stopPropagation(); // keep in-panel clicks from the outside-click handler
     const opt = event.target.closest(".cm-option");
     if (!opt) return;
     olMapState.colormap = opt.dataset.value || null;
@@ -557,6 +543,7 @@ function initInteractiveMap() {
     olMapState.boundaryLayer.setVisible(event.target.checked);
   });
   document.getElementById("ol-reset-view-btn").addEventListener("click", () => {
+    olMapState.userMovedView = false; // re-enable auto-centering on later resizes
     olMapState.map.getView().fit(olMapState.homeExtent, { size: olMapState.map.getSize(), duration: 300 });
   });
   document.getElementById("ol-fullscreen-btn").addEventListener("click", () => {
@@ -919,12 +906,12 @@ async function updateInteractiveMapLayer() {
   const units = canonicalUnit(nativeUnits);
   const unitFactor = canonicalUnitFactor(nativeUnits);
   const palette = currentPalette(style);
-  // A native-discrete palette forces stepped rendering at its own level count;
-  // a continuous palette follows the Continuous/Discrete(11-bin) toggle.
+  // Continuous palettes render as a smooth ramp; a native-discrete palette
+  // renders stepped at its own level count (there is no separate mode toggle).
   const discEntry = activeDiscreteEntry();
   const nBins = discEntry ? discEntry.colors.length : DISCRETE_BINS;
-  const renderBinned = olMapState.binned || !!discEntry;
-  syncColormapSelect(style); // reflect the active palette + continuous/discrete in the dropdown
+  const renderBinned = !!discEntry;
+  syncColormapSelect(style); // reflect the active palette in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
   const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
   const label = olMapState.mode === "climatology" ? `${pv} — climatology${unitSuffix}`
