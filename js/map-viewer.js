@@ -178,27 +178,33 @@ function colormapGradientCss(colors, binned) {
   return `linear-gradient(to right, ${steps.join(", ")})`;
 }
 
-// Build the custom colour-theme panel: two render-mode sections (Continuous /
-// Discrete 11-bin), each thematically grouped (diverging / sequential /
-// rainbow), every entry a gradient swatch + name. Picking a Discrete option IS
-// the continuous-vs-discrete switch (Dylan, 2026-10). Option value =
-// "cont:<name>" / "disc:<name>". Static -- built once; the active entry is
-// marked per-render by syncColormapSelect.
+// Build the custom colour-theme panel: a Continuous/Discrete(11-bin) toggle at
+// the top, then every palette listed ONCE (no per-mode duplication) as a
+// gradient swatch + name, grouped by theme (diverging / sequential / rainbow,
+// sequential hue-sorted). The swatch previews whichever mode is toggled; option
+// value is just the palette name. Rebuilt when the mode toggles; the active
+// entry is marked per-render by syncColormapSelect.
 function populateColormapSelect() {
   const panel = document.getElementById("ol-colormap-panel");
   if (!panel || typeof NCL_COLORMAPS === "undefined") return;
-  const row = (kind, name, colors) =>
-    `<button type="button" role="option" class="cm-option" data-value="${kind}:${name}">` +
-    `<span class="cm-swatch" style="background:${colormapGradientCss(colors, kind === "disc")}"></span>` +
-    `<span class="cm-option-name">${name}</span></button>`;
-  let html = "";
-  for (const [kind, kindLabel] of [["cont", "Continuous"], ["disc", "Discrete (11-bin)"]]) {
-    html += `<div class="cm-section">${kindLabel}</div>`;
-    for (const [theme, themeLabel] of Object.entries(CM_THEME_LABELS)) {
-      const group = NCL_COLORMAPS[theme];
-      if (!group) continue;
-      html += `<div class="cm-theme">${themeLabel}</div>`;
-      for (const name of Object.keys(group)) html += row(kind, name, group[name].colors);
+  const binned = olMapState.binned;
+  // A Continuous/Discrete toggle at the top is the render-mode switch; each
+  // palette is then listed ONCE (its swatch previews the chosen mode), grouped
+  // by theme with the sequential group hue-sorted. Rebuilt whenever the mode
+  // toggles so the swatches re-preview.
+  let html =
+    `<div class="cm-modes" role="group" aria-label="Colorbar style">` +
+    `<button type="button" class="cm-mode${binned ? "" : " active"}" data-binned="0">Continuous</button>` +
+    `<button type="button" class="cm-mode${binned ? " active" : ""}" data-binned="1">Discrete (11-bin)</button>` +
+    `</div>`;
+  for (const [theme, themeLabel] of Object.entries(CM_THEME_LABELS)) {
+    const group = NCL_COLORMAPS[theme];
+    if (!group) continue;
+    html += `<div class="cm-theme">${themeLabel}</div>`;
+    for (const name of Object.keys(group)) {
+      html += `<button type="button" role="option" class="cm-option" data-value="${name}">` +
+        `<span class="cm-swatch" style="background:${colormapGradientCss(group[name].colors, binned)}"></span>` +
+        `<span class="cm-option-name">${name}</span></button>`;
     }
   }
   panel.innerHTML = html;
@@ -212,9 +218,8 @@ function syncColormapSelect(style) {
   const panel = document.getElementById("ol-colormap-panel");
   if (!panel) return;
   const name = olMapState.colormap || modeDefaultCmapName(style);
-  const want = name ? `${olMapState.binned ? "disc" : "cont"}:${name}` : null;
   panel.querySelectorAll(".cm-option").forEach((btn) => {
-    btn.setAttribute("aria-selected", String(btn.dataset.value === want));
+    btn.setAttribute("aria-selected", String(btn.dataset.value === name));
   });
   const colors = name && lookupColormapColors(name);
   const sw = document.getElementById("ol-cm-current-swatch");
@@ -453,21 +458,28 @@ function initInteractiveMap() {
       if (active) active.scrollIntoView({ block: "center" });
     }
   });
-  cmPanel.addEventListener("click", (event) => {
-    const opt = event.target.closest(".cm-option");
-    if (!opt) return;
-    const val = opt.dataset.value || "";
-    const i = val.indexOf(":");
-    // "cont:<name>" / "disc:<name>" -- the group chosen IS the continuous-vs-
-    // discrete switch, so picking a Discrete option auto-bins the map.
-    olMapState.binned = val.slice(0, i) === "disc";
-    olMapState.colormap = i >= 0 ? val.slice(i + 1) : null;
-    closeColormapPanel();
-    // Palette + binning are baked into each cached WebGLTile color style at
-    // construction, so a change needs fresh layers (COG bytes stay HTTP-cached).
+  // Palette + binning are baked into each cached WebGLTile color style at
+  // construction, so a change needs fresh layers (COG bytes stay HTTP-cached).
+  const rebuildColormapLayers = () => {
     if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
     olMapState.layerCache = {};
     updateInteractiveMapLayer();
+  };
+  cmPanel.addEventListener("click", (event) => {
+    const mode = event.target.closest(".cm-mode");
+    if (mode) {
+      // The Continuous/Discrete toggle: auto-switches the map and re-previews
+      // every swatch; the panel stays open so you can still pick a palette.
+      olMapState.binned = mode.dataset.binned === "1";
+      populateColormapSelect();
+      rebuildColormapLayers();
+      return;
+    }
+    const opt = event.target.closest(".cm-option");
+    if (!opt) return;
+    olMapState.colormap = opt.dataset.value || null;
+    closeColormapPanel();
+    rebuildColormapLayers();
   });
   document.addEventListener("click", (event) => { if (cmDd && !cmDd.contains(event.target)) closeColormapPanel(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeColormapPanel(); });
