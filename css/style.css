@@ -750,11 +750,23 @@ table.headline-table tr.group-row td {
 
 .map-controls { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.8rem; align-items: center; }
 
-/* Map controls grouped into three labelled panels (Dylan, 2026-10): "Variable"
-   and "Time & type" sit side by side above the map; "Display" (cosmetic
-   options) sits below it. Replaces the old left category sidebar + sticky bar,
-   which ate the map's height and scattered related controls. */
-.map-panels-top { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; }
+/* Map page layout: a left control sidebar (all pickers, time, display, actions
+   stacked) + a map stage that fills the remaining content width, like dedicated
+   drought-mapping dashboards -- instead of the old single column that capped the
+   map at ~620px and left the rest of the width empty. Collapses to one column
+   (controls above a full-width map) on narrow screens. */
+.map-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
+.map-sidebar { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.map-sidebar .map-panel, .map-sidebar .map-panel-display, .map-sidebar .ol-actions { margin: 0; }
+.map-stage { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+/* The stage map fills the stage width (no 620px cap) with a viewport-bounded
+   height; ol.View.fit() frames the domain extent inside it. */
+.map-stage #ol-map-wrap { max-width: none; }
+.map-stage #ol-map { height: calc(100vh - 260px); min-height: 480px; aspect-ratio: auto; }
+@media (max-width: 900px) {
+  .map-layout { grid-template-columns: 1fr; }
+  .map-stage #ol-map { height: 68vh; min-height: 420px; }
+}
 .map-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

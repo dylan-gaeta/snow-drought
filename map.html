@@ -53,7 +53,8 @@
     <h2>Interactive maps</h2>
     <p class="finding-note">Interactive maps. Click for a pixel value, download a screenshot, or copy a link to this view. Colors/bins match the pre-rendered static maps (server-side).</p>
 
-    <div class="map-panels-top">
+    <div class="map-layout">
+      <aside class="map-sidebar">
       <div class="map-panel">
         <div class="product-search-wrap">
           <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
@@ -86,41 +87,45 @@
           <button type="button" id="ol-year-next-btn" aria-label="Next year">&rarr;</button>
         </div>
       </div>
-    </div>
 
-    <h3 id="ol-map-title" class="figure-title"></h3>
-    <div class="product-meta" id="product-meta"></div>
-    <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
-    <div id="ol-map-wrap">
-      <div id="ol-legend"></div>
-      <div id="ol-map" aria-label="Interactive map"></div>
-    </div>
-    <div id="ol-query-readout">Click the map to read a pixel value.</div>
+      <div class="map-panel map-panel-display" id="ol-display-panel">
+        <div class="map-panel-row">
+          <label class="select-field">Color theme
+            <div class="cm-dd" id="ol-colormap-dd">
+              <button type="button" class="cm-trigger" id="ol-colormap-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Color theme">
+                <span class="cm-swatch" id="ol-cm-current-swatch"></span>
+                <span class="cm-trigger-name" id="ol-cm-current-name">&mdash;</span>
+                <span class="cm-caret" aria-hidden="true">&#9662;</span>
+              </button>
+              <div class="cm-panel" id="ol-colormap-panel" role="listbox" hidden></div>
+            </div>
+          </label>
+          <button type="button" id="ol-invert-btn" class="map-toggle-btn" aria-pressed="false">Invert colors</button>
+          <label class="boundary-toggle"><input type="checkbox" id="ol-boundary-toggle" checked> State boundaries</label>
+          <label class="boundary-toggle"><input type="checkbox" id="ol-huc-toggle"> HUC2 basins</label>
+        </div>
+      </div>
 
-    <div class="map-panel map-panel-display" id="ol-display-panel">
-      <div class="map-panel-row">
-        <label class="select-field">Color theme
-          <div class="cm-dd" id="ol-colormap-dd">
-            <button type="button" class="cm-trigger" id="ol-colormap-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Color theme">
-              <span class="cm-swatch" id="ol-cm-current-swatch"></span>
-              <span class="cm-trigger-name" id="ol-cm-current-name">&mdash;</span>
-              <span class="cm-caret" aria-hidden="true">&#9662;</span>
-            </button>
-            <div class="cm-panel" id="ol-colormap-panel" role="listbox" hidden></div>
-          </div>
-        </label>
-        <button type="button" id="ol-invert-btn" class="map-toggle-btn" aria-pressed="false">Invert colors</button>
-        <label class="boundary-toggle"><input type="checkbox" id="ol-boundary-toggle" checked> State boundaries</label>
-        <label class="boundary-toggle"><input type="checkbox" id="ol-huc-toggle"> HUC2 basins</label>
+      <div class="ol-actions">
+        <button id="ol-reset-view-btn" type="button">Reset view</button>
+        <button id="ol-fullscreen-btn" type="button">Full screen</button>
+        <button id="ol-screenshot-btn" type="button">Download screenshot</button>
+        <button id="ol-copy-view-btn" type="button">Copy link to this view</button>
+      </div>
+      </aside>
+
+      <div class="map-stage">
+        <h3 id="ol-map-title" class="figure-title"></h3>
+        <div class="product-meta" id="product-meta"></div>
+        <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
+        <div id="ol-map-wrap">
+          <div id="ol-legend"></div>
+          <div id="ol-map" aria-label="Interactive map"></div>
+        </div>
+        <div id="ol-query-readout">Click the map to read a pixel value.</div>
       </div>
     </div>
 
-    <div class="ol-actions">
-      <button id="ol-reset-view-btn" type="button">Reset view</button>
-      <button id="ol-fullscreen-btn" type="button">Full screen</button>
-      <button id="ol-screenshot-btn" type="button">Download screenshot</button>
-      <button id="ol-copy-view-btn" type="button">Copy link to this view</button>
-    </div>
     <div id="ol-region-table-wrap" class="region-table-card">
       <h3 id="ol-region-table-heading">Regional values</h3>
       <p id="ol-region-table-note" class="value-glossary"></p>

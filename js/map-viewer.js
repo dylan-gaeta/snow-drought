@@ -455,18 +455,14 @@ function initInteractiveMap() {
       showFullExtent: true, // let the user zoom out to exactly the full extent, no further
     }),
   });
-  // ol.View.fit() preserves the container's own aspect ratio, padding
-  // symmetrically outside the extent wherever the container's shape doesn't
-  // match the domain's -- the fixed 520px-tall container was much wider than
-  // this (nearly square, once Mercator-projected) domain, so it padded with
-  // a lot of visibly empty area east of the real data (and an equal amount
-  // over the Pacific to the west). Setting the container's own aspect-ratio
-  // to the extent's real, computed ratio first removes that padding instead
-  // of guessing a height.
-  const mapEl = document.getElementById("ol-map");
-  mapEl.style.aspectRatio = `${(extent[2] - extent[0]) / (extent[3] - extent[1])}`;
+  // The map fills its stage: full content width, a viewport-bounded height set
+  // in CSS (.map-stage #ol-map). ol.View.fit() then frames the real domain
+  // extent inside it, padding symmetrically with basemap where the stage's
+  // shape doesn't match the domain's -- that surrounding context (a bit of
+  // ocean west, plains/Canada/Mexico around the edges) is intentional, matching
+  // how dedicated drought-mapping dashboards present a region.
   olMapState.map.updateSize();
-  olMapState.map.getView().fit(extent, { size: olMapState.map.getSize() || [600, 500] });
+  olMapState.map.getView().fit(extent, { size: olMapState.map.getSize() || [800, 600] });
   olMapState.homeExtent = extent; // "Reset view" button re-fits to this after a user pans/zooms away
 
   document.getElementById("ol-period-track").addEventListener("click", (event) => {
