@@ -356,6 +356,24 @@ function buildDiscreteColorExpression(vmin, vmax, colors, scale, nBins) {
   return expr;
 }
 
+// Like buildDiscreteColorExpression but keyed to EXPLICIT break values (the
+// data's own BoundaryNorm edges) rather than even bins: value in
+// [edges[i], edges[i+1]) -> colors[i]. Reproduces the pipeline's binned
+// anomaly maps exactly, so the legend ticks land on the real breaks.
+function buildBoundaryColorExpression(edges, colors, scale) {
+  const value = ["/", ["band", 1], scale];
+  const expr = ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0]];
+  for (let i = 0; i < colors.length; i++) {
+    const [r, g, b] = hexToRgbTriple(colors[i]);
+    if (i < colors.length - 1) {
+      expr.push(["<", value, edges[i + 1]], ["color", r, g, b]);
+    } else {
+      expr.push(["color", r, g, b]);
+    }
+  }
+  return expr;
+}
+
 // Smallest number of decimal places at which every boundary in a
 // BoundaryNorm scale formats to a distinct string -- e.g. [-0.11, -0.09,
 // ...] needs 2 decimals (1 decimal collapses both to "-0.1").
@@ -935,20 +953,26 @@ async function updateInteractiveMapLayer() {
     const span = vmax - vmin || 1;
     let gradient, tickValues;
     if (renderBinned) {
-      const bins = discreteBinColors(palette, nBins);
+      // When the data carries its own BoundaryNorm breaks (anomaly ships the
+      // full array), bins + ticks follow those EXACT breaks so the colorbar
+      // matches the pipeline and every tick sits on a break, not mid-bin.
+      // Raw/climatology ship only [vmin,vmax], so there fall back to even bins.
+      const edges = boundaries.length > 2
+        ? boundaries.slice()
+        : Array.from({ length: nBins + 1 }, (_, i) => vmin + (i / nBins) * span);
+      const bins = discreteBinColors(palette, edges.length - 1);
       const steps = [];
-      for (let i = 0; i < nBins; i++) {
-        steps.push(`${bins[i]} ${((i / nBins) * 100).toFixed(2)}%`,
-          `${bins[i]} ${(((i + 1) / nBins) * 100).toFixed(2)}%`);
+      for (let i = 0; i < bins.length; i++) {
+        const p0 = ((edges[i] - vmin) / span) * 100, p1 = ((edges[i + 1] - vmin) / span) * 100;
+        steps.push(`${bins[i]} ${p0.toFixed(2)}%`, `${bins[i]} ${p1.toFixed(2)}%`);
       }
       gradient = `linear-gradient(to right, ${steps.join(", ")})`;
-      // Label every bin edge, thinned so a high-level discrete table (16-20
-      // levels) doesn't crowd the axis.
+      // A tick on every break, thinned so a high-level scale doesn't crowd the axis.
       tickValues = [];
-      const tickStep = nBins > 12 ? 2 : 1;
-      for (let i = 0; i <= nBins; i += tickStep) tickValues.push(vmin + (i / nBins) * span);
-      if (tickValues[tickValues.length - 1] !== vmax) tickValues.push(vmax);
-      colorExpr = buildDiscreteColorExpression(vmin, vmax, palette, fileEntry.scale, nBins);
+      const tickStep = edges.length > 13 ? 2 : 1;
+      for (let i = 0; i < edges.length; i += tickStep) tickValues.push(edges[i]);
+      if (tickValues[tickValues.length - 1] !== edges[edges.length - 1]) tickValues.push(edges[edges.length - 1]);
+      colorExpr = buildBoundaryColorExpression(edges, bins, fileEntry.scale);
     } else {
       // One round-number tick roughly every 70px of the bar's actual width, so
       // a wide desktop colorbar gets a full axis and a narrow phone one stays
