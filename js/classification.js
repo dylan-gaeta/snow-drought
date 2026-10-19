@@ -136,32 +136,24 @@ function renderQuadrantChart() {
   const ymax = Math.max(...points.map((p) => Math.abs(p[y]))) * 1.12;
   const shapes = [];
   const annotations = [];
-  // Quadrant shading. On the Dierauer default pair (x = precipitation, y =
-  // temperature) the three snow-drought TYPES partition the plane exactly as
-  // classify() keys them on precipitation: adequate precip (right half) = warm;
-  // a precip deficit splits by temperature into warm & dry (upper left) and dry
-  // (lower left). The below-mean-peak-SWE gate (SWE on neither axis) decides
-  // whether a winter is a drought at all, so it is shown per point via
-  // color-by-regime + hover -- the tint only names the type a drought winter's
-  // precip/temperature would imply, never which winters are droughts. Any other
-  // axis pair has no such partition, so fall back to generic stress shading:
-  // tint each quadrant by how many axes point toward drought stress and label
-  // the fully-stressed / fully-benign corners by axis position.
+  // Quadrant corner labels (no background shading -- the panels stay white). On
+  // the Dierauer default pair (x = precipitation, y = temperature) the three
+  // snow-drought TYPES partition the plane exactly as classify() keys them on
+  // precipitation: adequate precip (right half) = warm; a precip deficit splits
+  // by temperature into warm & dry (upper left) and dry (lower left). The
+  // below-mean-peak-SWE gate (SWE on neither axis) decides whether a winter is a
+  // drought at all, so it is shown per point via color-by-regime + hover -- the
+  // corner label only names the type a drought winter's precip/temperature would
+  // imply, never which winters are droughts. Any other axis pair has no such
+  // partition, so fall back to labeling the fully-stressed / fully-benign
+  // corners by axis position.
   const dierauerPair = x === "ppt_anom" && y === "t_anom";
   if (dierauerPair) {
-    const regions = {
-      warm: [0, xmax, -ymax, ymax],
-      warm_dry: [-xmax, 0, 0, ymax],
-      dry: [-xmax, 0, -ymax, 0],
-    };
     const corners = {
       warm: [xmax, ymax, "right", "top"],
       warm_dry: [-xmax, ymax, "left", "top"],
       dry: [-xmax, -ymax, "left", "bottom"],
     };
-    Object.entries(regions).forEach(([regime, [x0, x1, y0, y1]]) => {
-      shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: REGIME_COLORS[regime], opacity: 0.13, line: { width: 0 }, layer: "below" });
-    });
     Object.entries(corners).forEach(([regime, [cx, cy, xa, ya]]) => {
       annotations.push({
         x: cx * 0.96, y: cy * 0.96, text: REGIME_LABELS[regime], showarrow: false,
@@ -172,15 +164,6 @@ function renderQuadrantChart() {
   } else {
     const sx = xMeta.stress_high ? 1 : -1;
     const sy = yMeta.stress_high ? 1 : -1;
-    const tint = { 2: "#b66a28", 1: "#f5e09e", 0: "#0570b0" };
-    [1, -1].forEach((xs) => {
-      const [x0, x1] = xs > 0 ? [0, xmax] : [-xmax, 0];
-      [1, -1].forEach((ys) => {
-        const [y0, y1] = ys > 0 ? [0, ymax] : [-ymax, 0];
-        const n = (xs === sx ? 1 : 0) + (ys === sy ? 1 : 0);
-        shapes.push({ type: "rect", x0, x1, y0, y1, fillcolor: tint[n], opacity: 0.13, line: { width: 0 }, layer: "below" });
-      });
-    });
     const sxp = sx > 0 ? xmax : -xmax;
     const syp = sy > 0 ? ymax : -ymax;
     annotations.push({
@@ -265,13 +248,13 @@ function renderQuadrantChart() {
   }
 
   const layout = {
-    margin: { t: colorBy === "regime" ? 46 : 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
+    margin: { t: colorBy === "regime" ? 70 : 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
     xaxis: { ...PLOTLY_AXIS_LINE, title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
     yaxis: { ...PLOTLY_AXIS_LINE, title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes, annotations,
     showlegend: colorBy === "regime",
-    legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0.5, xanchor: "center", font: { size: 12 } },
+    legend: { orientation: "h", y: 1.05, yanchor: "bottom", x: 0.5, xanchor: "center", font: { size: 12 } },
   };
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }

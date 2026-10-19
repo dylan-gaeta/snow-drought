@@ -149,31 +149,33 @@ const olMapState = {
   invert: false, // flip the color scale direction (legend gradient + raster)
 };
 
-// The Color theme dropdown offers the NCL tables appropriate to the current
-// mode -- diverging for Anomaly, sequential for Climatology/Raw -- plus the
-// product's own default. Repopulated when the mode changes; an override that
-// no longer fits the new mode's group resets to Default.
-// Find a theme's colors by key across all three groups (Diverging / Continuous
-// / Discrete) -- the dropdown offers every group at once, so an override isn't
-// tied to the current mode's group.
-function lookupColormapColors(key) {
+// The Color theme dropdown lists every palette at once (not filtered by mode),
+// so look these up by name across all groups. A product default named
+// "<name>_r" (reversed) is matched to its base "<name>" option plus the Invert
+// button -- the dropdown itself carries no _r variants.
+function lookupColormap(key) {
   if (typeof NCL_COLORMAPS === "undefined") return null;
-  for (const group of Object.values(NCL_COLORMAPS)) if (group[key]) return group[key].colors;
+  for (const group of Object.values(NCL_COLORMAPS)) if (group[key]) return group[key];
   return null;
 }
+function lookupColormapColors(key) {
+  const entry = lookupColormap(key);
+  return entry ? entry.colors : null;
+}
 
-const CM_THEME_LABELS = { diverging: "Diverging", sequential: "Sequential", rainbow: "Rainbow" };
+const CM_THEME_LABELS = { diverging: "Diverging", sequential: "Sequential", discrete: "Discrete" };
 
 // CSS linear-gradient preview for a palette swatch: a smooth ramp, or the same
 // 11 hard bins the map's discrete mode renders.
-function colormapGradientCss(colors, binned) {
+function colormapGradientCss(colors, binned, nBins) {
   if (!colors || !colors.length) return "transparent";
   if (!binned) return `linear-gradient(to right, ${colors.join(", ")})`;
-  const bins = discreteBinColors(colors);
+  const n = nBins || DISCRETE_BINS;
+  const bins = discreteBinColors(colors, n);
   const steps = [];
-  for (let i = 0; i < DISCRETE_BINS; i++) {
-    steps.push(`${bins[i]} ${((i / DISCRETE_BINS) * 100).toFixed(2)}%`,
-      `${bins[i]} ${(((i + 1) / DISCRETE_BINS) * 100).toFixed(2)}%`);
+  for (let i = 0; i < n; i++) {
+    steps.push(`${bins[i]} ${((i / n) * 100).toFixed(2)}%`,
+      `${bins[i]} ${(((i + 1) / n) * 100).toFixed(2)}%`);
   }
   return `linear-gradient(to right, ${steps.join(", ")})`;
 }
@@ -202,8 +204,14 @@ function populateColormapSelect() {
     if (!group) continue;
     html += `<div class="cm-theme">${themeLabel}</div>`;
     for (const name of Object.keys(group)) {
+      const entry = group[name];
+      // Native-discrete tables always preview stepped at their own level count;
+      // continuous ones follow the Continuous/Discrete toggle.
+      const swatch = entry.discrete
+        ? colormapGradientCss(entry.colors, true, entry.colors.length)
+        : colormapGradientCss(entry.colors, binned);
       html += `<button type="button" role="option" class="cm-option" data-value="${name}">` +
-        `<span class="cm-swatch" style="background:${colormapGradientCss(group[name].colors, binned)}"></span>` +
+        `<span class="cm-swatch" style="background-image:${swatch}"></span>` +
         `<span class="cm-option-name">${name}</span></button>`;
     }
   }
@@ -217,15 +225,24 @@ function populateColormapSelect() {
 function syncColormapSelect(style) {
   const panel = document.getElementById("ol-colormap-panel");
   if (!panel) return;
-  const name = olMapState.colormap || modeDefaultCmapName(style);
+  // A product default may be a reversed "<name>_r"; the dropdown carries only
+  // base names, so match (and label) by the base and let currentPalette supply
+  // the actual oriented colors -- its style-colors fallback handles reversal.
+  const rawName = activePaletteName(style);
+  const baseName = rawName ? rawName.replace(/_r$/, "") : null;
   panel.querySelectorAll(".cm-option").forEach((btn) => {
-    btn.setAttribute("aria-selected", String(btn.dataset.value === name));
+    btn.setAttribute("aria-selected", String(btn.dataset.value === baseName));
   });
-  const colors = name && lookupColormapColors(name);
+  const colors = currentPalette(style);
+  const disc = activeDiscreteEntry();
+  const swBinned = olMapState.binned || !!disc;
+  const swBins = disc ? disc.colors.length : DISCRETE_BINS;
   const sw = document.getElementById("ol-cm-current-swatch");
   const nm = document.getElementById("ol-cm-current-name");
-  if (sw) sw.style.background = colors ? colormapGradientCss(colors, olMapState.binned) : "transparent";
-  if (nm) nm.textContent = name ? (olMapState.binned ? `${name} · 11-bin` : name) : "Product default";
+  if (sw) sw.style.backgroundImage = (colors && colors.length) ? colormapGradientCss(colors, swBinned, swBins) : "none";
+  if (nm) nm.textContent = baseName
+    ? (disc ? `${baseName} · ${disc.colors.length}-level` : (olMapState.binned ? `${baseName} · 11-bin` : baseName))
+    : "Product default";
 }
 
 // The active palette's hex stops. olMapState.colormap is the user's chosen NCL
@@ -236,11 +253,32 @@ function syncColormapSelect(style) {
 function modeDefaultCmapName(style) {
   return olMapState.mode === "anomaly" ? style.anomaly_cmap : style.baseline_cmap;
 }
+// The active palette name: the user's override, else the product's own default
+// for this mode (which may be a reversed "<name>_r").
+function activePaletteName(style) {
+  return olMapState.colormap || modeDefaultCmapName(style);
+}
+// A native-discrete table auto-switches the map to stepped rendering at its own
+// level count -- but only when the user explicitly picks it. Product defaults
+// keep their exported (continuous / toggle-driven) look, so return null for them.
+function activeDiscreteEntry() {
+  if (!olMapState.colormap) return null;
+  const entry = lookupColormap(olMapState.colormap.replace(/_r$/, ""));
+  return entry && entry.discrete ? entry : null;
+}
 function currentPalette(style) {
-  const isDiverging = olMapState.mode === "anomaly";
-  const name = olMapState.colormap || modeDefaultCmapName(style);
-  const palette = (name && lookupColormapColors(name))
-    || (isDiverging ? style.anomaly_colors : style.baseline_colors);
+  let palette;
+  if (olMapState.colormap) {
+    // User override: the NCL table's own stops; a "<name>_r" override is the
+    // base reversed (the dropdown carries only base names).
+    const base = olMapState.colormap.replace(/_r$/, "");
+    palette = (lookupColormapColors(base) || []).slice();
+    if (/_r$/.test(olMapState.colormap)) palette.reverse();
+    if (!palette.length) palette = olMapState.mode === "anomaly" ? style.anomaly_colors : style.baseline_colors;
+  } else {
+    // Product default: the style's own baked colors, oriented as exported.
+    palette = olMapState.mode === "anomaly" ? style.anomaly_colors : style.baseline_colors;
+  }
   return olMapState.invert ? palette.slice().reverse() : palette;
 }
 
@@ -309,21 +347,23 @@ function buildContinuousColorExpression(vmin, vmax, colors, scale) {
 // across the palette. For a symmetric anomaly (vmin=-vmax) the odd count leaves
 // one centre bin straddling zero, matching the pipeline's own BoundaryNorm maps.
 const DISCRETE_BINS = 11;
-function discreteBinColors(colors) {
+function discreteBinColors(colors, nBins) {
+  const n = nBins || DISCRETE_BINS;
   const out = [];
-  for (let i = 0; i < DISCRETE_BINS; i++) {
-    out.push(colors[Math.round((i / (DISCRETE_BINS - 1)) * (colors.length - 1))]);
+  for (let i = 0; i < n; i++) {
+    out.push(colors[Math.round((i / (n - 1)) * (colors.length - 1))]);
   }
   return out;
 }
-function buildDiscreteColorExpression(vmin, vmax, colors, scale) {
+function buildDiscreteColorExpression(vmin, vmax, colors, scale, nBins) {
+  const n = nBins || DISCRETE_BINS;
   const value = ["/", ["band", 1], scale];
-  const bins = discreteBinColors(colors);
+  const bins = discreteBinColors(colors, n);
   const expr = ["case", ["==", ["band", 2], 0], ["color", 0, 0, 0, 0]];
-  for (let i = 0; i < DISCRETE_BINS; i++) {
+  for (let i = 0; i < n; i++) {
     const [r, g, b] = hexToRgbTriple(bins[i]);
-    if (i < DISCRETE_BINS - 1) {
-      expr.push(["<", value, vmin + ((i + 1) / DISCRETE_BINS) * (vmax - vmin)], ["color", r, g, b]);
+    if (i < n - 1) {
+      expr.push(["<", value, vmin + ((i + 1) / n) * (vmax - vmin)], ["color", r, g, b]);
     } else {
       expr.push(["color", r, g, b]); // final bin = the "case" default
     }
@@ -466,6 +506,10 @@ function initInteractiveMap() {
     updateInteractiveMapLayer();
   };
   cmPanel.addEventListener("click", (event) => {
+    // Keep in-panel clicks from reaching the document outside-click handler:
+    // the mode toggle rebuilds the panel (detaching the clicked node), which
+    // the document handler would otherwise read as an outside click and close.
+    event.stopPropagation();
     const mode = event.target.closest(".cm-mode");
     if (mode) {
       // The Continuous/Discrete toggle: auto-switches the map and re-previews
@@ -879,6 +923,11 @@ async function updateInteractiveMapLayer() {
   const units = canonicalUnit(nativeUnits);
   const unitFactor = canonicalUnitFactor(nativeUnits);
   const palette = currentPalette(style);
+  // A native-discrete palette forces stepped rendering at its own level count;
+  // a continuous palette follows the Continuous/Discrete(11-bin) toggle.
+  const discEntry = activeDiscreteEntry();
+  const nBins = discEntry ? discEntry.colors.length : DISCRETE_BINS;
+  const renderBinned = olMapState.binned || !!discEntry;
   syncColormapSelect(style); // reflect the active palette + continuous/discrete in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
   const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
@@ -894,24 +943,29 @@ async function updateInteractiveMapLayer() {
   } else {
     // Over [vmin, vmax] (Climatology/Raw ship exactly that pair; Anomaly's
     // symmetric diverging boundaries give it as [first, last]). Continuous = a
-    // smooth gradient with round-number axis ticks; Discrete = the same palette
-    // as DISCRETE_BINS hard-stop bins with ticks on the bin edges -- both in the
-    // same legend element, chosen by the one Color-theme dropdown (Dylan, 2026-10).
+    // smooth gradient with round-number axis ticks; Discrete = the palette as
+    // hard-stop bins (11 for a continuous palette in discrete mode, or a
+    // discrete table's own native level count) with ticks on the bin edges --
+    // both in the same legend element, chosen by the one Color-theme dropdown.
     const vmin = boundaries[0];
     const vmax = boundaries[boundaries.length - 1];
     const span = vmax - vmin || 1;
     let gradient, tickValues;
-    if (olMapState.binned) {
-      const bins = discreteBinColors(palette);
+    if (renderBinned) {
+      const bins = discreteBinColors(palette, nBins);
       const steps = [];
-      for (let i = 0; i < DISCRETE_BINS; i++) {
-        steps.push(`${bins[i]} ${((i / DISCRETE_BINS) * 100).toFixed(2)}%`,
-          `${bins[i]} ${(((i + 1) / DISCRETE_BINS) * 100).toFixed(2)}%`);
+      for (let i = 0; i < nBins; i++) {
+        steps.push(`${bins[i]} ${((i / nBins) * 100).toFixed(2)}%`,
+          `${bins[i]} ${(((i + 1) / nBins) * 100).toFixed(2)}%`);
       }
       gradient = `linear-gradient(to right, ${steps.join(", ")})`;
+      // Label every bin edge, thinned so a high-level discrete table (16-20
+      // levels) doesn't crowd the axis.
       tickValues = [];
-      for (let i = 0; i <= DISCRETE_BINS; i++) tickValues.push(vmin + (i / DISCRETE_BINS) * span);
-      colorExpr = buildDiscreteColorExpression(vmin, vmax, palette, fileEntry.scale);
+      const tickStep = nBins > 12 ? 2 : 1;
+      for (let i = 0; i <= nBins; i += tickStep) tickValues.push(vmin + (i / nBins) * span);
+      if (tickValues[tickValues.length - 1] !== vmax) tickValues.push(vmax);
+      colorExpr = buildDiscreteColorExpression(vmin, vmax, palette, fileEntry.scale, nBins);
     } else {
       // One round-number tick roughly every 70px of the bar's actual width, so
       // a wide desktop colorbar gets a full axis and a narrow phone one stays

@@ -8,8 +8,21 @@
 const snotelState = {
   stations: null, climatology: null, history: null, waterYears: [],
   metric: "swe", wy: null, dayIndex: 182, selected: null, stateFilter: "",
-  map: null, layer: null, dailyCache: {}, playTimer: null,
+  map: null, layer: null, dailyCache: {}, playTimer: null, palette: null,
 };
+
+// A continuous NCL palette (from ncl-colormaps.js) by name, used when the user
+// picks a colorbar instead of each metric's default stepped bins. SNOTEL offers
+// only the continuous groups (diverging + sequential), not the discrete tables,
+// since its fields are continuous quantities.
+function snotelPaletteColors(name) {
+  if (typeof NCL_COLORMAPS === "undefined") return null;
+  for (const theme of ["sequential", "diverging"]) {
+    const group = NCL_COLORMAPS[theme];
+    if (group && group[name]) return group[name].colors;
+  }
+  return null;
+}
 
 const SNOTEL_EXTENT = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
 const SNOTEL_PAN_EXTENT = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
@@ -37,6 +50,14 @@ const METRIC_SCALES = {
 function colorFor(metric, value) {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   const scale = METRIC_SCALES[metric];
+  if (snotelState.palette) {
+    const pal = snotelPaletteColors(snotelState.palette);
+    if (pal) {
+      const lo = scale.bounds[0], hi = scale.bounds[scale.bounds.length - 1];
+      const f = Math.min(1, Math.max(0, (value - lo) / (hi - lo)));
+      return pal[Math.round(f * (pal.length - 1))];
+    }
+  }
   let bin = 0;
   while (bin < scale.bounds.length - 1 && value >= scale.bounds[bin + 1]) bin++;
   return scale.colors[bin];
@@ -161,12 +182,21 @@ function renderLegend() {
   const scale = METRIC_SCALES[snotelState.metric];
   const d = dateForDay(snotelState.wy, snotelState.dayIndex);
   const when = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const label = `<span class="snotel-legend-label">${scale.label} · ${when}</span>`;
+  const pal = snotelState.palette && snotelPaletteColors(snotelState.palette);
+  if (pal) {
+    const lo = scale.bounds[0], hi = scale.bounds[scale.bounds.length - 1];
+    document.getElementById("snotel-legend").innerHTML = label +
+      `<span class="snotel-legend-cont">${lo}` +
+      `<span class="snotel-legend-bar" style="background-image:linear-gradient(to right, ${pal.join(", ")})"></span>` +
+      `${hi}</span>`;
+    return;
+  }
   const swatches = scale.colors.map((cc, i) => {
     const lo = scale.bounds[i], hi = i < scale.bounds.length - 1 ? scale.bounds[i + 1] : null;
     return `<span class="snotel-legend-item"><span class="snotel-legend-swatch" style="background:${cc}"></span>${hi === null ? "≥ " + lo : lo + "–" + hi}</span>`;
   }).join("");
-  document.getElementById("snotel-legend").innerHTML =
-    `<span class="snotel-legend-label">${scale.label} · ${when}</span>${swatches}`;
+  document.getElementById("snotel-legend").innerHTML = label + swatches;
 }
 
 // ------------------------------------------------- station detail
@@ -407,6 +437,19 @@ async function init() {
   document.getElementById("snotel-station-select").addEventListener("change", (e) => { if (e.target.value) selectStation(e.target.value); });
 
   document.getElementById("snotel-metric-select").addEventListener("change", (e) => { snotelState.metric = e.target.value; refreshMap(); });
+  const palSel = document.getElementById("snotel-palette-select");
+  if (palSel) {
+    let html = `<option value="">Default (binned)</option>`;
+    for (const [theme, lbl] of [["sequential", "Sequential"], ["diverging", "Diverging"]]) {
+      const group = typeof NCL_COLORMAPS !== "undefined" && NCL_COLORMAPS[theme];
+      if (!group) continue;
+      html += `<optgroup label="${lbl}">`;
+      for (const nm of Object.keys(group)) html += `<option value="${nm}">${nm}</option>`;
+      html += `</optgroup>`;
+    }
+    palSel.innerHTML = html;
+    palSel.addEventListener("change", (e) => { snotelState.palette = e.target.value || null; refreshMap(); });
+  }
   wySel.addEventListener("change", (e) => changeWaterYear(parseInt(e.target.value, 10)));
   const slider = document.getElementById("snotel-day-slider");
   slider.addEventListener("input", (e) => { stopPlay(); snotelState.dayIndex = parseInt(e.target.value, 10); refreshMap(); });

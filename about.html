@@ -44,14 +44,16 @@
 <main>
 
   <section id="what-this-is">
-    <h2>What this is</h2>
+    <h2>About this dashboard</h2>
     <p>
-      A public, data-forward explorer built on top of snowdrought-carbon, a
-      private NOAA Global Monitoring Laboratory / CIRES research codebase for
-      studying winter and snow drought across the Western US. This site is
-      not an official NOAA or NIDIS product, issues no forecasts, and makes
-      no causal or year-against-year claims &mdash; every chart and map is a
-      direct, descriptive read of the underlying computed values.
+      This is an open, public tool for exploring and learning from winter and
+      snow drought across the Western US &mdash; a data-exploration and
+      educational resource, first and foremost. It brings dozens of openly
+      available climate, snow, hydrology, and carbon datasets together in one
+      place and presents each as a plain, descriptive view of the numbers:
+      interactive maps, time series, seasonal cycles, and summary tables you
+      can explore, compare, and download figures from. Every chart and map is a
+      direct read of the selected variables and datasets.
     </p>
   </section>
 
@@ -100,26 +102,6 @@
         / no snow drought following Dierauer, Allen &amp; Whitfield (2019,
         <em>Water Resources Research</em>).</li>
     </ul>
-  </section>
-
-  <section id="usdm-classification">
-    <h2>U.S. Drought Monitor categories</h2>
-    <p>USDM values on this site are the drought classification (0&ndash;4,
-      corresponding to D0&ndash;D4) blended with the underlying percentile.
-      Real-world impact descriptions below are quoted directly from
-      <a href="https://www.drought.gov/explaining-drought-category-maps" target="_blank" rel="noopener">drought.gov's own category explainer</a>.</p>
-    <div style="overflow-x:auto;">
-      <table class="headline-table">
-        <thead><tr><th>Category</th><th>Percentile</th><th>Typical impacts (drought.gov)</th></tr></thead>
-        <tbody>
-          <tr><td>D0 &mdash; Abnormally Dry</td><td>20.01&ndash;30.00</td><td>Going into drought: &ldquo;short-term dryness slowing planting, growth of crops or pastures.&rdquo; Coming out of drought: &ldquo;some lingering water deficits&rdquo; and &ldquo;pastures or crops not fully recovered.&rdquo;</td></tr>
-          <tr><td>D1 &mdash; Moderate Drought</td><td>10.01&ndash;20.00</td><td>&ldquo;Some damage to crops, pastures,&rdquo; &ldquo;streams, reservoirs, or wells low, some water shortages developing or imminent,&rdquo; &ldquo;voluntary water-use restrictions requested.&rdquo;</td></tr>
-          <tr><td>D2 &mdash; Severe Drought</td><td>5.01&ndash;10.00</td><td>&ldquo;Crop or pasture losses likely,&rdquo; &ldquo;water shortages common,&rdquo; &ldquo;water restrictions imposed.&rdquo;</td></tr>
-          <tr><td>D3 &mdash; Extreme Drought</td><td>2.01&ndash;5.00</td><td>&ldquo;Major crop/pasture losses&rdquo; and &ldquo;widespread water shortages or restrictions.&rdquo;</td></tr>
-          <tr><td>D4 &mdash; Exceptional Drought</td><td>0.00&ndash;2.00</td><td>&ldquo;Exceptional and widespread crop/pasture losses&rdquo; and &ldquo;shortages of water in reservoirs, streams, and wells creating water emergencies.&rdquo;</td></tr>
-        </tbody>
-      </table>
-    </div>
   </section>
 
   <section id="observational-coverage">
@@ -194,6 +176,23 @@
         <li><strong>Geospatial processing:</strong> <a href="https://geopandas.org/" target="_blank" rel="noopener">GeoPandas</a>, <a href="https://shapely.readthedocs.io/" target="_blank" rel="noopener">Shapely</a>, <a href="https://xarray.dev/" target="_blank" rel="noopener">xarray</a>, and <a href="https://rasterio.readthedocs.io/" target="_blank" rel="noopener">rasterio</a>. State boundaries from <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>; HUC basins from the <a href="https://www.usgs.gov/national-hydrography/watershed-boundary-dataset" target="_blank" rel="noopener">USGS Watershed Boundary Dataset</a>.</li>
       </ul>
     </div>
+  </section>
+
+  <section id="disclaimers">
+    <h2>Disclaimers</h2>
+    <ul>
+      <li>This site is <strong>not an official NOAA, NIDIS, or U.S. Drought
+        Monitor product</strong>. It issues no forecasts and makes no causal or
+        year-against-year claims &mdash; every chart and map is a direct,
+        descriptive read of the selected variables and datasets.</li>
+      <li>For data access, authoritative values, complete metadata, quality
+        flags, version history, and terms of use, always defer to each
+        dataset's <strong>original provider</strong> (linked in the Datasets
+        &amp; references table above). The versions shown here are reprocessed
+        for visualization and may lag, be cropped to the Western US, differ in
+        spatial resolution, or apply different pre-processing and QA-flag
+        handling of satellite layers than the source.</li>
+    </ul>
   </section>
 
 </main>

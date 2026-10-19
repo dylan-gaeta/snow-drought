@@ -243,11 +243,7 @@ table.headline-table caption { text-align: left; font-size: 0.85rem; color: var(
 table.headline-table th, table.headline-table td {
   border-bottom: 1px solid var(--border);
   padding: 0.55em 0.75em;
-  text-align: right;
-}
-table.headline-table th:first-child, table.headline-table td:first-child,
-table.headline-table th:nth-child(2), table.headline-table td:nth-child(2) {
-  text-align: left;
+  text-align: center;
 }
 table.headline-table thead th {
   background: #eef1f5;
@@ -267,18 +263,6 @@ table.headline-table tbody tr:not(.group-row) { transition: background var(--tra
    axis "more stress" / "less stress". */
 table.headline-table td.stress { color: #955910; font-weight: 600; }
 table.headline-table td.relief { color: #0570b0; font-weight: 600; }
-
-/* Regional values tables (Time Series / Seasonal / Map): center every data
-   column and leave only the Region name left-aligned. The :nth-child(2)
-   selector ties the base rule's specificity so the raw-value column -- left
-   for the other headline tables -- centers here too. */
-table.region-values-table th, table.region-values-table td,
-table.region-values-table th:nth-child(2), table.region-values-table td:nth-child(2) {
-  text-align: center;
-}
-table.region-values-table th:first-child, table.region-values-table td:first-child {
-  text-align: left;
-}
 
 /* Shared checkbox legend: one toggle per series (Compare overlay datasets,
    Seasonal Cycle winter years). A checked box shows that series on the plot. */
@@ -689,7 +673,10 @@ table.headline-table tr.group-row td {
 }
 .cm-trigger:hover { border-color: var(--blue); }
 .cm-trigger:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-color: var(--blue); }
-.cm-swatch { flex: 0 0 auto; width: 46px; height: 14px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.12); }
+/* Longhand background-image (set inline) + no-repeat + full size so the ramp
+   fills exactly once and the end color can't wrap onto the left cap; an inset
+   hairline defines the swatch without a border that bleeds at rounded corners. */
+.cm-swatch { flex: 0 0 auto; width: 46px; height: 14px; border-radius: 3px; background-repeat: no-repeat; background-size: 100% 100%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .cm-trigger-name { flex: 1 1 auto; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem; }
 .cm-caret { flex: 0 0 auto; color: var(--text-muted); font-size: 0.7rem; }
 .cm-panel {
@@ -1201,6 +1188,8 @@ table.headline-table tr.group-row td {
 .snotel-legend-label { font-weight: 600; color: var(--text); margin-right: 0.3rem; flex-basis: 100%; }
 .snotel-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; }
 .snotel-legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
+.snotel-legend-cont { display: inline-flex; align-items: center; gap: 0.4rem; font-variant-numeric: tabular-nums; }
+.snotel-legend-bar { display: inline-block; width: 200px; height: 14px; border-radius: 3px; background-repeat: no-repeat; background-size: 100% 100%; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2); }
 
 /* SNOTEL day slider: scrub through the snow season (Oct 1 -> Sep 30). */
 .snotel-day-row { align-items: center; gap: 0.6rem; }

@@ -1,10 +1,12 @@
-// NCL / matplotlib (MPL_*) color tables from the UCAR NCL color-table gallery
-// (https://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml),
-// sampled 33 stops each from the open-source `cmaps` package. GENERATED --
-// regenerate from cmaps, do not hand-edit. Grouped diverging / sequential /
-// rainbow; the sequential group is ordered by hue (warm -> green -> blue ->
-// purple -> grayscale). The Map Color-theme popover shows each as a gradient
-// swatch, once, with a Continuous/Discrete(11-bin) toggle at top.
+// NCL / matplotlib (MPL_*) color tables from the UCAR NCL color-table gallery,
+// via the open-source `cmaps` package. GENERATED -- regenerate from cmaps, do
+// not hand-edit. Three groups: diverging and sequential are smooth continuous
+// ramps (33 sampled stops, hue-sorted, rainbow tables at the end of sequential);
+// discrete tables (precip_diff_12lev, CBR_wet, ...) carry their NATIVE stepped
+// levels and a discrete:true flag -- the map renders them at that native bin
+// count (not forced to 11) and the swatch shows them stepped. No _r reverse
+// variants (the Invert button handles reversal). The Map/SNOTEL Color-theme
+// popovers read these groups directly.
 const NCL_COLORMAPS = {
   "diverging": {
     "BlWhRe": {
@@ -83,158 +85,6 @@ const NCL_COLORMAPS = {
         "#921519"
       ]
     },
-    "BlueWhiteOrangeRed_r": {
-      "label": "BlueWhiteOrangeRed_r",
-      "colors": [
-        "#921519",
-        "#a8181e",
-        "#bd1c23",
-        "#d31f28",
-        "#e03b28",
-        "#eb5429",
-        "#f6702a",
-        "#f9872d",
-        "#fc9f30",
-        "#feb73f",
-        "#fdcb62",
-        "#fcdf85",
-        "#fdeeac",
-        "#fef5cd",
-        "#fffcee",
-        "#ffffff",
-        "#ffffff",
-        "#ffffff",
-        "#f7fcfe",
-        "#e9f6fc",
-        "#dcf1fa",
-        "#c9eaf9",
-        "#b5e3f8",
-        "#a2dcf7",
-        "#89caee",
-        "#71b8e4",
-        "#5aa6d9",
-        "#468bc8",
-        "#3572b7",
-        "#2459a7",
-        "#21488d",
-        "#1e3976",
-        "#1b2c62"
-      ]
-    },
-    "GreenMagenta16_r": {
-      "label": "GreenMagenta16_r",
-      "colors": [
-        "#500050",
-        "#500050",
-        "#860086",
-        "#860086",
-        "#bb00bb",
-        "#bb00bb",
-        "#f100f1",
-        "#f100f1",
-        "#ff50ff",
-        "#ff50ff",
-        "#ff86ff",
-        "#ff86ff",
-        "#ffbbff",
-        "#ffbbff",
-        "#fff1ff",
-        "#fff1ff",
-        "#ffffff",
-        "#ffffff",
-        "#bbffbb",
-        "#bbffbb",
-        "#86ff86",
-        "#86ff86",
-        "#50ff50",
-        "#50ff50",
-        "#00f100",
-        "#00f100",
-        "#00bb00",
-        "#00bb00",
-        "#008600",
-        "#008600",
-        "#005000",
-        "#005000",
-        "#005000"
-      ]
-    },
-    "GMT_drywet": {
-      "label": "GMT_drywet",
-      "colors": [
-        "#8b662d",
-        "#967033",
-        "#aa853e",
-        "#bf994a",
-        "#d4ad55",
-        "#e9c261",
-        "#e5cd69",
-        "#dad570",
-        "#cedc77",
-        "#c8e07b",
-        "#bde882",
-        "#adee8c",
-        "#93eea0",
-        "#7aeeb4",
-        "#60eec8",
-        "#45eedc",
-        "#30e8eb",
-        "#2cdceb",
-        "#25c5ec",
-        "#1daded",
-        "#1696ed",
-        "#0e7eee",
-        "#1066e6",
-        "#154edb",
-        "#1a37d0",
-        "#1d2bca",
-        "#2213bf",
-        "#2403b4",
-        "#1f0da6",
-        "#181898",
-        "#12228a",
-        "#0d2b7c",
-        "#0a3075"
-      ]
-    },
-    "GMT_polar": {
-      "label": "GMT_polar",
-      "colors": [
-        "#0d0dff",
-        "#0d0dff",
-        "#2626ff",
-        "#2626ff",
-        "#4040ff",
-        "#5959ff",
-        "#5959ff",
-        "#7373ff",
-        "#8c8cff",
-        "#8c8cff",
-        "#a6a6ff",
-        "#a6a6ff",
-        "#bfbfff",
-        "#d9d9ff",
-        "#d9d9ff",
-        "#f2f2ff",
-        "#fff2f2",
-        "#fff2f2",
-        "#ffd9d9",
-        "#ffd9d9",
-        "#ffbfbf",
-        "#ffa6a6",
-        "#ffa6a6",
-        "#ff8c8c",
-        "#ff7373",
-        "#ff7373",
-        "#ff5959",
-        "#ff5959",
-        "#ff4040",
-        "#ff2626",
-        "#ff2626",
-        "#ff0d0d",
-        "#ff0d0d"
-      ]
-    },
     "MPL_BrBG": {
       "label": "MPL_BrBG",
       "colors": [
@@ -271,44 +121,6 @@ const NCL_COLORMAPS = {
         "#015349",
         "#00463b",
         "#003c30"
-      ]
-    },
-    "MPL_BrBG_r": {
-      "label": "MPL_BrBG_r",
-      "colors": [
-        "#003c30",
-        "#004b40",
-        "#01564d",
-        "#01645b",
-        "#0e726a",
-        "#21847c",
-        "#2f9189",
-        "#44a299",
-        "#5bb3a8",
-        "#76c6ba",
-        "#8ad1c6",
-        "#a0dad1",
-        "#b6e3dd",
-        "#ccebe7",
-        "#d9eeeb",
-        "#e7f2f0",
-        "#f5f5f4",
-        "#f5f1e4",
-        "#f6edd5",
-        "#f6e9c5",
-        "#f0deb0",
-        "#e8d29a",
-        "#e1c684",
-        "#d8b46c",
-        "#cea053",
-        "#c48b3a",
-        "#b77928",
-        "#a76a1d",
-        "#955910",
-        "#844c09",
-        "#754308",
-        "#633906",
-        "#563105"
       ]
     },
     "MPL_coolwarm": {
@@ -577,44 +389,6 @@ const NCL_COLORMAPS = {
         "#006837"
       ]
     },
-    "MPL_Spectral": {
-      "label": "MPL_Spectral",
-      "colors": [
-        "#09000b",
-        "#540060",
-        "#7d008e",
-        "#870098",
-        "#3800a3",
-        "#0000b5",
-        "#0000d5",
-        "#0038dd",
-        "#007add",
-        "#0090dd",
-        "#009fcb",
-        "#00aaab",
-        "#00aa95",
-        "#00a668",
-        "#009b13",
-        "#00aa00",
-        "#00bf00",
-        "#00d400",
-        "#00ea00",
-        "#00ff00",
-        "#75ff00",
-        "#c8fb00",
-        "#e8f000",
-        "#f7dd00",
-        "#ffc500",
-        "#ffa500",
-        "#ff5d00",
-        "#fe0000",
-        "#e90000",
-        "#d80000",
-        "#ce0000",
-        "#cc6c6c",
-        "#cccccc"
-      ]
-    },
     "NCV_blu_red": {
       "label": "NCV_blu_red",
       "colors": [
@@ -651,82 +425,6 @@ const NCL_COLORMAPS = {
         "#ac0025",
         "#940029",
         "#7f002a"
-      ]
-    },
-    "precip_diff_12lev": {
-      "label": "precip_diff_12lev",
-      "colors": [
-        "#b66a28",
-        "#b66a28",
-        "#b66a28",
-        "#cd853f",
-        "#cd853f",
-        "#e1a564",
-        "#e1a564",
-        "#e1a564",
-        "#f5cd84",
-        "#f5cd84",
-        "#f5e09e",
-        "#f5e09e",
-        "#f5e09e",
-        "#fff5ba",
-        "#fff5ba",
-        "#ffffff",
-        "#ffffff",
-        "#ffffff",
-        "#cdffcd",
-        "#cdffcd",
-        "#99f0b2",
-        "#99f0b2",
-        "#99f0b2",
-        "#53bd9f",
-        "#53bd9f",
-        "#6eaac8",
-        "#6eaac8",
-        "#6eaac8",
-        "#0570b0",
-        "#0570b0",
-        "#023858",
-        "#023858",
-        "#023858"
-      ]
-    },
-    "precip3_16lev": {
-      "label": "precip3_16lev",
-      "colors": [
-        "#ffffff",
-        "#ffffff",
-        "#d6e2ff",
-        "#d6e2ff",
-        "#b5c9ff",
-        "#b5c9ff",
-        "#8eb2ff",
-        "#8eb2ff",
-        "#7f96ff",
-        "#7f96ff",
-        "#6370f7",
-        "#6370f7",
-        "#0063ff",
-        "#0063ff",
-        "#009696",
-        "#009696",
-        "#00c633",
-        "#63ff00",
-        "#63ff00",
-        "#96ff00",
-        "#96ff00",
-        "#c6ff33",
-        "#c6ff33",
-        "#ffff00",
-        "#ffff00",
-        "#ffc600",
-        "#ffc600",
-        "#ffa000",
-        "#ffa000",
-        "#ff7c00",
-        "#ff7c00",
-        "#ff1900",
-        "#ff1900"
       ]
     }
   },
@@ -1491,44 +1189,6 @@ const NCL_COLORMAPS = {
         "#08306b"
       ]
     },
-    "CBR_wet": {
-      "label": "CBR_wet",
-      "colors": [
-        "#ffffff",
-        "#ffffff",
-        "#ffffff",
-        "#f7fcf0",
-        "#f7fcf0",
-        "#f7fcf0",
-        "#e0f3db",
-        "#e0f3db",
-        "#e0f3db",
-        "#ccebc5",
-        "#ccebc5",
-        "#ccebc5",
-        "#a8ddb5",
-        "#a8ddb5",
-        "#a8ddb5",
-        "#7bccc4",
-        "#7bccc4",
-        "#7bccc4",
-        "#4eb3d3",
-        "#4eb3d3",
-        "#4eb3d3",
-        "#2b8cbe",
-        "#2b8cbe",
-        "#2b8cbe",
-        "#0868ac",
-        "#0868ac",
-        "#0868ac",
-        "#084081",
-        "#084081",
-        "#084081",
-        "#00203e",
-        "#00203e",
-        "#00203e"
-      ]
-    },
     "WhiteBlue": {
       "label": "WhiteBlue",
       "colors": [
@@ -1984,9 +1644,45 @@ const NCL_COLORMAPS = {
         "#ece51b",
         "#fde725"
       ]
-    }
-  },
-  "rainbow": {
+    },
+    "GMT_drywet": {
+      "label": "GMT_drywet",
+      "colors": [
+        "#8b662d",
+        "#967033",
+        "#aa853e",
+        "#bf994a",
+        "#d4ad55",
+        "#e9c261",
+        "#e5cd69",
+        "#dad570",
+        "#cedc77",
+        "#c8e07b",
+        "#bde882",
+        "#adee8c",
+        "#93eea0",
+        "#7aeeb4",
+        "#60eec8",
+        "#45eedc",
+        "#30e8eb",
+        "#2cdceb",
+        "#25c5ec",
+        "#1daded",
+        "#1696ed",
+        "#0e7eee",
+        "#1066e6",
+        "#154edb",
+        "#1a37d0",
+        "#1d2bca",
+        "#2213bf",
+        "#2403b4",
+        "#1f0da6",
+        "#181898",
+        "#12228a",
+        "#0d2b7c",
+        "#0a3075"
+      ]
+    },
     "MPL_jet": {
       "label": "MPL_jet",
       "colors": [
@@ -2138,6 +1834,153 @@ const NCL_COLORMAPS = {
         "#ff003b",
         "#ff0018"
       ]
+    },
+    "MPL_Spectral": {
+      "label": "MPL_Spectral",
+      "colors": [
+        "#09000b",
+        "#540060",
+        "#7d008e",
+        "#870098",
+        "#3800a3",
+        "#0000b5",
+        "#0000d5",
+        "#0038dd",
+        "#007add",
+        "#0090dd",
+        "#009fcb",
+        "#00aaab",
+        "#00aa95",
+        "#00a668",
+        "#009b13",
+        "#00aa00",
+        "#00bf00",
+        "#00d400",
+        "#00ea00",
+        "#00ff00",
+        "#75ff00",
+        "#c8fb00",
+        "#e8f000",
+        "#f7dd00",
+        "#ffc500",
+        "#ffa500",
+        "#ff5d00",
+        "#fe0000",
+        "#e90000",
+        "#d80000",
+        "#ce0000",
+        "#cc6c6c",
+        "#cccccc"
+      ]
+    }
+  },
+  "discrete": {
+    "CBR_wet": {
+      "label": "CBR_wet",
+      "colors": [
+        "#ffffff",
+        "#f7fcf0",
+        "#e0f3db",
+        "#ccebc5",
+        "#a8ddb5",
+        "#7bccc4",
+        "#4eb3d3",
+        "#2b8cbe",
+        "#0868ac",
+        "#084081",
+        "#00203e"
+      ],
+      "discrete": true
+    },
+    "precip_diff_12lev": {
+      "label": "precip_diff_12lev",
+      "colors": [
+        "#b66a28",
+        "#cd853f",
+        "#e1a564",
+        "#f5cd84",
+        "#f5e09e",
+        "#fff5ba",
+        "#ffffff",
+        "#cdffcd",
+        "#99f0b2",
+        "#53bd9f",
+        "#6eaac8",
+        "#0570b0",
+        "#023858"
+      ],
+      "discrete": true
+    },
+    "GreenMagenta16": {
+      "label": "GreenMagenta16",
+      "colors": [
+        "#005000",
+        "#008600",
+        "#00bb00",
+        "#00f100",
+        "#50ff50",
+        "#86ff86",
+        "#bbffbb",
+        "#ffffff",
+        "#fff1ff",
+        "#ffbbff",
+        "#ff86ff",
+        "#ff50ff",
+        "#f100f1",
+        "#bb00bb",
+        "#860086",
+        "#500050"
+      ],
+      "discrete": true
+    },
+    "precip3_16lev": {
+      "label": "precip3_16lev",
+      "colors": [
+        "#ffffff",
+        "#d6e2ff",
+        "#b5c9ff",
+        "#8eb2ff",
+        "#7f96ff",
+        "#6370f7",
+        "#0063ff",
+        "#009696",
+        "#00c633",
+        "#63ff00",
+        "#96ff00",
+        "#c6ff33",
+        "#ffff00",
+        "#ffc600",
+        "#ffa000",
+        "#ff7c00",
+        "#ff1900"
+      ],
+      "discrete": true
+    },
+    "GMT_polar": {
+      "label": "GMT_polar",
+      "colors": [
+        "#0d0dff",
+        "#2626ff",
+        "#4040ff",
+        "#5959ff",
+        "#7373ff",
+        "#8c8cff",
+        "#a6a6ff",
+        "#bfbfff",
+        "#d9d9ff",
+        "#f2f2ff",
+        "#fff2f2",
+        "#ffd9d9",
+        "#ffbfbf",
+        "#ffa6a6",
+        "#ff8c8c",
+        "#ff7373",
+        "#ff5959",
+        "#ff4040",
+        "#ff2626",
+        "#ff0d0d"
+      ],
+      "discrete": true
     }
   }
 };
