@@ -162,39 +162,65 @@ function lookupColormapColors(key) {
   return null;
 }
 
-// One dropdown, two groups: every NCL table as a Continuous (smooth ramp) OR
-// Discrete (11-bin) option -- picking a Discrete one auto-switches the map to
-// hard bins, same palette (Dylan, 2026-10: "both discrete and continuous
-// colorbars on the same dataset from just one dropdown"). Option value encodes
-// both: "cont:<name>" / "disc:<name>". The list is static (same for every mode/
-// product); the current product's own default is selected per-render by
-// syncColormapSelect, so there is no generic "Default (product)" placeholder.
-function allColormapNames() {
-  const names = [];
-  if (typeof NCL_COLORMAPS !== "undefined") {
-    for (const group of Object.values(NCL_COLORMAPS)) for (const k of Object.keys(group)) names.push(k);
+const CM_THEME_LABELS = { diverging: "Diverging", sequential: "Sequential", rainbow: "Rainbow" };
+
+// CSS linear-gradient preview for a palette swatch: a smooth ramp, or the same
+// 11 hard bins the map's discrete mode renders.
+function colormapGradientCss(colors, binned) {
+  if (!colors || !colors.length) return "transparent";
+  if (!binned) return `linear-gradient(to right, ${colors.join(", ")})`;
+  const bins = discreteBinColors(colors);
+  const steps = [];
+  for (let i = 0; i < DISCRETE_BINS; i++) {
+    steps.push(`${bins[i]} ${((i / DISCRETE_BINS) * 100).toFixed(2)}%`,
+      `${bins[i]} ${(((i + 1) / DISCRETE_BINS) * 100).toFixed(2)}%`);
   }
-  return names;
-}
-function populateColormapSelect() {
-  const sel = document.getElementById("ol-colormap-select");
-  if (!sel || typeof NCL_COLORMAPS === "undefined") return;
-  const opts = (kind) => allColormapNames().map((k) => `<option value="${kind}:${k}">${k}</option>`).join("");
-  sel.innerHTML =
-    `<optgroup label="Continuous">${opts("cont")}</optgroup>` +
-    `<optgroup label="Discrete (11-bin)">${opts("disc")}</optgroup>`;
+  return `linear-gradient(to right, ${steps.join(", ")})`;
 }
 
-// Highlight whichever option the current view resolves to: the user's chosen
-// palette if any, else this product/mode's own default (modeDefaultCmapName).
-// Leaves the dropdown unset only for a default with no NCL match (USDM's
-// discrete category legend), which still renders from its own style colors.
+// Build the custom colour-theme panel: two render-mode sections (Continuous /
+// Discrete 11-bin), each thematically grouped (diverging / sequential /
+// rainbow), every entry a gradient swatch + name. Picking a Discrete option IS
+// the continuous-vs-discrete switch (Dylan, 2026-10). Option value =
+// "cont:<name>" / "disc:<name>". Static -- built once; the active entry is
+// marked per-render by syncColormapSelect.
+function populateColormapSelect() {
+  const panel = document.getElementById("ol-colormap-panel");
+  if (!panel || typeof NCL_COLORMAPS === "undefined") return;
+  const row = (kind, name, colors) =>
+    `<button type="button" role="option" class="cm-option" data-value="${kind}:${name}">` +
+    `<span class="cm-swatch" style="background:${colormapGradientCss(colors, kind === "disc")}"></span>` +
+    `<span class="cm-option-name">${name}</span></button>`;
+  let html = "";
+  for (const [kind, kindLabel] of [["cont", "Continuous"], ["disc", "Discrete (11-bin)"]]) {
+    html += `<div class="cm-section">${kindLabel}</div>`;
+    for (const [theme, themeLabel] of Object.entries(CM_THEME_LABELS)) {
+      const group = NCL_COLORMAPS[theme];
+      if (!group) continue;
+      html += `<div class="cm-theme">${themeLabel}</div>`;
+      for (const name of Object.keys(group)) html += row(kind, name, group[name].colors);
+    }
+  }
+  panel.innerHTML = html;
+}
+
+// Reflect the active view in the trigger (swatch + name) and the highlighted
+// option. Active = the user's chosen palette, else this product/mode's own
+// default (modeDefaultCmapName); a default with no NCL match (USDM's discrete
+// category legend) shows as "Product default" and still renders from its style.
 function syncColormapSelect(style) {
-  const sel = document.getElementById("ol-colormap-select");
-  if (!sel) return;
+  const panel = document.getElementById("ol-colormap-panel");
+  if (!panel) return;
   const name = olMapState.colormap || modeDefaultCmapName(style);
-  const want = `${olMapState.binned ? "disc" : "cont"}:${name}`;
-  sel.value = name && sel.querySelector(`option[value="${window.CSS ? CSS.escape(want) : want}"]`) ? want : "";
+  const want = name ? `${olMapState.binned ? "disc" : "cont"}:${name}` : null;
+  panel.querySelectorAll(".cm-option").forEach((btn) => {
+    btn.setAttribute("aria-selected", String(btn.dataset.value === want));
+  });
+  const colors = name && lookupColormapColors(name);
+  const sw = document.getElementById("ol-cm-current-swatch");
+  const nm = document.getElementById("ol-cm-current-name");
+  if (sw) sw.style.background = colors ? colormapGradientCss(colors, olMapState.binned) : "transparent";
+  if (nm) nm.textContent = name ? (olMapState.binned ? `${name} · 11-bin` : name) : "Product default";
 }
 
 // The active palette's hex stops. olMapState.colormap is the user's chosen NCL
@@ -413,19 +439,38 @@ function initInteractiveMap() {
     updateInteractiveMapLayer(); // re-syncs the colour-theme selection to the new mode's default
 
   });
-  document.getElementById("ol-colormap-select").addEventListener("change", (event) => {
-    const val = event.target.value || "";
+  const cmDd = document.getElementById("ol-colormap-dd");
+  const cmBtn = document.getElementById("ol-colormap-btn");
+  const cmPanel = document.getElementById("ol-colormap-panel");
+  const closeColormapPanel = () => { cmPanel.hidden = true; cmBtn.setAttribute("aria-expanded", "false"); };
+  cmBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const opening = cmPanel.hidden;
+    cmPanel.hidden = !opening;
+    cmBtn.setAttribute("aria-expanded", String(opening));
+    if (opening) {
+      const active = cmPanel.querySelector('.cm-option[aria-selected="true"]');
+      if (active) active.scrollIntoView({ block: "center" });
+    }
+  });
+  cmPanel.addEventListener("click", (event) => {
+    const opt = event.target.closest(".cm-option");
+    if (!opt) return;
+    const val = opt.dataset.value || "";
     const i = val.indexOf(":");
     // "cont:<name>" / "disc:<name>" -- the group chosen IS the continuous-vs-
     // discrete switch, so picking a Discrete option auto-bins the map.
     olMapState.binned = val.slice(0, i) === "disc";
     olMapState.colormap = i >= 0 ? val.slice(i + 1) : null;
+    closeColormapPanel();
     // Palette + binning are baked into each cached WebGLTile color style at
     // construction, so a change needs fresh layers (COG bytes stay HTTP-cached).
     if (olMapState.rasterLayer) { olMapState.map.removeLayer(olMapState.rasterLayer); olMapState.rasterLayer = null; }
     olMapState.layerCache = {};
     updateInteractiveMapLayer();
   });
+  document.addEventListener("click", (event) => { if (cmDd && !cmDd.contains(event.target)) closeColormapPanel(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeColormapPanel(); });
   document.getElementById("ol-invert-btn").addEventListener("click", (event) => {
     olMapState.invert = !olMapState.invert;
     event.currentTarget.classList.toggle("active", olMapState.invert);

@@ -1,11 +1,10 @@
 // NCL / matplotlib (MPL_*) color tables from the UCAR NCL color-table gallery
 // (https://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml),
-// sampled 33 evenly-spaced stops each from the open-source `cmaps` package
-// (which mirrors that gallery). GENERATED -- do not hand-edit; regenerate from
-// cmaps. Drives the Map page Color theme dropdown (grouped Diverging /
-// Continuous). The map DEFAULT uses each product's own 256-stop style palette
-// (data/map_styles/*.json); these are the user-selectable overrides + the named
-// options the dropdown pre-selects the default against.
+// sampled 33 stops each from the open-source `cmaps` package (mirrors that
+// gallery). GENERATED -- regenerate from cmaps, do not hand-edit. Grouped by
+// THEME (diverging / sequential / rainbow); the Map Color-theme dropdown shows
+// each as a gradient swatch under Continuous + Discrete (11-bin) sections. The
+// map DEFAULT uses each product's own 256-stop style palette.
 const NCL_COLORMAPS = {
   "diverging": {
     "BlueWhiteOrangeRed": {
@@ -731,7 +730,7 @@ const NCL_COLORMAPS = {
       ]
     }
   },
-  "continuous": {
+  "sequential": {
     "CBR_wet": {
       "label": "CBR_wet",
       "colors": [
@@ -1112,82 +1111,6 @@ const NCL_COLORMAPS = {
         "#ffffff"
       ]
     },
-    "MPL_gist_ncar": {
-      "label": "MPL_gist_ncar",
-      "colors": [
-        "#000777",
-        "#00422b",
-        "#004448",
-        "#000ecd",
-        "#0055ff",
-        "#00c0ff",
-        "#00e5ff",
-        "#00fede",
-        "#00faaa",
-        "#00fc5e",
-        "#0dff0b",
-        "#40e100",
-        "#6ad800",
-        "#7af200",
-        "#96ff1c",
-        "#bbff3c",
-        "#dfff1c",
-        "#fff500",
-        "#ffe100",
-        "#ffce05",
-        "#ffba0e",
-        "#ff7807",
-        "#ff3e00",
-        "#ff1800",
-        "#ff0058",
-        "#ff00e6",
-        "#cf18ff",
-        "#a439fd",
-        "#d468f3",
-        "#ee92f1",
-        "#f4b7f5",
-        "#fadcfa",
-        "#fef8fe"
-      ]
-    },
-    "MPL_gist_rainbow": {
-      "label": "MPL_gist_rainbow",
-      "colors": [
-        "#ff0023",
-        "#ff0700",
-        "#ff3300",
-        "#ff5e00",
-        "#ff8900",
-        "#ffb400",
-        "#ffe000",
-        "#f3ff00",
-        "#c8ff00",
-        "#9dff00",
-        "#72ff00",
-        "#46ff00",
-        "#1bff00",
-        "#00ff10",
-        "#00ff3b",
-        "#00ff66",
-        "#00ff91",
-        "#00ffbc",
-        "#00ffe7",
-        "#00ecff",
-        "#00c0ff",
-        "#0095ff",
-        "#0069ff",
-        "#003eff",
-        "#0012ff",
-        "#1900ff",
-        "#4500ff",
-        "#7000ff",
-        "#9c00ff",
-        "#c700ff",
-        "#f300ff",
-        "#ff00e0",
-        "#ff00bf"
-      ]
-    },
     "MPL_GnBu": {
       "label": "MPL_GnBu",
       "colors": [
@@ -1338,82 +1261,6 @@ const NCL_COLORMAPS = {
         "#ffffc8",
         "#ffffe7",
         "#ffffff"
-      ]
-    },
-    "MPL_hsv": {
-      "label": "MPL_hsv",
-      "colors": [
-        "#ff0600",
-        "#ff3500",
-        "#ff6400",
-        "#ff9400",
-        "#ffc300",
-        "#fef100",
-        "#ddff00",
-        "#adff00",
-        "#7eff00",
-        "#4fff00",
-        "#20ff00",
-        "#00ff10",
-        "#00ff3f",
-        "#00ff6e",
-        "#00ff9d",
-        "#00ffcd",
-        "#00fffc",
-        "#00d3ff",
-        "#00a4ff",
-        "#0074ff",
-        "#0045ff",
-        "#0016ff",
-        "#1900ff",
-        "#4900ff",
-        "#7800ff",
-        "#a700ff",
-        "#d600ff",
-        "#fc00f5",
-        "#ff00c9",
-        "#ff009a",
-        "#ff006b",
-        "#ff003b",
-        "#ff0018"
-      ]
-    },
-    "MPL_jet": {
-      "label": "MPL_jet",
-      "colors": [
-        "#000084",
-        "#0000a8",
-        "#0000cd",
-        "#0000f1",
-        "#0004ff",
-        "#0024ff",
-        "#0044ff",
-        "#0065ff",
-        "#0085ff",
-        "#00a4ff",
-        "#00c4ff",
-        "#00e4f8",
-        "#19ffde",
-        "#33ffc4",
-        "#4dffaa",
-        "#66ff90",
-        "#80ff77",
-        "#9aff5d",
-        "#b4ff43",
-        "#ceff29",
-        "#e7ff0f",
-        "#ffea00",
-        "#ffcc00",
-        "#ffae00",
-        "#ff9100",
-        "#ff7300",
-        "#ff5500",
-        "#ff3800",
-        "#ff1a00",
-        "#e40000",
-        "#bf0000",
-        "#9b0000",
-        "#800000"
       ]
     },
     "MPL_ocean": {
@@ -2136,6 +1983,160 @@ const NCL_COLORMAPS = {
         "#a6181e",
         "#9c171b",
         "#921519"
+      ]
+    }
+  },
+  "rainbow": {
+    "MPL_gist_ncar": {
+      "label": "MPL_gist_ncar",
+      "colors": [
+        "#000777",
+        "#00422b",
+        "#004448",
+        "#000ecd",
+        "#0055ff",
+        "#00c0ff",
+        "#00e5ff",
+        "#00fede",
+        "#00faaa",
+        "#00fc5e",
+        "#0dff0b",
+        "#40e100",
+        "#6ad800",
+        "#7af200",
+        "#96ff1c",
+        "#bbff3c",
+        "#dfff1c",
+        "#fff500",
+        "#ffe100",
+        "#ffce05",
+        "#ffba0e",
+        "#ff7807",
+        "#ff3e00",
+        "#ff1800",
+        "#ff0058",
+        "#ff00e6",
+        "#cf18ff",
+        "#a439fd",
+        "#d468f3",
+        "#ee92f1",
+        "#f4b7f5",
+        "#fadcfa",
+        "#fef8fe"
+      ]
+    },
+    "MPL_gist_rainbow": {
+      "label": "MPL_gist_rainbow",
+      "colors": [
+        "#ff0023",
+        "#ff0700",
+        "#ff3300",
+        "#ff5e00",
+        "#ff8900",
+        "#ffb400",
+        "#ffe000",
+        "#f3ff00",
+        "#c8ff00",
+        "#9dff00",
+        "#72ff00",
+        "#46ff00",
+        "#1bff00",
+        "#00ff10",
+        "#00ff3b",
+        "#00ff66",
+        "#00ff91",
+        "#00ffbc",
+        "#00ffe7",
+        "#00ecff",
+        "#00c0ff",
+        "#0095ff",
+        "#0069ff",
+        "#003eff",
+        "#0012ff",
+        "#1900ff",
+        "#4500ff",
+        "#7000ff",
+        "#9c00ff",
+        "#c700ff",
+        "#f300ff",
+        "#ff00e0",
+        "#ff00bf"
+      ]
+    },
+    "MPL_hsv": {
+      "label": "MPL_hsv",
+      "colors": [
+        "#ff0600",
+        "#ff3500",
+        "#ff6400",
+        "#ff9400",
+        "#ffc300",
+        "#fef100",
+        "#ddff00",
+        "#adff00",
+        "#7eff00",
+        "#4fff00",
+        "#20ff00",
+        "#00ff10",
+        "#00ff3f",
+        "#00ff6e",
+        "#00ff9d",
+        "#00ffcd",
+        "#00fffc",
+        "#00d3ff",
+        "#00a4ff",
+        "#0074ff",
+        "#0045ff",
+        "#0016ff",
+        "#1900ff",
+        "#4900ff",
+        "#7800ff",
+        "#a700ff",
+        "#d600ff",
+        "#fc00f5",
+        "#ff00c9",
+        "#ff009a",
+        "#ff006b",
+        "#ff003b",
+        "#ff0018"
+      ]
+    },
+    "MPL_jet": {
+      "label": "MPL_jet",
+      "colors": [
+        "#000084",
+        "#0000a8",
+        "#0000cd",
+        "#0000f1",
+        "#0004ff",
+        "#0024ff",
+        "#0044ff",
+        "#0065ff",
+        "#0085ff",
+        "#00a4ff",
+        "#00c4ff",
+        "#00e4f8",
+        "#19ffde",
+        "#33ffc4",
+        "#4dffaa",
+        "#66ff90",
+        "#80ff77",
+        "#9aff5d",
+        "#b4ff43",
+        "#ceff29",
+        "#e7ff0f",
+        "#ffea00",
+        "#ffcc00",
+        "#ffae00",
+        "#ff9100",
+        "#ff7300",
+        "#ff5500",
+        "#ff3800",
+        "#ff1a00",
+        "#e40000",
+        "#bf0000",
+        "#9b0000",
+        "#800000"
       ]
     }
   }
