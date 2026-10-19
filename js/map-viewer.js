@@ -143,7 +143,6 @@ const olMapState = {
   styleCache: {},
   layerCache: {}, // COG url -> built ol.layer.WebGLTile, reused across mode/period/year revisits
   currentStyle: null,
-  currentCogUrl: null,
   currentScale: null,
   colormap: null, // null = the product's own NCL palette; else an NCL_COLORMAPS key
   invert: false, // flip the color scale direction (legend gradient + raster)
@@ -421,9 +420,6 @@ function initInteractiveMap() {
     setTimeout(() => olMapState.map.updateSize(), 0);
   });
   document.getElementById("ol-screenshot-btn").addEventListener("click", takeMapScreenshot);
-  document.getElementById("ol-copy-url-btn").addEventListener("click", () => {
-    if (olMapState.currentCogUrl) copyToClipboard(new URL(olMapState.currentCogUrl, window.location.href).href);
-  });
   document.getElementById("ol-copy-view-btn").addEventListener("click", copyViewLink);
 
   olMapState.map.on("singleclick", (event) => {
@@ -683,17 +679,12 @@ async function updateInteractiveMapLayer() {
     // Same staleness for the controls that live outside #ol-map-wrap (so
     // hiding the map alone doesn't hide them): mode buttons kept the
     // previous product's enabled/disabled state, the year control kept its
-    // previous range, and the download/copy actions still pointed at the
-    // previous product's file.
+    // previous range.
     document.querySelectorAll("#ol-mode-toggle button[data-mode]").forEach((btn) => {
       btn.disabled = true;
       btn.title = "No data for this selection.";
     });
     document.getElementById("ol-year-control-wrap").style.display = "none";
-    olMapState.currentCogUrl = null;
-    const geotiffLink = document.getElementById("ol-geotiff-link");
-    geotiffLink.removeAttribute("href");
-    geotiffLink.removeAttribute("download");
     return;
   }
   const slot = style.periods[olMapState.period];
@@ -706,13 +697,6 @@ async function updateInteractiveMapLayer() {
     wrap.style.display = "none";
     emptyMsg.style.display = "block";
     document.getElementById("ol-legend").innerHTML = "";
-    // Mode buttons/slider were already set correctly for this slot above,
-    // but the download/copy actions still point at whatever file last
-    // rendered successfully -- same staleness as the branch above.
-    olMapState.currentCogUrl = null;
-    const geotiffLink = document.getElementById("ol-geotiff-link");
-    geotiffLink.removeAttribute("href");
-    geotiffLink.removeAttribute("download");
     return;
   }
   const file = fileEntry.file;
@@ -770,19 +754,10 @@ async function updateInteractiveMapLayer() {
     emptyMsg.style.display = "block";
     emptyMsg.textContent = "Map file failed to load for this selection.";
     document.getElementById("ol-legend").innerHTML = "";
-    olMapState.currentCogUrl = null;
-    const geotiffLink = document.getElementById("ol-geotiff-link");
-    geotiffLink.removeAttribute("href");
-    geotiffLink.removeAttribute("download");
     return;
   }
 
-  olMapState.currentCogUrl = url;
   olMapState.currentScale = fileEntry.scale;
-  document.getElementById("ol-geotiff-link").href = url;
-  document.getElementById("ol-geotiff-link").setAttribute(
-    "download", `${mapPickerState.product}_${mapPickerState.response}_${olMapState.period}_${mapViewSuffix()}.tif`
-  );
 
   const legend = document.getElementById("ol-legend");
   const nativeUnits = entry.units || "";
