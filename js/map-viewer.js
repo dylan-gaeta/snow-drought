@@ -109,9 +109,14 @@ function initMapPicker() {
 // only on Time Series/Seasonal/etc. (Dylan, 2026-10).
 function responseHasSpatialMap(category, product, response) {
   const entry = manifest.categories[category]?.[product]?.[response];
-  // entry.maps is an (empty) object for site/point products with no COG, so
-  // test for actual map entries, not just the key's presence.
-  return !!(entry && entry.maps && Object.keys(entry.maps).length > 0 && !entry.no_spatial_maps);
+  // The interactive map renders from the COG map_style (style.periods), not the
+  // static-figure manifest. entry.maps is only the static-gallery index and is
+  // EMPTY for multi-response products whose static maps share one figure dir
+  // (SMAP SM/AM/PM/VOD..., SMOS SM/VOD, UA-SWE) -- those still have COGs, so gate
+  // on has_cog too (set from the exported map_styles). Point networks have
+  // no_spatial_maps and no COG, so they stay excluded either way.
+  if (!entry || entry.no_spatial_maps) return false;
+  return entry.has_cog === true || (entry.maps && Object.keys(entry.maps).length > 0);
 }
 
 function categoryHasSpatialMap(category) {
