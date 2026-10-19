@@ -855,6 +855,9 @@ table.headline-table tr.group-row td {
 }
 .ol-period-stop:hover { color: var(--text); background: rgba(2, 56, 88, 0.06); }
 .ol-period-stop.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+/* Months spanned by the currently selected seasonal window: a soft tint so the
+   month strip visibly mirrors the season above it (distinct from the navy .active). */
+.ol-period-month.in-season:not(.active) { background: rgba(58, 134, 188, 0.20); color: var(--text); }
 /* Months: compact fixed-width single-letter stops forming the slider track. */
 .ol-period-month { width: 1.5rem; padding: 0.25rem 0; text-align: center; border-radius: var(--radius-sm); }
 /* A month with no COG for the current year/mode (e.g. the current year ends

@@ -1033,6 +1033,15 @@ async function updateInteractiveMapLayer() {
 // (so they read as seasons, not months), then the 12 calendar months follow
 // as compact single-letter stops that the play button animates through.
 const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+// Calendar months (zero-padded, matching the month stops' data-period) each
+// seasonal window spans, so selecting a season lights up its months on the
+// strip below. ANNUAL (once the pipeline exports it) spans all twelve.
+const SEASON_MONTHS = {
+  MAM: ["03", "04", "05"], JJA: ["06", "07", "08"], SON: ["09", "10", "11"],
+  DJF: ["12", "01", "02"], NDJF: ["11", "12", "01", "02"],
+  DJFM: ["12", "01", "02", "03"], AMJJ: ["04", "05", "06", "07"],
+  ANNUAL: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
+};
 const PERIOD_PLAY_INTERVAL_MS = 850;
 
 function buildPeriodSlider(periods) {
@@ -1055,8 +1064,15 @@ function buildPeriodSlider(periods) {
 }
 
 function updatePeriodSliderActive() {
-  document.querySelectorAll("#ol-period-track .ol-period-stop").forEach((b) =>
-    b.classList.toggle("active", b.dataset.period === olMapState.period));
+  const inSeason = new Set(SEASON_MONTHS[olMapState.period] || []);
+  document.querySelectorAll("#ol-period-track .ol-period-stop").forEach((b) => {
+    b.classList.toggle("active", b.dataset.period === olMapState.period);
+    // Keep the two rows in sync: a selected seasonal window lights up the
+    // months it spans on the strip below.
+    if (b.classList.contains("ol-period-month")) {
+      b.classList.toggle("in-season", inSeason.has(b.dataset.period));
+    }
+  });
 }
 
 // Dim the month stops that have no COG for the current mode + year, so it's
