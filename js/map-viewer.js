@@ -604,7 +604,9 @@ function initInteractiveMap() {
       const value = (raw / olMapState.currentScale) * canonicalUnitFactor(nativeUnits);
       const unitSuffix = canonicalUnit(nativeUnits);
       const lonLat = ol.proj.toLonLat(event.coordinate);
-      readout.textContent = `${value.toFixed(2)}${unitSuffix ? " " + unitSuffix : ""} at ${lonLat[1].toFixed(3)}°N, ${lonLat[0].toFixed(3)}°E`;
+      const latStr = `${Math.abs(lonLat[1]).toFixed(3)}°${lonLat[1] >= 0 ? "N" : "S"}`;
+      const lonStr = `${Math.abs(lonLat[0]).toFixed(3)}°${lonLat[0] >= 0 ? "E" : "W"}`;
+      readout.textContent = `${value.toFixed(2)}${unitSuffix ? " " + unitSuffix : ""} at ${latStr}, ${lonStr}`;
     } catch (err) {
       readout.textContent = "Could not read a value at this point.";
     }
@@ -931,7 +933,7 @@ async function updateInteractiveMapLayer() {
   const renderBinned = !!discEntry;
   syncColormapSelect(style); // reflect the active palette in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
-  const pv = `${mapPickerState.product} · ${mapPickerState.response}`;
+  const pv = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)}`;
   const label = olMapState.mode === "climatology" ? `${pv} — climatology${unitSuffix}`
     : olMapState.mode === "raw" ? `${pv} — ${olMapState.year}${unitSuffix}`
     : `${pv} — ${olMapState.year} anomaly${unitSuffix}`;
@@ -1033,15 +1035,11 @@ async function updateInteractiveMapLayer() {
 // (so they read as seasons, not months), then the 12 calendar months follow
 // as compact single-letter stops that the play button animates through.
 const MONTH_LETTERS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-// Calendar months (zero-padded, matching the month stops' data-period) each
-// seasonal window spans, so selecting a season lights up its months on the
-// strip below. ANNUAL (once the pipeline exports it) spans all twelve.
-const SEASON_MONTHS = {
-  MAM: ["03", "04", "05"], JJA: ["06", "07", "08"], SON: ["09", "10", "11"],
-  DJF: ["12", "01", "02"], NDJF: ["11", "12", "01", "02"],
-  DJFM: ["12", "01", "02", "03"], AMJJ: ["04", "05", "06", "07"],
-  ANNUAL: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
-};
+// Which calendar months each seasonal window spans, so selecting a season
+// lights up its months on the strip below. Reuses common.js's SEASON_MONTHS
+// (numeric months) -- a second top-level const of the same name here would
+// redeclare it in map.html's shared script scope and crash the page; the
+// month stops' data-period values are zero-padded, so pad on lookup.
 const PERIOD_PLAY_INTERVAL_MS = 850;
 
 function buildPeriodSlider(periods) {
@@ -1064,7 +1062,7 @@ function buildPeriodSlider(periods) {
 }
 
 function updatePeriodSliderActive() {
-  const inSeason = new Set(SEASON_MONTHS[olMapState.period] || []);
+  const inSeason = new Set((SEASON_MONTHS[olMapState.period] || []).map((m) => String(m).padStart(2, "0")));
   document.querySelectorAll("#ol-period-track .ol-period-stop").forEach((b) => {
     b.classList.toggle("active", b.dataset.period === olMapState.period);
     // Keep the two rows in sync: a selected seasonal window lights up the
