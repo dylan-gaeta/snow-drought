@@ -63,12 +63,15 @@
       Every anomaly on this site is the departure from that calendar
       month's own baseline average &mdash; the baseline period is the
       later of 1990 or that product's own record start, through 2024.
-      Native standardized indices (SPI, SPEI, EDDI, PDSI, ForDRI, and ESI)
+      Native standardized indices (SPI, SPEI, EDDI, ForDRI, and ESI)
       are already their own standardized departure statistic at the source
-      and are shown directly rather than recomputed.
+      and are shown directly rather than recomputed. Index-scale measures
+      (PDSI, VegDRI, USDM) are shown on their own native scale and are
+      re-standardized against their own baseline only for the cross-product
+      &sigma; comparison views.
     </p>
     <p>
-      On the <a href="data.html">summary table</a>, several ways to display the
+      On the <a href="data.html">Summary Statistics</a> page, several ways to display the
       same underlying anomaly are available:
     </p>
     <ul id="value-type-list"></ul>
@@ -141,7 +144,7 @@
           <tr><td>NLDAS-Noah</td><td>NLDAS-2 Noah land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>NLDAS-VIC</td><td>NLDAS-2 VIC land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>PRISM</td><td>Monthly 4-km precipitation and vapor-pressure-deficit grids</td><td><a href="https://prism.oregonstate.edu/" target="_blank" rel="noopener">PRISM Climate Group, Oregon State University</a></td></tr>
-          <tr><td>MODIS-Terra</td><td>Leaf area index (MOD15A2H.061), evapotranspiration (MOD16A2GF.061), gross primary productivity (MOD17A2HGF.061), and NDVI/EVI vegetation indices (MOD13C1.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>MODIS-Terra</td><td>Leaf area index (MOD15A2H.061), evapotranspiration (MOD16A2GF.061), gross primary productivity (MOD17A2HGF.061), NDVI/EVI/LSWI vegetation indices (MOD13C1.061), and day/night land-surface temperature (MOD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>MODIS-Aqua</td><td>Aqua-sensor counterparts: leaf area index, evapotranspiration, gross primary productivity, NDVI/EVI/LSWI vegetation indices, and day/night land-surface temperature (MYD-series, e.g. MYD13C1.061, MYD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>VIIRS-NDVI</td><td>VIIRS 0.05&deg; NDVI, EVI, and LSWI vegetation indices (VNP13C1)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>VIIRS-LST</td><td>VIIRS day/night land-surface temperature (VNP21C2)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
@@ -149,8 +152,8 @@
           <tr><td>GRACE-JPL-L3</td><td>Mascon terrestrial water-storage anomaly (TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4, DOI 10.5067/TEMSC-3JC634)</td><td><a href="https://podaac.jpl.nasa.gov/dataset/TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4" target="_blank" rel="noopener">NASA JPL / PO.DAAC</a></td></tr>
           <tr><td>GRACE-L4</td><td>Catchment land-surface data-assimilation model groundwater/soil-moisture storage (GRACEDADM_CLSM025GL_7D)</td><td><a href="https://earth.gsfc.nasa.gov/hydro/data/groundwater-and-soil-moisture-conditions-grace-data-assimilation" target="_blank" rel="noopener">NASA Goddard Space Flight Center / GES DISC</a></td></tr>
           <tr><td>SMOS</td><td>L2 soil moisture and vegetation optical depth (MIR_SMUDP2)</td><td><a href="https://earth.esa.int/eogateway/missions/smos" target="_blank" rel="noopener">European Space Agency</a></td></tr>
-          <tr><td>SMAP</td><td>L3 radiometer soil moisture (SPL3SMP) &mdash; AM and PM overpasses, plus vegetation optical depth, vegetation water content, and surface temperature</td><td><a href="https://nsidc.org/data/spl3smp" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
-          <tr><td>SiB4</td><td>Process-based terrestrial biosphere model (GPP/RECO/NEE by plant functional type)</td><td>Colorado State University (Dr. Aleya Kaushik)</td></tr>
+          <tr><td>SMAP</td><td>L3 radiometer surface soil moisture (SPL3SMP)</td><td><a href="https://nsidc.org/data/spl3smp" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
+          <tr><td>SiB4</td><td>Process-based terrestrial biosphere model (GPP, respiration, NEE, plus ET, LAI, SIF, soil water, and VPD by plant functional type)</td><td>Colorado State University (Dr. Aleya Kaushik)</td></tr>
           <tr><td>OCO-2</td><td>Level-2 Lite solar-induced fluorescence (OCO2_L2_Lite_SIF)</td><td><a href="https://disc.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>TROPOMI</td><td>TROPOMI solar-induced fluorescence (TROPOSIF L2B_SIF___)</td><td><a href="https://s5p-pal.com/" target="_blank" rel="noopener">ESA Sentinel-5P S5P-PAL</a></td></tr>
           <tr><td>PhenoCam</td><td>Camera network green chromatic coordinate (canopy greenness)</td><td><a href="https://phenocam.nau.edu/" target="_blank" rel="noopener">PhenoCam Network, Northern Arizona University</a></td></tr>

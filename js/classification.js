@@ -16,28 +16,36 @@
 // the pipeline's own precomputed classification (data/
 // snow_drought_classification.json's "regime" field), never recomputed here.
 // Labels are dataset-qualified, matching 94_context_SnowDroughtQuadrants_
-// analyze.py's own VARIABLES dict verbatim (its "label" field, minus the
-// "DJFM Anomaly (unit)" suffix -- unit/window are shown separately here).
+// analyze.py's own VARIABLES dict (its "label" field). Each variable carries
+// its own temporal window (t2m/precip over Oct-Apr, SWE at the annual peak,
+// everything else DJFM) in a `window` field so two otherwise-parallel options
+// (e.g. PRISM precip Oct-Apr vs ERA5-Land precip DJFM) are distinguishable;
+// the window + unit are shown in the axis/colorbar titles.
 // Expanded 2026-10-01 (Dylan: "we should be able to plot more temp/vpd/
 // precip/snow variables") with 5 more ERA5-Land/PRISM drivers already in the
 // same pipeline file, no new reducer needed.
 const QUADRANT_VARIABLES = {
-  t_anom: { label: "ERA5-Land Temperature", unit: "°C", stress_high: true, stress: "warm", benign: "cold" },
-  ppt_anom: { label: "PRISM Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
-  swe_anom: { label: "SNOTEL Peak SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
-  vpd_anom: { label: "PRISM Max VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
-  vpdmin_anom: { label: "PRISM Min VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
-  sca_terra_anom: { label: "MODIS-Terra Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
-  sca_aqua_anom: { label: "MODIS-Aqua Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
-  era5_vpd_anom: { label: "ERA5-Land VPD", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
-  era5_ppt_anom: { label: "ERA5-Land Precipitation", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
-  era5_swe_anom: { label: "ERA5-Land SWE", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
-  era5_sca_anom: { label: "ERA5-Land Snow Cover", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  t_anom: { label: "ERA5-Land Temperature", window: "Oct–Apr", unit: "°C", stress_high: true, stress: "warm", benign: "cold" },
+  ppt_anom: { label: "PRISM Precipitation", window: "Oct–Apr", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
+  swe_anom: { label: "SNOTEL Peak SWE", window: "", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
+  vpd_anom: { label: "PRISM Max VPD", window: "DJFM", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
+  vpdmin_anom: { label: "PRISM Min VPD", window: "DJFM", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
+  sca_terra_anom: { label: "MODIS-Terra Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  sca_aqua_anom: { label: "MODIS-Aqua Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
+  era5_vpd_anom: { label: "ERA5-Land VPD", window: "DJFM", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
+  era5_ppt_anom: { label: "ERA5-Land Precipitation", window: "DJFM", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
+  era5_swe_anom: { label: "ERA5-Land SWE", window: "DJFM", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
+  era5_sca_anom: { label: "ERA5-Land Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
 // Exactly three snow-drought types plus "none" (peak SWE at/above its mean, so
 // not a drought) -- no "other" regime (mirrors 94_context_SnowDroughtQuadrants_
 // analyze.py's REGIMES).
 const REGIME_COLORS = { dry: "#dfc27d", warm_dry: "#d6604d", warm: "#f4a582", none: "#92c5de" };
+// Darker, higher-contrast versions for the corner-label TEXT on the white
+// panel -- the pale marker tints above fail WCAG contrast as text.
+const REGIME_TEXT_COLORS = { dry: "#8a6d1b", warm_dry: "#a50f15", warm: "#c0392b", none: "#2166ac" };
+// A second (shape) channel per regime so the scatter isn't color-only.
+const REGIME_SYMBOLS = { dry: "diamond", warm_dry: "square", warm: "triangle-up", none: "circle" };
 const REGIME_LABELS = {
   dry: "Dry snow drought", warm_dry: "Warm & dry snow drought",
   warm: "Warm snow drought", none: "No snow drought",
@@ -157,7 +165,7 @@ function renderQuadrantChart() {
     Object.entries(corners).forEach(([regime, [cx, cy, xa, ya]]) => {
       annotations.push({
         x: cx * 0.96, y: cy * 0.96, text: REGIME_LABELS[regime], showarrow: false,
-        font: { size: 12, color: REGIME_COLORS[regime], weight: 700 },
+        font: { size: 12, color: REGIME_TEXT_COLORS[regime], weight: 700 },
         xanchor: xa, yanchor: ya,
       });
     });
@@ -212,7 +220,7 @@ function renderQuadrantChart() {
           mode: "markers", type: "scatter", name: REGIME_LEGEND_LABELS[regime],
           marker: {
             size: pr.map((p) => (p.winter_year === 2026 ? 16 : 9)),
-            color: REGIME_COLORS[regime], line: { color: "#333", width: 0.8 },
+            color: REGIME_COLORS[regime], symbol: REGIME_SYMBOLS[regime], line: { color: "#333", width: 0.8 },
           },
           hovertext: pr.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),
           hoverinfo: "text",
@@ -235,7 +243,7 @@ function renderQuadrantChart() {
       marker = {
         size: sizes, color: points.map((p) => p[colorBy]), colorscale: PRECIP_DIFF, cmid: 0,
         reversescale: !cMeta.stress_high,
-        colorbar: { title: { text: `${cMeta.label} (${cMeta.unit})`, side: "right" }, thickness: 14 },
+        colorbar: { title: { text: `${cMeta.label}${cMeta.window ? " " + cMeta.window : ""} anomaly (${cMeta.unit})`, side: "right" }, thickness: 14 },
         line: { color: "#333", width: 0.8 },
       };
     }
@@ -249,8 +257,8 @@ function renderQuadrantChart() {
 
   const layout = {
     margin: { t: colorBy === "regime" ? 70 : 20, r: isNarrow ? 58 : 80, b: 55, l: isNarrow ? 48 : 65 },
-    xaxis: { ...PLOTLY_AXIS_LINE, title: `${xMeta.label} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
-    yaxis: { ...PLOTLY_AXIS_LINE, title: `${yMeta.label} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
+    xaxis: { ...PLOTLY_AXIS_LINE, title: `${xMeta.label}${xMeta.window ? " " + xMeta.window : ""} anomaly (${xMeta.unit})`, range: [-xmax, xmax], zeroline: true, zerolinecolor: "#555" },
+    yaxis: { ...PLOTLY_AXIS_LINE, title: `${yMeta.label}${yMeta.window ? " " + yMeta.window : ""} anomaly (${yMeta.unit})`, range: [-ymax, ymax], zeroline: true, zerolinecolor: "#555" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes, annotations,
     showlegend: colorBy === "regime",

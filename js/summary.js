@@ -66,6 +66,9 @@ function initSummaryTable() {
     option.textContent = String(year);
     yearSelect.appendChild(option);
   }
+  // Default to the latest year present rather than a hardcoded one, so the
+  // view doesn't go stale as the record advances.
+  summaryState.year = maxYear;
   yearSelect.value = String(summaryState.year);
   yearSelect.addEventListener("change", (event) => {
     summaryState.year = parseInt(event.target.value, 10);
@@ -97,7 +100,7 @@ function initSummaryTable() {
   renderSummaryTable();
 }
 
-function formatSummaryValue(result, units, valueType) {
+function formatSummaryValue(result, units, valueType, data) {
   const sign = result.sigma >= 0 ? "+" : "";
   // Raw value + raw-unit anomaly display in the canonical unit (e.g. kg m-2 -> mm).
   const factor = canonicalUnitFactor(units);
@@ -113,13 +116,17 @@ function formatSummaryValue(result, units, valueType) {
     return sigmaToPercentileLabel(percentile);
   }
   if (valueType === "percent_of_normal") {
-    if (result.percentOfNormal === null) return "n/a";
+    // Gated by the pipeline's pct_of_normal_ok flag (a non-negative physical
+    // amount, not a thermal/interval-scale quantity or a native standardized
+    // index), same as the shared regional tables in common.js.
+    if (!data.pct_of_normal_ok || result.percentOfNormal === null) return "&mdash;";
     return `${result.percentOfNormal.toFixed(0)}%`;
   }
   if (valueType === "rank") {
     if (result.stressRank === null || result.nRecord === null) return "&mdash;";
     return `${Math.round(result.stressRank)}/${result.nRecord}`;
   }
+  if (result.sigma === null) return "&mdash;"; // short-record product: baseline too short for a sigma (see MIN_BASELINE_YEARS_SIGMA)
   return `${sign}${result.sigma.toFixed(1)}`; // "sigma" default
 }
 
@@ -186,8 +193,10 @@ async function renderSummaryTable() {
       }
       const cellsHtml = row.cells.map((result) => {
         if (!result) return "<td>&mdash;</td>";
-        const isStress = data.drier_is_high ? result.sigma > 0 : result.sigma < 0;
-        const cls = isStress ? "stress" : "relief";
+        // Short-record products carry sigma === null (baseline < MIN_BASELINE_YEARS_SIGMA);
+        // leave those cells uncolored rather than defaulting them to the low-stress hue.
+        const cls = result.sigma === null ? ""
+          : (data.drier_is_high ? result.sigma > 0 : result.sigma < 0) ? "stress" : "relief";
         const text = formatSummaryValue(result, data.units, summaryState.valueType);
         return `<td class="${cls}">${text}</td>`;
       }).join("");

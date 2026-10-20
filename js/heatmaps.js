@@ -307,8 +307,8 @@ async function renderHeatmapUnsafe(chart, pairs) {
     // NCL precip_diff_12lev / ColorBrewer BrBG, the full 13-stop spectrum (via
     // the cmaps package) -- the same ramp the map anomaly layers and the
     // snowdrought.org welcome border use, so the whole site reads one palette
-    // rather than just the two teal/brown extremes. Red stays reserved for the
-    // "no data" state. White is pinned exactly at zero via zmid, so the
+    // rather than just the two teal/brown extremes. No-data cells render as the
+    // gray plot background, not a scale color. White is pinned exactly at zero via zmid, so the
     // midpoint is neutral rather than BrBG's natural pale-tan. Order: blue
     // (less stress) low -> white (neutral) -> brown (more stress) high.
     colorscale: [

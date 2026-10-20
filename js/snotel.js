@@ -53,7 +53,11 @@ function colorFor(metric, value) {
   if (snotelState.palette) {
     const pal = snotelPaletteColors(snotelState.palette);
     if (pal) {
-      const lo = scale.bounds[0], hi = scale.bounds[scale.bounds.length - 1];
+      // Percentile is a 0-100 quantity; its stepped bins stop at 90, but the
+      // continuous palette must span the full 0-100 or the top decile all maps
+      // to a single color.
+      const lo = scale.bounds[0];
+      const hi = metric === "percentile" ? 100 : scale.bounds[scale.bounds.length - 1];
       const f = Math.min(1, Math.max(0, (value - lo) / (hi - lo)));
       return pal[Math.round(f * (pal.length - 1))];
     }
@@ -270,8 +274,9 @@ function renderDetail() {
   const band = snotelState.climatology.stations[triplet];
   document.getElementById("snotel-detail-title").textContent =
     `${meta.name}, ${meta.state} — ${meta.elev_ft ? meta.elev_ft.toLocaleString() + " ft" : "elevation n/a"}`;
-  document.getElementById("snotel-detail-note").textContent =
-    `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median, 10th–90th percentile band).`;
+  document.getElementById("snotel-detail-note").textContent = band
+    ? `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median, 10th–90th percentile band).`
+    : `Daily SWE, water year ${snotelState.wy} (no climatology normal available for this station).`;
 
   const nDays = wyData ? wyData.n_days : 365;
   const dates = [], doys = [];

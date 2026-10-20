@@ -51,7 +51,7 @@
 
   <section id="interactive-maps">
     <h2>Interactive maps</h2>
-    <p class="finding-note">Interactive maps. Click for a pixel value, download a screenshot, or copy a link to this view. Colors/bins match the pre-rendered static maps (server-side).</p>
+    <p class="finding-note">Click for a pixel value, download a screenshot, or copy a link to this view. The interactive view uses the same server-side color palettes as the static maps, rendered as a continuous ramp.</p>
 
     <div class="map-layout">
       <aside class="map-sidebar">
@@ -119,7 +119,7 @@
         <div id="ol-map-empty" class="map-empty" style="display:none;">No interactive map available for this selection.</div>
         <div id="ol-map-wrap">
           <div id="ol-legend"></div>
-          <div id="ol-map" aria-label="Interactive map"></div>
+          <div id="ol-map" aria-label="Interactive map" tabindex="0"></div>
         </div>
         <div id="ol-query-readout">Click the map to read a pixel value.</div>
       </div>

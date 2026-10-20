@@ -348,7 +348,9 @@ async function renderOverlay() {
         if (v === null || v === undefined) return null;
         if (isSigma) return v;
         const cv = toCanonicalValue(v, data.units);
-        return mmPerDay ? cv * daysInMonth(dates[j]) : cv;
+        if (!mmPerDay) return cv;
+        const [y, m] = dates[j].split("-").map(Number);
+        return cv * daysInMonth(y, m);
       });
       if (values.some((v) => v !== null)) anyData = true;
     }

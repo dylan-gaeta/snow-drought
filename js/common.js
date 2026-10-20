@@ -36,7 +36,7 @@ const VARIABLE_FULL_NAME = {
   T2m: "2 m air temperature", TAIR: "air temperature", TD2m: "2 m dewpoint", TDMEAN: "mean dewpoint",
   TMAX: "maximum temperature", TMEAN: "mean temperature", TMIN: "minimum temperature",
   VPD: "vapor pressure deficit", VPDMAX: "maximum vapor pressure deficit", VPDMIN: "minimum vapor pressure deficit",
-  SURFACE_TEMP: "surface temperature", SURFACE_TEMP_AM: "surface temperature (AM)", SURFACE_TEMP_PM: "surface temperature (PM)",
+  SURFACE_TEMP: "surface temperature",
   LST_DAY: "daytime land-surface temperature", LST_NIGHT: "nighttime land-surface temperature",
   LST_DAY_TERRA: "daytime land-surface temperature", LST_NIGHT_TERRA: "nighttime land-surface temperature",
   LST_DAY_AQUA: "daytime land-surface temperature", LST_NIGHT_AQUA: "nighttime land-surface temperature",
@@ -46,7 +46,7 @@ const VARIABLE_FULL_NAME = {
   PPT: "precipitation", RAINFALL: "rainfall", RUNOFF: "runoff",
   SURFACE_RUNOFF: "surface runoff", SUBSURFACE_RUNOFF: "subsurface runoff",
   // soil moisture / water storage
-  SM: "soil moisture", SM_AM: "soil moisture (AM)", SM_PM: "soil moisture (PM)",
+  SM: "soil moisture",
   SMrz: "root-zone soil moisture", SMs: "surface soil moisture",
   ROOT_SM: "root-zone soil moisture", SURFACE_SM: "surface soil moisture",
   RTZSM: "root-zone soil moisture percentile", SFSM: "surface soil moisture percentile", GWS: "groundwater storage percentile",
@@ -59,7 +59,7 @@ const VARIABLE_FULL_NAME = {
   GPP: "gross primary productivity", NPP: "net primary productivity", NEE: "net ecosystem exchange",
   RECO: "ecosystem respiration", RH: "heterotrophic respiration",
   LAND_CARBON_EXCHANGE: "NBE incl. fire",
-  VOD: "vegetation optical depth", VOD_AM: "vegetation optical depth (AM)", VOD_PM: "vegetation optical depth (PM)",
+  VOD: "vegetation optical depth",
   // fire
   BI: "burning index", ERC: "energy release component", FM100: "100-hour fuel moisture",
   FM1000: "1000-hour fuel moisture", BURNED_AREA: "burned area", CARBON_EMISSIONS: "fire carbon emissions",
@@ -71,13 +71,6 @@ const VARIABLE_FULL_NAME = {
 function responseDisplay(code) {
   const name = VARIABLE_FULL_NAME[code];
   return name ? `${code} (${name})` : code;
-}
-
-// Days in the calendar month of a "YYYY-MM" / "YYYY-MM-DD" string -- used to
-// convert a per-day rate (mm/day) to that month's total (mm/month).
-function daysInMonth(dateStr) {
-  const [year, month] = dateStr.split("-").map(Number);
-  return new Date(year, month, 0).getDate();
 }
 
 // Solid black axis border on every Plotly chart (Compare, Time Series,
@@ -298,10 +291,12 @@ const COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION = 0.15;
 // ---------------------------------------------------------- Window statistics
 //
 // Shared season-window aggregation + non-parametric standardization, used by
-// both the homepage summary table (js/summary.js) and the dynamic heatmaps
-// (js/explore.js) -- one implementation so the two views can never drift
-// against each other.
+// both the Summary Statistics page (js/summary.js, on data.html) and the
+// anomaly heatmaps (js/heatmaps.js) -- one implementation so the two views
+// can never drift against each other.
 
+// Days in calendar month (year, month) -- used both by day_weighted_mean
+// weighting below and by the Compare overlay's mm/day -> mm/month conversion.
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate();
 }
@@ -1059,3 +1054,24 @@ function wireProductSearch(inputId, resultsId, onSelect) {
     }
   });
 }
+
+// Accessibility, applied once for every page (the nav is static per-page HTML):
+// mark the active nav link programmatically and inject a skip-to-content link
+// as the first focusable element. aria-pressed on the segmented toggles and the
+// OpenLayers map's keyboard operability are handled in their own page scripts.
+(function enhanceNavAccessibility() {
+  const run = () => {
+    document.querySelectorAll(".site-nav a.active").forEach((a) => a.setAttribute("aria-current", "page"));
+    const main = document.querySelector("main");
+    if (main && !document.querySelector(".skip-link")) {
+      if (!main.id) main.id = "main-content";
+      const skip = document.createElement("a");
+      skip.href = "#" + main.id;
+      skip.className = "skip-link";
+      skip.textContent = "Skip to content";
+      document.body.insertBefore(skip, document.body.firstChild);
+    }
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+  else run();
+})();
