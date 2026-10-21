@@ -49,15 +49,15 @@
     <h2>SNOTEL Snowpack</h2>
     <p class="finding-note">The NRCS SNOTEL network &mdash; 800+ automated
       stations measuring mountain snow water equivalent (SWE). Each station is
-      colored by its SWE relative to the 1990&ndash;2024 normal for the selected
+      colored by its SWE relative to the 1990&ndash;2024 median for the selected
       day &mdash; scrub or play through the snow season, and click a station for
-      its own daily record. Percent of normal is only meaningful in the snow
+      its own daily record. Percent of median is only meaningful in the snow
       season. The current water year's data is provisional (NRCS).</p>
 
     <div class="selector-row">
       <label class="select-field">Metric <select id="snotel-metric-select" aria-label="Metric">
         <option value="swe" selected>SWE (mm)</option>
-        <option value="pct_of_median">SWE % of normal</option>
+        <option value="pct_of_median">SWE % of median</option>
         <option value="percentile">SWE percentile</option>
       </select></label>
       <label class="select-field">Colorbar <select id="snotel-palette-select" aria-label="Colorbar"></select></label>
@@ -89,11 +89,11 @@
     <div class="sites-detail">
       <h3 class="figure-title" id="snotel-elev-title"></h3>
       <p class="finding-note">Snow water equivalent versus station elevation for
-        the selected day, in the metric chosen above (% of normal, percentile,
+        the selected day, in the metric chosen above (% of median, percentile,
         or raw mm). A downward tilt (lower elevations drier) is the signature of
         a warm snow drought &mdash; snow lost preferentially at lower, warmer
-        sites. Percent-of-normal is a ratio that can run to several hundred
-        percent where the normal snowpack is tiny, so that view is capped at
+        sites. Percent-of-median is a ratio that can run to several hundred
+        percent where the median snowpack is tiny, so that view is capped at
         200% (off-scale points shown as triangles); the raw-mm and percentile
         views are not affected by that.</p>
       <div id="snotel-elev-chart" style="height:380px;"></div>

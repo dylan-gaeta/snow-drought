@@ -639,19 +639,24 @@ async function fetchMapStyle(product, response) {
 // Climatology (always available whenever a period slot exists at all) if
 // the currently active mode just became unavailable for the new period.
 function updateModeToggleAvailability(slot) {
+  const available = {};
   document.querySelectorAll("#ol-mode-toggle button[data-mode]").forEach((btn) => {
     const mode = btn.dataset.mode;
-    const available = mode === "climatology"
+    available[mode] = mode === "climatology"
       ? "baseline" in slot
       : Object.keys(slot).some((k) => k.startsWith(`${mode}_`));
-    btn.disabled = !available;
-    btn.title = available ? "" : "No data for this mode in the selected period.";
-    if (!available && btn.classList.contains("active")) {
-      btn.classList.remove("active");
-      olMapState.mode = "climatology";
-      document.querySelector('#ol-mode-toggle button[data-mode="climatology"]').classList.add("active");
-    }
+    btn.disabled = !available[mode];
+    btn.title = available[mode] ? "" : "No data for this mode in the selected period.";
   });
+  // If the active mode has no COGs here, switch to the first mode that DOES --
+  // a fixed climatology fallback left a raw-only product (OCO-2's sounding map,
+  // which has no anomaly or climatology) blank.
+  if (!available[olMapState.mode]) {
+    const fallback = ["anomaly", "raw", "climatology"].find((m) => available[m]);
+    document.querySelectorAll("#ol-mode-toggle button[data-mode]").forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.mode === fallback));
+    if (fallback) olMapState.mode = fallback;
+  }
 }
 
 // A drag slider gave no precise, tap-friendly way to land on a specific

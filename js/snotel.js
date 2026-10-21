@@ -31,7 +31,7 @@ const PLAY_INTERVAL_MS = 55;
 
 const METRIC_SCALES = {
   pct_of_median: {
-    label: "SWE % of normal", field: "pct_of_median",
+    label: "SWE % of median", field: "pct_of_median",
     bounds: [0, 50, 70, 90, 110, 130, 150, 200],
     colors: ["#8c510a", "#bf812d", "#dfc27d", "#f5f5f5", "#c7eae5", "#5ab4ac", "#2166ac", "#053061"],
   },
@@ -353,7 +353,7 @@ function renderElevation() {
   if (metric === "pct_of_median") { yaxis.range = [0, PCT_CAP]; shapes.push(refAt(100)); }
   else if (metric === "percentile") { yaxis.range = [0, 100]; shapes.push(refAt(50)); }
   else { yaxis.rangemode = "tozero"; }
-  const unit = metric === "pct_of_median" ? "% of normal" : metric === "percentile" ? "th percentile" : " mm";
+  const unit = metric === "pct_of_median" ? "% of median" : metric === "percentile" ? "th percentile" : " mm";
   Plotly.newPlot("snotel-elev-chart", [{
     x: xs, y: yPlot, text, customdata: yTrue, type: "scatter", mode: "markers",
     marker: { size: 6, color: colors, symbol: symbols, line: { color: "#333", width: 0.5 } },
