@@ -354,13 +354,12 @@ function nativeIndexPercentile(sigma) {
 
 // Mirrors common/detrend.py's MIN_BASELINE_YEARS -- must stay in sync.
 const MIN_BASELINE_YEARS = 3;
-// Mirrors common/detrend.py's MIN_BASELINE_YEARS_SIGMA: a z-score from fewer
-// than this many baseline years has an unreliable (under-estimated) SD, so a
-// modest departure reads as a spurious 5-7 sigma -- short satellite records
-// (SMAP, TROPOMI, OCO-2) would otherwise light up the summary table with
-// impossible outliers. Below it, sigma reads as no-data; percentile and rank
-// (robust to small samples) are still shown.
-const MIN_BASELINE_YEARS_SIGMA = 8;
+// The pipeline retired its old arbitrary 8-baseline-year floor on sigma: it now
+// standardizes against ONE pooled interannual SD (common/detrend.py), stable even
+// for a short record, so a z-score no longer needs 8 baseline years to be
+// trustworthy -- a short satellite record (TROPOMI SIF) gets a real sigma. The
+// client mirrors that by gating sigma only on MIN_BASELINE_YEARS (enough for any
+// statistic) plus the dormancy floors below, not an arbitrary year count.
 
 function windowMonthYearPairs(windowKey, targetYear) {
   const months = SEASON_MONTHS[windowKey] || [parseInt(windowKey, 10)];
@@ -419,7 +418,7 @@ function monthlyStressSigma(data, region, idx) {
     if (mo === month && y >= region.baseline_start_year && y <= region.baseline_end_year
         && val !== null && Number.isFinite(val)) sample.push(val);
   }
-  if (sample.length < MIN_BASELINE_YEARS_SIGMA) return null;
+  if (sample.length < MIN_BASELINE_YEARS) return null;
   const { mean, std } = meanStd(sample);
   return std <= 0 ? null : (v - mean) / std;
 }
@@ -499,7 +498,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const rankB = 0.5 * (belowB + atOrBelowB);
     const percentileNative = ((rankB + 0.5) / (nB + 1)) * 100;
     const { mean: meanB, std: stdB } = meanStd(baseline);
-    const sigmaNonSigma = (nB < MIN_BASELINE_YEARS_SIGMA || stdB <= 0) ? null : (v - meanB) / stdB;
+    const sigmaNonSigma = (nB < MIN_BASELINE_YEARS || stdB <= 0) ? null : (v - meanB) / stdB;
     const recordN = [];
     const firstY = parseInt(region.dates[0].slice(0, 4), 10);
     const lastY = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
@@ -585,7 +584,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   }
   const seasonalScale = monthlyMeans.length > 1 ? meanStd(monthlyMeans).std : 0;
   const seasonalFloor = SEASONAL_DORMANT_FRACTION * seasonalScale;
-  const sigma = (baselineAnomalies.length < MIN_BASELINE_YEARS_SIGMA
+  const sigma = (baselineAnomalies.length < MIN_BASELINE_YEARS
                  || stdAnom <= DORMANT_SD_FRACTION * overallBaselineStd
                  || (seasonalFloor > 0 && stdAnom < seasonalFloor))
     ? null
