@@ -238,8 +238,8 @@ const SEASON_MONTHS = {
 
 // Mirrors config.py's PRODUCT_OBSERVATION_KIND exactly -- do not diverge.
 // Re-synced 2026-10-01 after this copy drifted from the Python source: 6
-// real observation products (GBBEPx, SNOTEL, MODIS-Terra-SCA,
-// MODIS-Aqua-SCA, VIIRS-LST, AmeriFlux) were missing entirely, which made
+// real observation products (GBBEPx, SNOTEL, MODIS-Terra,
+// MODIS-Aqua, VIIRS, AmeriFlux) were missing entirely, which made
 // their Compare-view lines render dashed/"model" by default (a bare-object
 // lookup miss is undefined, not "observation") -- confirmed live,
 // 2026-09-30/10-01: "a whole bunch of these are not labeled right." Also
@@ -251,17 +251,17 @@ const PRODUCT_OBSERVATION_KIND = {
   "ERA5-Land": "model", "GFED5": "observation", "GBBEPx": "observation",
   "GPCP": "observation", "GRACE-JPL-L3": "observation", "NLDAS-Mosaic": "model",
   "NLDAS-Noah": "model", "NLDAS-VIC": "model", "PRISM": "observation",
-  "SiB4": "model", "UA-SWE-Monthly": "observation", "IMS-Snow": "observation",
+  "SiB4": "model", "UA-SWE-Monthly": "observation", "NSIDC-IMS": "observation",
   "SNOTEL": "observation", "SMAP": "observation", "SNODAS": "model",
   "gridMET-Fire": "model", "OCO-2": "observation", "PhenoCam": "observation",
   "SMOS": "observation", "CAMS": "model", "CarbonTracker": "model",
   "FluxSat": "model", "GOSIF": "model", "GOSIF-GPP": "model", "MiCASA": "model",
   "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
-  "MODIS-Terra-SCA": "observation", "MODIS-Aqua-SCA": "observation",
+  "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
   "TROPOMI": "observation", "SPI": "observation", "SPEI": "observation",
   "EDDI": "model", "PDSI": "model", "ForDRI": "model", "ESI": "observation",
   "VegDRI": "observation", "USDM": "observation", "VIIRS": "observation",
-  "VIIRS-LST": "observation", "VIIRS-NDVI": "observation", "GRACE-L4": "model",
+  "VIIRS": "observation", "VIIRS": "observation", "GRACE-L4": "model",
   "NEON": "observation", "AmeriFlux": "observation",
   "GLEAM": "model", "USDM-Extent": "observation",
 };

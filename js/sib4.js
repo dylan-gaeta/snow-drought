@@ -31,7 +31,7 @@ const SIB4_CORRESPONDENCE = {
   RECO: [["MiCASA", "RH"]],
   RESP_HET: [["MiCASA", "RH"]],
   SIF: [["TROPOMI", "SIF"], ["GOSIF", "SIF"], ["OCO-2", "SIF"]],
-  LAI: [["MODIS-Terra", "LAI"], ["MODIS-Aqua", "LAI"], ["MODIS-Terra", "NDVI"], ["VIIRS-NDVI", "NDVI"]],
+  LAI: [["MODIS-Terra", "LAI"], ["MODIS-Aqua", "LAI"], ["MODIS-Terra", "NDVI"], ["VIIRS", "NDVI"]],
   // SiB4's modeled evapotranspiration, soil water, and canopy VPD against their
   // satellite / reanalysis / land-model observational counterparts. The compare
   // panel standardizes every series to its own sigma and flips by stress
