@@ -111,7 +111,7 @@ async function renderSeasonal() {
     { x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
     {
       x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty",
-      fillcolor: hexToRgba(teal, 0.25), name: "Climatology ± 2 SD", showlegend: false, hoverinfo: "skip",
+      fillcolor: hexToRgba(teal, 0.25), name: "Climatology ±2σ", showlegend: false, hoverinfo: "skip",
     },
     {
       x, y: mean, type: "scatter", mode: "lines+markers", line: { color: teal, width: 3 },
@@ -166,7 +166,7 @@ function renderSeasonalLegend() {
   const teal = manifest.climatology_color;
   [
     { label: "Climatological mean", color: teal },
-    { label: "Climatology ± 2 SD", color: hexToRgba(teal, 0.35) },
+    { label: "Climatology ±2σ", color: hexToRgba(teal, 0.35) },
   ].forEach(({ label, color }) => {
     const item = document.createElement("span");
     item.className = "checkbox-legend-item is-static";

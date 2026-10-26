@@ -87,7 +87,7 @@ async function initQuadrantView() {
   regionCodes.forEach((code) => {
     const option = document.createElement("option");
     option.value = code;
-    option.textContent = manifest.region_labels[code] || code;
+    option.textContent = regionLabelFor(code);
     if (code === quadrantState.region) option.selected = true;
     regionSelect.appendChild(option);
   });
@@ -275,7 +275,7 @@ function renderQuadrantTable() {
   if (!body) return;
   const region = quadrantState.region;
   const heading = document.getElementById("quadrant-table-heading");
-  if (heading) heading.textContent = `Classification by winter — ${manifest.region_labels[region] || region}`;
+  if (heading) heading.textContent = `Classification by winter — ${regionLabelFor(region)}`;
   const fmt = (v, d) => (v === null || v === undefined ? "&mdash;" : `${v >= 0 ? "+" : ""}${v.toFixed(d)}`);
   const rows = quadrantState.rows
     .filter((r) => r.region === region)

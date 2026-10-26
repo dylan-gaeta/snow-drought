@@ -158,7 +158,7 @@ async function renderCompare() {
   const baselineText = (entry) => (entry && entry.baseline_start_year && entry.baseline_end_year)
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}` : "n/a";
   const metaLine = (label, state, entry) => entry
-    ? `${label}: ${state.product} ${state.response} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
+    ? `${label}: ${state.product} ${responseDisplay(state.response)} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
     : "";
   document.getElementById("compare-title").textContent =
     `${compareState.a.product} · ${responseDisplay(compareState.a.response)} vs ${compareState.b.product} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;
@@ -370,7 +370,7 @@ async function renderOverlay() {
   let yTitle;
   if (isSigma) yTitle = "Standardized anomaly (σ)";
   else if (isAnomaly) yTitle = units.length === 1 ? `Anomaly (${units[0]})` : "Anomaly";
-  else yTitle = units.length === 1 ? units[0] : "";
+  else yTitle = units.length === 1 ? units[0] : "Mixed units";
 
   // In raw / anomaly views the lines only sit on one scale if the datasets
   // share units; warn (like the A-vs-B baseline note) when they don't. σ is

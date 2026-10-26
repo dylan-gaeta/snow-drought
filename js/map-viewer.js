@@ -790,7 +790,7 @@ async function renderRegionValuesTable(entry) {
     note.textContent = "No years available for this selection.";
     return;
   }
-  heading.textContent = `Regional values — ${olPeriodLabel(period)} ${year}`;
+  heading.textContent = `Regional values — ${mapPickerState.product} · ${responseDisplay(mapPickerState.response)}, ${olPeriodLabel(period)} ${year}`;
   const rawHeader = document.getElementById("ol-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, period);
   body.innerHTML = regionalSummaryRowsHtml(data, period, year);
@@ -858,6 +858,18 @@ async function updateInteractiveMapLayer() {
   updateModeToggleAvailability(slot);
   updateYearControlForPeriod(slot);
   updatePeriodAvailability();
+  // Re-render the title now that year/mode are reconciled to this product's
+  // actual coverage: the two calls above can clamp the year to the product's
+  // last available year or fall the mode back to an available one, and the
+  // title set at the top of this function uses the pre-reconciliation values
+  // -- without this it would mislabel the year/mode of the raster drawn below.
+  if (titleEl) {
+    const drawnModeLabel = olMapState.mode === "climatology" ? "Climatology" : olMapState.mode === "raw" ? "Raw units" : "Anomaly";
+    const drawnWhen = olMapState.mode === "climatology"
+      ? periodLabel(olMapState.period)
+      : `${periodLabel(olMapState.period)} ${olMapState.year}`;
+    titleEl.textContent = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)} — ${drawnWhen} (${drawnModeLabel})`;
+  }
   const key = olMapState.mode === "climatology" ? "baseline" : `${olMapState.mode}_${olMapState.year}`;
   const fileEntry = slot[key];
   if (!fileEntry) {
@@ -1244,6 +1256,14 @@ function copyViewLink() {
   if (olMapState.year !== null) params.set("year", String(olMapState.year));
   const url = `${window.location.origin}${window.location.pathname}#${params.toString()}`;
   copyToClipboard(url);
+  // The clipboard write is silent -- give the button brief visible feedback so
+  // the user knows it worked.
+  const btn = document.getElementById("ol-copy-view-btn");
+  if (btn) {
+    const original = btn.textContent;
+    btn.textContent = "Link copied";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }
 }
 
 async function init() {

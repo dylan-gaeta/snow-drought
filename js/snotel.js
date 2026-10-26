@@ -182,6 +182,12 @@ function updateDayLabel() {
     d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
+// Stations with no value for the selected day are drawn in this gray on the map
+// (same rgba used for the unavailable-marker fill below); surface it in the
+// legend so a gray dot isn't an unexplained symbol.
+const NO_DATA_SWATCH =
+  `<span class="snotel-legend-item"><span class="snotel-legend-swatch" style="background:rgba(150,150,150,0.3)"></span>no data</span>`;
+
 function renderLegend() {
   const scale = METRIC_SCALES[snotelState.metric];
   const d = dateForDay(snotelState.wy, snotelState.dayIndex);
@@ -189,18 +195,21 @@ function renderLegend() {
   const label = `<span class="snotel-legend-label">${scale.label} · ${when}</span>`;
   const pal = snotelState.palette && snotelPaletteColors(snotelState.palette);
   if (pal) {
-    const lo = scale.bounds[0], hi = scale.bounds[scale.bounds.length - 1];
+    // Match colorFor(): percentile colors span the full 0-100 even though the
+    // stepped bins stop at 90, so the continuous bar must be labeled 0-100 too.
+    const lo = scale.bounds[0];
+    const hi = snotelState.metric === "percentile" ? 100 : scale.bounds[scale.bounds.length - 1];
     document.getElementById("snotel-legend").innerHTML = label +
       `<span class="snotel-legend-cont">${lo}` +
       `<span class="snotel-legend-bar" style="background-image:linear-gradient(to right, ${pal.join(", ")})"></span>` +
-      `${hi}</span>`;
+      `${hi}</span>` + NO_DATA_SWATCH;
     return;
   }
   const swatches = scale.colors.map((cc, i) => {
     const lo = scale.bounds[i], hi = i < scale.bounds.length - 1 ? scale.bounds[i + 1] : null;
     return `<span class="snotel-legend-item"><span class="snotel-legend-swatch" style="background:${cc}"></span>${hi === null ? "≥ " + lo : lo + "–" + hi}</span>`;
   }).join("");
-  document.getElementById("snotel-legend").innerHTML = label + swatches;
+  document.getElementById("snotel-legend").innerHTML = label + swatches + NO_DATA_SWATCH;
 }
 
 // ------------------------------------------------- station detail
@@ -346,6 +355,11 @@ function renderElevation() {
       text.push(`${st.name}, ${st.state}`);
       symbols.push(clamp && v > PCT_CAP ? "triangle-up" : "circle");
     });
+  }
+  if (!xs.length) {
+    document.getElementById("snotel-elev-chart").innerHTML =
+      '<p class="chart-empty">No station data for this day.</p>';
+    return;
   }
   const refAt = (y) => ({ type: "line", x0: 0, x1: 1, xref: "paper", y0: y, y1: y, line: { color: "#888", width: 1, dash: "dash" } });
   const yaxis = { title: scale.label, ...PLOTLY_AXIS_LINE };

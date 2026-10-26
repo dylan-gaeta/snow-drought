@@ -387,7 +387,7 @@ async function renderCompare() {
     const d = others[i];
     const region = d && d.regions[sib4State.region];
     const color = COMPARE_COLORS[i % COMPARE_COLORS.length];
-    const name = `${product} ${response}`;
+    const name = `${product} ${responseDisplay(response)}`;
     const pairKey = `${product}|${response}`;
     legendItems.push({ name, color, pairKey, visible: checked.has(pairKey) });
     if (!region) return;

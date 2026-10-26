@@ -257,11 +257,10 @@ const PRODUCT_OBSERVATION_KIND = {
   "SMOS": "observation", "CAMS": "model", "CarbonTracker": "model",
   "FluxSat": "model", "GOSIF": "model", "GOSIF-GPP": "model", "MiCASA": "model",
   "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
-  "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
   "TROPOMI": "observation", "SPI": "observation", "SPEI": "observation",
   "EDDI": "model", "PDSI": "model", "ForDRI": "model", "ESI": "observation",
   "VegDRI": "observation", "USDM": "observation", "VIIRS": "observation",
-  "VIIRS": "observation", "VIIRS": "observation", "GRACE-L4": "model",
+  "GRACE-L4": "model",
   "NEON": "observation", "AmeriFlux": "observation",
   "GLEAM": "model", "USDM-Extent": "observation",
 };

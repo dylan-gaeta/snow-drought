@@ -28,7 +28,6 @@
 
   --radius-sm: 6px;
   --radius-md: 10px;
-  --legend-bar-width: 22px;
   --shadow-sm: 0 1px 2px rgba(2, 56, 88, 0.06), 0 1px 1px rgba(2, 56, 88, 0.04);
   --shadow-md: 0 4px 12px rgba(2, 56, 88, 0.10), 0 1px 3px rgba(2, 56, 88, 0.08);
   --shadow-focus: 0 0 0 3px rgba(58, 134, 188, 0.28);
@@ -604,6 +603,11 @@ table.headline-table tr.group-row td {
   font-size: 0.95rem;
   flex-shrink: 0;
 }
+/* Match the series colors the chart draws (compare.js COMPARE_A/B_COLOR) so the
+   A/B badge reinforces which line/axis is which -- the B series is the orange
+   right-axis line, not navy. */
+.compare-slot-label.a { background: #1b6ca8; }
+.compare-slot-label.b { background: #e8702a; }
 
 .value-glossary { font-size: 0.85rem; color: var(--text-muted); margin: -0.4rem 0 1rem; font-style: italic; }
 
@@ -686,8 +690,8 @@ table.headline-table tr.group-row td {
   border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 4px;
 }
 .cm-panel[hidden] { display: none; }
-.cm-section { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); padding: 0.55rem 0.5rem 0.2rem; position: sticky; top: 0; background: var(--bg-panel); }
-.cm-theme { font-size: 0.64rem; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.5rem 0.1rem 0.65rem; }
+.cm-section { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text); padding: 0.55rem 0.5rem 0.2rem; position: sticky; top: 0; background: var(--bg-panel); }
+.cm-theme { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.5rem 0.1rem 0.65rem; }
 .cm-option {
   display: flex; align-items: center; gap: 0.55rem; width: 100%;
   padding: 0.3rem 0.5rem; border: none; background: none;
@@ -776,7 +780,7 @@ table.headline-table tr.group-row td {
 .map-panel-display { margin: 1rem 0; }
 .map-panel-title {
   margin: 0 0 0.6rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -863,12 +867,6 @@ table.headline-table tr.group-row td {
 /* A month with no COG for the current year/mode (e.g. the current year ends
    mid-year) -- still clickable, but visibly not part of the viewable range. */
 .ol-period-month.unavailable { opacity: 0.3; }
-/* Keep the Dataset/Variable + period/mode/year controls in view while scrolling
-   the map and the regional table below -- they sit just under the sticky site
-   header (~120px tall). On mobile the header wraps taller and a sticky bar would
-   eat too much of a small screen, so it's static there. */
-.map-sticky { position: sticky; top: 120px; z-index: 5; background: var(--bg); padding: 0.4rem 0 0.5rem; }
-@media (max-width: 820px) { .map-sticky { position: static; } }
 .map-image-wrap {
   text-align: center;
   background: #fff;

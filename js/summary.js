@@ -197,13 +197,13 @@ async function renderSummaryTable() {
         // leave those cells uncolored rather than defaulting them to the low-stress hue.
         const cls = result.sigma === null ? ""
           : (data.drier_is_high ? result.sigma > 0 : result.sigma < 0) ? "stress" : "relief";
-        const text = formatSummaryValue(result, data.units, summaryState.valueType);
+        const text = formatSummaryValue(result, data.units, summaryState.valueType, data);
         return `<td class="${cls}">${text}</td>`;
       }).join("");
       const tr = document.createElement("tr");
       const responseCell = data.glossary
-        ? `<td title="${data.glossary.replace(/"/g, "&quot;")}">${row.response}${note}</td>`
-        : `<td>${row.response}${note}</td>`;
+        ? `<td title="${data.glossary.replace(/"/g, "&quot;")}">${responseDisplay(row.response)}${note}</td>`
+        : `<td>${responseDisplay(row.response)}${note}</td>`;
       tr.innerHTML = `${responseCell}<td>${row.product}</td>${cellsHtml}`;
       body.appendChild(tr);
     });

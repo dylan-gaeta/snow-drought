@@ -105,7 +105,7 @@ async function renderTimeseries() {
   traces.push({
     x: dates, y, type: "scatter", mode: "lines",
     line: { color: "#1b1b1b", width: 1.4 },
-    name: yTitle,
+    name: pickerState.product,
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   });
   document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
@@ -117,7 +117,7 @@ async function renderTimeseries() {
   }
   const layout = {
     margin: { t: 20, r: 20, b: 45, l: 60 },
-    yaxis: { title: yTitle, zeroline: isDeparture, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: yTitle, zeroline: false, ...PLOTLY_AXIS_LINE },
     xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes: isDeparture ? [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }] : [],

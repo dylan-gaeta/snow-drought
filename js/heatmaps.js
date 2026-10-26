@@ -161,7 +161,7 @@ async function renderHeatmap() {
   if (titleEl) {
     const cat = heatmapState.category === "all" ? "All products" : categoryLabelWithIcon(heatmapState.category);
     const fam = HEATMAP_FAMILIES[heatmapState.family];
-    const when = fam && fam.waterYear ? ` — WY${fam.waterYear}` : "";
+    const when = fam ? ` — ${fam.label}` : "";
     titleEl.textContent = `${cat}${when} — ${regionLabelFor(heatmapState.region)}`;
   }
   const pairs = heatmapPairs(heatmapState.category, heatmapState.family);

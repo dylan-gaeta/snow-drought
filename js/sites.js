@@ -181,7 +181,7 @@ function renderSiteChart() {
       hovertemplate: `${r} %{x|%Y-%m}: %{y:.2f}<extra></extra>`,
     };
   });
-  const yUnits = net.units;
+  const yUnits = (net.units || "").replace("umol", "µmol");
   const yTitle = isAnom ? `Anomaly (${yUnits})`
     : responses.length === 1 ? `${responses[0]} (${yUnits})` : `Value (${yUnits})`;
   Plotly.newPlot(el, traces, {
