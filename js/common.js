@@ -255,7 +255,7 @@ const PRODUCT_OBSERVATION_KIND = {
   "SNOTEL": "observation", "SMAP": "observation", "SNODAS": "model",
   "gridMET-Fire": "model", "OCO-2": "observation", "PhenoCam": "observation",
   "SMOS": "observation", "CAMS": "model", "CarbonTracker": "model",
-  "FluxSat": "model", "GOSIF": "model", "GOSIF-GPP": "model", "MiCASA": "model",
+  "FluxSat": "model", "GOSIF": "model", "MiCASA": "model",
   "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
   "TROPOMI": "observation", "SPI": "observation", "SPEI": "observation",
   "EDDI": "model", "PDSI": "model", "ForDRI": "model", "ESI": "observation",

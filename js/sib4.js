@@ -26,7 +26,7 @@ const sib4State = {
 // the compare panel. Filtered against the manifest at render time, so a pair
 // that isn't in this build is silently skipped rather than 404-ing.
 const SIB4_CORRESPONDENCE = {
-  GPP: [["MODIS-Terra", "GPP"], ["MODIS-Aqua", "GPP"], ["FluxSat", "GPP"], ["GOSIF-GPP", "GPP"], ["AmeriFlux", "GPP"]],
+  GPP: [["MODIS-Terra", "GPP"], ["MODIS-Aqua", "GPP"], ["FluxSat", "GPP"], ["GOSIF", "GPP"], ["AmeriFlux", "GPP"]],
   NEE: [["CarbonTracker", "NEE"], ["MiCASA", "NEE"], ["CAMS", "LAND_CARBON_EXCHANGE"], ["NEON", "NEE"], ["AmeriFlux", "NEE"]],
   RECO: [["MiCASA", "RH"]],
   RESP_HET: [["MiCASA", "RH"]],
