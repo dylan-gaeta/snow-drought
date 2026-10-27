@@ -434,10 +434,9 @@ function monthlyStressSigma(data, region, idx) {
 // aggregates the anomaly across the season window first. percentile stays an
 // empirical percentile of the target among the baseline years (a percentile is
 // inherently a rank), reported alongside the z-score.
-// percentOfNormal is null wherever the baseline mean is too close to zero to
-// divide by meaningfully (e.g. some temperature/VPD anomaly-prone fields),
-// or for native standardized indices (already a departure statistic, not a
-// physical quantity with a "normal").
+// percentOfNormal is null wherever the window's normal is not positive, or for
+// native standardized indices (already a departure statistic, not a physical
+// quantity with a "normal").
 // stressRank/n: this target year's rank among the n baseline years, counted
 // from the most stressful end (1 = the single most drought-stressed
 // baseline year for this response's own drier_is_high direction) -- the
@@ -522,12 +521,9 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   if (targetAnomaly === null || targetRaw === null) return null;
 
   const baselineAnomalies = [];
-  const baselineRaws = [];
   for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
     const a = aggregateWindow(region, windowKey, y, data.aggregation, "anomaly");
-    const r = aggregateWindow(region, windowKey, y, data.aggregation, "value");
     if (a !== null) baselineAnomalies.push(a);
-    if (r !== null) baselineRaws.push(r);
   }
   if (baselineAnomalies.length < MIN_BASELINE_YEARS) return null;
   baselineAnomalies.sort((a, b) => a - b);
@@ -626,13 +622,13 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // Fractional (mid-rank) -- rounded only where displayed as a badge.
   const stressRank = data.drier_is_high ? nRecord - rankRecord + 1 : rankRecord;
 
-  let percentOfNormal = null;
-  if (baselineRaws.length >= 2) {
-    const { mean: meanRaw, std: stdRaw } = meanStd(baselineRaws);
-    // Guard: a baseline mean within one baseline std of zero makes "percent
-    // of normal" numerically unstable (small denominator), not meaningful.
-    if (Math.abs(meanRaw) > stdRaw) percentOfNormal = (targetRaw / meanRaw) * 100;
-  }
+  // Percent of normal against the same "Normal" the regional tables show
+  // (raw - anomaly: the window's baseline mean on the per-cell / per-site anomaly
+  // basis), so every page reads one number. Whether the ratio means anything for
+  // this response at all is the pipeline's pct_of_normal_ok flag, checked by
+  // the callers; a non-positive normal (e.g. no snow in the baseline) has none.
+  const normal = targetRaw - targetAnomaly;
+  const percentOfNormal = normal > 0 ? (targetRaw / normal) * 100 : null;
   // The rank badge is "stressRank of nRecord": stressRank is ranked against
   // the FULL record (recordAnomalies / nRecord above), so its denominator must
   // be nRecord, NOT the smaller baseline sample n -- pairing them gave
@@ -817,6 +813,14 @@ function periodLabel(period) {
 
 // "Raw value" header: a single month is that month's value; a multi-month window
 // is a day-weighted MEAN (mean-type variables) or a SUM (accumulations).
+// Display unit of a window aggregate: a multi-month SUM of monthly totals is a
+// total over the window, so a per-month unit ("mm month-1") drops its
+// "month-1" (a DJFM precipitation total is mm, not mm per month).
+function windowUnits(data, windowKey) {
+  const units = canonicalUnit(data.units);
+  return (data.aggregation === "sum" && !/^\d{2}$/.test(windowKey)) ? units.replace(/\s*month-1$/, "") : units;
+}
+
 function rawValueHeaderLabel(data, windowKey) {
   return /^\d{2}$/.test(windowKey) ? "Raw value"
     : data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
@@ -829,22 +833,37 @@ function regionalSummaryNote(data) {
   return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = more stress, the wettest third blue = less stress, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 
+// Show or hide the "% of normal" header of the table holding bodyEl, matching
+// the cells regionalSummaryRowsHtml writes for this response.
+function applyPctOfNormalHeader(bodyEl, data) {
+  bodyEl.closest("table").querySelectorAll(".pct-normal-th").forEach((th) => {
+    th.hidden = !data.pct_of_normal_ok;
+  });
+}
+
 function regionalSummaryRowsHtml(data, windowKey, year) {
   // Raw value / normal / raw-unit anomaly display in the canonical unit
   // (e.g. kg m-2 -> mm); % of normal stays a native ratio below.
   const unitFactor = canonicalUnitFactor(data.units);
-  const dispUnits = canonicalUnit(data.units);
+  const dispUnits = windowUnits(data, windowKey);
+  // % of normal only means something for a physical amount (precipitation, SWE,
+  // soil moisture, evaporation...): data.pct_of_normal_ok from the pipeline
+  // excludes temperature-like quantities, native indices, and quantities that
+  // change sign or are not amounts (net carbon exchange, TWS anomaly, LSWI,
+  // percentiles). Where it doesn't apply the column is dropped, not dashed.
+  const showPct = Boolean(data.pct_of_normal_ok);
+  const nColumns = showPct ? 7 : 6;
   const regionGroups = [
     { label: "Regions", entries: regionEntries() },
     { label: "States", entries: manifest.western_states.map((code) => ({ code, label: manifest.state_labels[code] })) },
     { label: "HUC2 basins", entries: manifest.huc2_regions.map((code) => ({ code, label: manifest.huc2_labels[code] })) },
   ];
   return regionGroups.flatMap(({ label: groupLabel, entries }) => {
-    const groupRow = `<tr class="group-row"><td colspan="7">${groupLabel}</td></tr>`;
+    const groupRow = `<tr class="group-row"><td colspan="${nColumns}">${groupLabel}</td></tr>`;
     const dataRows = entries.map(({ code, label }) => {
       const region = data.regions[code];
       const result = region ? computeWindowValue(data, region, windowKey, year) : null;
-      if (!result) return `<tr><td>${label}</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>`;
+      if (!result) return `<tr><td>${label}</td>${"<td>&mdash;</td>".repeat(nColumns - 1)}</tr>`;
       // Color reflects standing ON RECORD (rank), not which side of the
       // climatological mean a value falls -- the mean is not the line between
       // drought and no-drought. Driest third of years on record read stress,
@@ -859,22 +878,16 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       // the anomaly is the mean-centered departure, mean = raw - anomaly. Not
       // defined for native standardized indices (the value already is a departure).
       const hasNormal = result.anomaly !== null && !result.isNativeIndex;
-      const normal = hasNormal ? result.rawValue - result.anomaly : null; // native units (used for % of normal)
+      const normal = hasNormal ? result.rawValue - result.anomaly : null; // native units
       const normalText = normal === null ? "&mdash;" : `${(normal * unitFactor).toFixed(2)} ${dispUnits}`;
-      // % of normal only makes sense for a non-negative physical AMOUNT (precip,
-      // SWE, soil moisture, evaporation...), not an interval-scale quantity like
-      // temperature/dewpoint/VPD where raw/mean is meaningless and runs past
-      // 100%. data.pct_of_normal_ok carries that distinction from the pipeline
-      // (not thermal-family, not a native standardized index); also require a
-      // positive baseline mean.
-      const pctText = (!data.pct_of_normal_ok || normal === null || normal <= 0) ? "&mdash;"
-        : `${(result.rawValue / normal * 100).toFixed(0)}%`;
+      const pctCell = !showPct ? ""
+        : `<td>${result.percentOfNormal === null ? "&mdash;" : `${result.percentOfNormal.toFixed(0)}%`}</td>`;
       const rawAnomText = (result.anomaly === null || result.isNativeIndex)
         ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${(result.anomaly * unitFactor).toFixed(2)} ${dispUnits}`;
       const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
       const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
         : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${Math.round(result.stressRank)}/${result.nRecord}</span>`;
-      return `<tr><td>${label}</td><td>${rawText}</td><td>${normalText}</td><td>${pctText}</td><td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
+      return `<tr><td>${label}</td><td>${rawText}</td><td>${normalText}</td>${pctCell}<td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
     });
     return [groupRow, ...dataRows];
   }).join("");

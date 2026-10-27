@@ -142,6 +142,7 @@ async function renderTimeseriesRegionTable() {
     return;
   }
   body.innerHTML = regionalSummaryRowsHtml(data, tsTableWindow, tsTableYear);
+  applyPctOfNormalHeader(body, data);
   note.textContent = regionalSummaryNote(data);
 }
 

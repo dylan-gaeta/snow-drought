@@ -794,6 +794,7 @@ async function renderRegionValuesTable(entry) {
   const rawHeader = document.getElementById("ol-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, period);
   body.innerHTML = regionalSummaryRowsHtml(data, period, year);
+  applyPctOfNormalHeader(body, data);
   note.textContent = regionalSummaryNote(data);
 }
 

@@ -106,7 +106,7 @@ function formatSummaryValue(result, units, valueType, data) {
   const sign = result.sigma >= 0 ? "+" : "";
   // Raw value + raw-unit anomaly display in the canonical unit (e.g. kg m-2 -> mm).
   const factor = canonicalUnitFactor(units);
-  const dispUnits = canonicalUnit(units);
+  const dispUnits = windowUnits(data, summaryState.window);
   if (valueType === "raw") return `${(result.rawValue * factor).toFixed(2)} ${dispUnits}`;
   if (valueType === "anomaly_raw") {
     if (result.anomaly === null || result.isNativeIndex) return "&mdash;";

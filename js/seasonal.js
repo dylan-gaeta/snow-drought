@@ -219,6 +219,7 @@ async function renderSeasonalRegionTable() {
     return;
   }
   body.innerHTML = regionalSummaryRowsHtml(data, seasonalTableWindow, seasonalTableYear);
+  applyPctOfNormalHeader(body, data);
   note.textContent = regionalSummaryNote(data);
 }
 
