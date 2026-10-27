@@ -509,7 +509,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const nRecordNative = recordN.length;
     const ltN = recordN.filter((b) => b < v).length;
     const leN = recordN.filter((b) => b <= v).length;
-    const rankRecordNative = 0.5 * (ltN + leN);
+    const rankRecordNative = 0.5 * (ltN + leN) + 0.5;
     const stressRankNative = data.drier_is_high ? nRecordNative - rankRecordNative + 1 : rankRecordNative;
     return {
       sigma: sigmaNonSigma, percentile: percentileNative, rawValue: v, anomaly: null,
@@ -617,7 +617,10 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // middle of the record.
   const ltRecord = recordAnomalies.filter((a) => a < targetAnomaly).length;
   const leRecord = recordAnomalies.filter((a) => a <= targetAnomaly).length;
-  const rankRecord = 0.5 * (ltRecord + leRecord);
+  // 1-based mid-rank: the target year is itself in recordAnomalies, so the
+  // record minimum scores (0 + 1)/2 + 0.5 = 1, not 0.5 -- without the +0.5 a
+  // record-setting year on the drier_is_high end came out 1.5 and displayed as 2.
+  const rankRecord = 0.5 * (ltRecord + leRecord) + 0.5;
   // rank counts from the driest/coolest (lowest-anomaly) end; drier_is_high
   // determines which end is actually the stressed one for this response.
   // Fractional (mid-rank) -- rounded only where displayed as a badge.

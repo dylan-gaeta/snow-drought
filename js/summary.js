@@ -80,8 +80,10 @@ function initSummaryTable() {
     anomaly_raw: "The departure from the baseline mean in the variable's own physical units (not standardized) -- the window value minus its baseline-mean normal.",
   };
   const updateValueGlossary = () => {
+    // The table's σ is the window σ (computeWindowValue), not the stored chart σ.
+    const glossaryKey = valueSelect.value === "sigma" ? "sigma_window" : valueSelect.value;
     document.getElementById("summary-value-glossary").textContent =
-      (manifest.value_type_glossary || {})[valueSelect.value] || localGlossary[valueSelect.value] || "";
+      (manifest.value_type_glossary || {})[glossaryKey] || localGlossary[valueSelect.value] || "";
   };
   valueSelect.addEventListener("change", (event) => {
     summaryState.valueType = event.target.value;

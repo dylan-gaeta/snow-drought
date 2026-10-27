@@ -5,7 +5,8 @@
 // snake_case codes (percent_of_normal, anomaly_raw, ...) that should not be
 // shown raw to a reader. Unmapped keys fall back to a de-underscored form.
 const VALUE_TYPE_LABELS = {
-  sigma: "Standardized anomaly (σ)", anomaly_raw: "Raw-unit anomaly",
+  sigma: "Standardized anomaly (σ), charts", sigma_window: "Standardized anomaly (σ), tables and heatmaps",
+  anomaly_raw: "Raw-unit anomaly",
   percent_of_normal: "Percent of normal", percentile: "Percentile",
   rank: "Driest/wettest rank", raw: "Raw value",
 };
