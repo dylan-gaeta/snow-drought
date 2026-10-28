@@ -55,15 +55,19 @@ const REGIME_LABELS = {
 const REGIME_LEGEND_LABELS = {
   dry: "Dry", warm_dry: "Warm & dry", warm: "Warm", none: "No drought",
 };
-// NCL precip_diff_12lev diverging ramp -- used when points are colored by a
-// driver variable's anomaly (centered at 0), matching the rest of the site.
-const PRECIP_DIFF = [
-  [0, "#023858"], [0.0833, "#0570b0"], [0.1667, "#6eaac8"], [0.25, "#53bd9f"],
-  [0.3333, "#99f0b2"], [0.4167, "#cdffcd"], [0.5, "#ffffff"], [0.5833, "#fff5ba"],
-  [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"], [1, "#b66a28"],
-];
+// Driver-anomaly coloring: a continuous NCL ramp as a Plotly colorscale, with
+// pure white at the midpoint (the MPL_ tables are off-white there, and zero
+// anomaly is meaningful). Thermal/demand drivers (stress_high) read red = warm
+// on MPL_RdBu reversed; moisture/snow drivers read brown = low on MPL_BrBG.
+function driverColorscale(stressHigh) {
+  const colors = NCL_COLORMAPS.diverging[stressHigh ? "MPL_RdBu" : "MPL_BrBG"].colors.slice();
+  if (stressHigh) colors.reverse();
+  if (colors.length % 2 === 0) throw new Error("driverColorscale needs an odd number of stops to center white");
+  colors[(colors.length - 1) / 2] = "#ffffff";
+  return colors.map((color, i) => [i / (colors.length - 1), color]);
+}
 
-const quadrantState = { region: "ALL", x: "ppt_anom", y: "t_anom", color: "regime", rows: [] };
+const quadrantState = { region: "ALL", x: "t_anom", y: "swe_anom", color: "ppt_anom", rows: [] };
 
 async function initQuadrantView() {
   const xSelect = document.getElementById("quadrant-x-select");
@@ -236,13 +240,11 @@ function renderQuadrantChart() {
       };
     } else {
       const cMeta = QUADRANT_VARIABLES[colorBy];
-      // Flip the diverging ramp for benign-direction variables (stress_high
-      // false, e.g. precipitation / SWE / snow cover) so the stressed end
-      // always reads brown and the benign end blue, matching the site-wide
-      // palette; cmid:0 keeps white anchored at zero anomaly either way.
+      const values = points.map((p) => p[colorBy]).filter((v) => v !== null);
+      const limit = Math.max(...values.map((v) => Math.abs(v)));
       marker = {
-        size: sizes, color: points.map((p) => p[colorBy]), colorscale: PRECIP_DIFF, cmid: 0,
-        reversescale: !cMeta.stress_high,
+        size: sizes, color: points.map((p) => p[colorBy]),
+        colorscale: driverColorscale(cMeta.stress_high), cmin: -limit, cmax: limit,
         colorbar: { title: { text: `${cMeta.label}${cMeta.window ? " " + cMeta.window : ""} anomaly (${cMeta.unit})`, side: "right" }, thickness: 14 },
         line: { color: "#333", width: 0.8 },
       };
