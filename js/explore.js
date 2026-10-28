@@ -44,6 +44,8 @@ function populateStartYearControl(entry) {
 async function renderTimeseries() {
   const chart = document.getElementById("timeseries-chart");
   const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
+  // Set before the no-data check, so the heading always names the region shown.
+  document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const region = data.regions[pickerState.region];
   if (!region) {
     chart.innerHTML = '<p class="chart-empty">No data for this region.</p>';
@@ -108,7 +110,6 @@ async function renderTimeseries() {
     name: pickerState.product,
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   });
-  document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
     sigmaNote.textContent = (isSigma && !data.native_standardized && manifest.value_type_glossary)

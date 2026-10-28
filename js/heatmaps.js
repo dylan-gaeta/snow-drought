@@ -304,34 +304,24 @@ async function renderHeatmapUnsafe(chart, pairs) {
 
   const trace = {
     x: xLabels, y: yLabels, z, type: "heatmap",
-    // NCL precip_diff_12lev / ColorBrewer BrBG, the full 13-stop spectrum (via
-    // the cmaps package) -- the same ramp the map anomaly layers and the
-    // snowdrought.org welcome border use, so the whole site reads one palette
-    // rather than just the two teal/brown extremes. No-data cells render as the
-    // gray plot background, not a scale color. White is pinned exactly at zero via zmid, so the
-    // midpoint is neutral rather than BrBG's natural pale-tan. Order: blue
-    // (less stress) low -> white (neutral) -> brown (more stress) high.
-    colorscale: [
-      [0, "#023858"], [0.0833, "#0570b0"], [0.1667, "#6eaac8"], [0.25, "#53bd9f"],
-      [0.3333, "#99f0b2"], [0.4167, "#cdffcd"], [0.5, "#ffffff"], [0.5833, "#fff5ba"],
-      [0.6667, "#f5e09e"], [0.75, "#f5cd84"], [0.8333, "#e1a564"], [0.9167, "#cd853f"],
-      [1, "#b66a28"],
-    ],
+    // NCL MPL_BrBG reversed: teal (less stress) low -> brown (more stress) high,
+    // with pure white pinned at zero (the MPL_ table is off-white there). Cells
+    // past +/-zAbs take the end colors, so the end ticks read "<=" / ">=".
+    colorscale: heatmapColorscale(),
     zmin: -zAbs, zmax: zAbs, zmid: 0,
     // Horizontal colorbar ABOVE the heatmap (the matrix can be tall, and a
-    // right-side vertical bar forced scrolling to see its low end). The two
-    // ends are labeled by direction -- less stress / more stress -- since
-    // bare sigma numbers read as cryptic; exact values are in the hover.
+    // right-side vertical bar forced scrolling to see its low end).
     colorbar: {
       orientation: "h",
       x: 0.5, xanchor: "center",
       y: 1.04, yanchor: "bottom",
       len: 0.55, thickness: 16,
       tickmode: "array",
-      tickvals: [-zAbs, 0, zAbs],
-      ticktext: ["Less stress", "0", "More stress"],
+      tickvals: sigmaTicks(zAbs),
+      ticktext: sigmaTicks(zAbs).map((v) => (v === -zAbs ? `≤−${zAbs}` : v === zAbs ? `≥+${zAbs}`
+        : v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0")),
       tickfont: { size: 12 },
-      title: { text: "Standardized anomaly (σ)", side: "top", font: { size: 13 } },
+      title: { text: "← Less stress · Standardized anomaly (σ) · More stress →", side: "top", font: { size: 13 } },
     },
     hoverongaps: false,
   };
@@ -369,3 +359,19 @@ async function renderHeatmapUnsafe(chart, pairs) {
 }
 
 loadManifest().then(initHeatmaps);
+
+// Heatmap colorscale: NCL MPL_BrBG reversed (teal low = less stress, brown high
+// = more stress) with pure white at the midpoint.
+function heatmapColorscale() {
+  const colors = NCL_COLORMAPS.diverging.MPL_BrBG.colors.slice().reverse();
+  if (colors.length % 2 === 0) throw new Error("heatmapColorscale needs an odd number of stops to center white");
+  colors[(colors.length - 1) / 2] = "#ffffff";
+  return colors.map((color, i) => [i / (colors.length - 1), color]);
+}
+
+// One colorbar tick per whole sigma across the fixed symmetric range.
+function sigmaTicks(zAbs) {
+  const ticks = [];
+  for (let v = -zAbs; v <= zAbs; v++) ticks.push(v);
+  return ticks;
+}

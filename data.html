@@ -48,7 +48,7 @@
     <p class="finding-note">Standardized anomaly (&sigma;) per product: one
       row per product/response, one column per month or year. Each row is
       sign-flipped to its own variable's stress direction (e.g. low
-      snowpack is the stress direction, not high), so gold always means more stress
+      snowpack is the stress direction, not high), so brown always means more stress
       and teal always means less stress, regardless of the variable's raw sign
       convention.</p>
     <p class="finding-note">Every row is standardized against that product's
@@ -62,8 +62,8 @@
       deviation from fewer years, so read a row's color as its standing within
       its own history, not as a strict cross-product ranking.</p>
     <div class="heatmap-legend-key">
-      <span><span class="heatmap-legend-swatch" style="background:#955910;"></span> More stress</span>
-      <span><span class="heatmap-legend-swatch" style="background:#0570b0;"></span> Less stress</span>
+      <span><span class="heatmap-legend-swatch" style="background:#563105;"></span> More stress</span>
+      <span><span class="heatmap-legend-swatch" style="background:#003c30;"></span> Less stress</span>
       <span><span class="heatmap-legend-swatch" style="background:#c8c8c8;"></span> No data</span>
     </div>
     <div class="heatmap-layout">
@@ -133,9 +133,8 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <p>
-      Source: snowdrought-carbon (private research codebase, NOAA
-      Global Monitoring Laboratory &middot; Cooperative Institute for
-      Research in Environmental Sciences).
+      NOAA Global Monitoring Laboratory &middot; Cooperative Institute for
+      Research in Environmental Sciences.
     </p>
     <p>
       See <a href="about.html">About</a> for methodology, references, and
@@ -145,6 +144,7 @@
 </footer>
 
 <script src="js/common.js"></script>
+<script src="js/ncl-colormaps.js"></script>
 <script src="js/heatmaps.js"></script>
 <script src="js/summary.js"></script>
 </body>
