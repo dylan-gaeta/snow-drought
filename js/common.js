@@ -469,25 +469,6 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     };
     const v = aggregateNative(targetYear);
     if (v === null || v === undefined) return null;
-    // SPI/SPEI/EDDI/ESI/ForDRI publish in σ units: the value already IS a
-    // standardized departure, so it passes through unchanged -- never
-    // re-standardized or relabelled.
-    const sigmaNative = typeof data.units === "string" && data.units.trim() === "σ";
-    if (sigmaNative) {
-      return {
-        sigma: v, percentile: null, rawValue: v, anomaly: null, percentOfNormal: null,
-        isNativeIndex: true, stressRank: null, n: null, nRecord: null,
-      };
-    }
-    // A non-σ native index (USDM 0-5 severity, PDSI/VegDRI "Index") is NOT on a
-    // z scale: running its raw value through the stress-heatmap color and the
-    // normal-CDF percentile put an average USDM month at ~95th-percentile stress
-    // and "no drought" at the 50th. For the cross-product σ heatmap + percentile
-    // it is standardized against its OWN baseline years instead (Dylan, 2026-10);
-    // its native value is still what the Time Series / Map pages read (from the
-    // stored region.sigma, untouched). percentOfNormal stays null -- a drought
-    // index has no physical "normal" to take a percent of. isNativeIndex is
-    // false so the summary uses this empirical percentile, not the normal CDF.
     const baseline = [];
     for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
       const b = aggregateNative(y);
@@ -499,7 +480,30 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const belowB = baseline.filter((b) => b < v).length;
     const atOrBelowB = baseline.filter((b) => b <= v).length;
     const rankB = 0.5 * (belowB + atOrBelowB);
+    // Percentile against this region's own baseline years. A regional mean of a
+    // per-cell standardized index varies far less than one cell does (baseline
+    // SD 0.35-0.86 for SPI/SPEI/EDDI/ESI/ForDRI), so reading its value off the
+    // standard normal curve made dry years look ordinary.
     const percentileNative = ((rankB + 0.5) / (nB + 1)) * 100;
+    // SPI/SPEI/EDDI/ESI/ForDRI publish in σ units: the value already IS a
+    // standardized departure, so it passes through unchanged -- never
+    // re-standardized or relabelled.
+    const sigmaNative = typeof data.units === "string" && data.units.trim() === "σ";
+    if (sigmaNative) {
+      return {
+        sigma: v, percentile: percentileNative, rawValue: v, anomaly: null, percentOfNormal: null,
+        isNativeIndex: true, stressRank: null, n: nB, nRecord: null, stressShare: null, reliefShare: null,
+      };
+    }
+    // A non-σ native index (USDM 0-5 severity, PDSI/VegDRI "Index") is NOT on a
+    // z scale: running its raw value through the stress-heatmap color and the
+    // normal-CDF percentile put an average USDM month at ~95th-percentile stress
+    // and "no drought" at the 50th. For the cross-product σ heatmap + percentile
+    // it is standardized against its OWN baseline years instead (Dylan, 2026-10);
+    // its native value is still what the Time Series / Map pages read (from the
+    // stored region.sigma, untouched). percentOfNormal stays null -- a drought
+    // index has no physical "normal" to take a percent of. isNativeIndex is
+    // false so the summary uses this empirical percentile, not the normal CDF.
     const { mean: meanB, std: stdB } = meanStd(baseline);
     const sigmaNonSigma = (nB < MIN_BASELINE_YEARS || stdB <= 0) ? null : (v - meanB) / stdB;
     const recordN = [];
@@ -518,7 +522,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     return {
       sigma: sigmaNonSigma, percentile: percentileNative, rawValue: v, anomaly: null,
       percentOfNormal: null, isNativeIndex: false, stressRank: stressRankNative,
-      n: nB, nRecord: nRecordNative,
+      n: nB, nRecord: nRecordNative, ...recordShares(data, ltN, leN, nRecordNative),
     };
   }
   const targetAnomaly = aggregateWindow(region, windowKey, targetYear, data.aggregation, "anomaly");
@@ -584,11 +588,9 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   }
   const seasonalScale = monthlyMeans.length > 1 ? meanStd(monthlyMeans).std : 0;
   const seasonalFloor = SEASONAL_DORMANT_FRACTION * seasonalScale;
-  const sigma = (baselineAnomalies.length < MIN_BASELINE_YEARS
-                 || stdAnom <= DORMANT_SD_FRACTION * overallBaselineStd
-                 || (seasonalFloor > 0 && stdAnom < seasonalFloor))
-    ? null
-    : (targetAnomaly - meanAnom) / stdAnom;
+  const dormant = stdAnom <= DORMANT_SD_FRACTION * overallBaselineStd
+    || (seasonalFloor > 0 && stdAnom < seasonalFloor);
+  const sigma = dormant ? null : (targetAnomaly - meanAnom) / stdAnom;
 
   // The displayed "rank on record" badge is a separate statistic from sigma:
   // sigma/percentile stay anchored to the fixed baseline_start_year..
@@ -644,9 +646,18 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // impossible badges like "36/34" (rank out of a 37-year record over a
   // 34-year baseline count) (Dylan, 2026-10). `n` stays for sigma/percentile,
   // which ARE baseline-relative.
+  // A dormant window (no real year-to-year variation, e.g. summer snowpack) has
+  // no meaningful standing either: ranking or percentiling near-identical
+  // values (0.001 mm of July SWE) would be noise, so they go blank with sigma.
+  if (dormant) {
+    return {
+      sigma, percentile: null, rawValue: targetRaw, anomaly: targetAnomaly, percentOfNormal,
+      isNativeIndex: false, stressRank: null, n, nRecord: null, stressShare: null, reliefShare: null,
+    };
+  }
   return {
     sigma, percentile, rawValue: targetRaw, anomaly: targetAnomaly, percentOfNormal,
-    isNativeIndex: false, stressRank, n, nRecord,
+    isNativeIndex: false, stressRank, n, nRecord, ...recordShares(data, ltRecord, leRecord, nRecord),
   };
 }
 
@@ -831,15 +842,51 @@ function windowUnits(data, windowKey) {
 }
 
 function rawValueHeaderLabel(data, windowKey) {
-  return /^\d{2}$/.test(windowKey) ? "Raw value"
-    : data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
+  if (/^\d{2}$/.test(windowKey)) return "Raw value";
+  // A fixed-timescale index (SPI-03, PDSI...) is read at the window's last month.
+  if (data.aggregation === "native_index") return `Value as of ${nativeWindowLastMonth(windowKey)}`;
+  return data.aggregation === "sum" ? "Raw value (window total)" : "Raw value (window mean)";
+}
+
+// Month name a native_index window is read at (DJFM -> March).
+function nativeWindowLastMonth(windowKey) {
+  const pairs = windowMonthYearPairs(windowKey, 2000);
+  return MONTH_NAMES[pairs[pairs.length - 1].month - 1];
+}
+
+// Share of the record at least as stressed / at least as un-stressed as the
+// target, ties included. lt/le = years with a strictly lower / lower-or-equal
+// anomaly than the target, of n.
+function recordShares(data, lt, le, n) {
+  const atLeastAsHigh = n - lt;
+  const atLeastAsLow = le;
+  return data.drier_is_high
+    ? { stressShare: atLeastAsHigh / n, reliefShare: atLeastAsLow / n }
+    : { stressShare: atLeastAsLow / n, reliefShare: atLeastAsHigh / n };
+}
+
+// Row shading by standing on record: "stress" only if no more than a third of
+// the record is at least as stressed (ties counted), "relief" likewise, so a
+// block of tied years (e.g. 22 of 35 Septembers with zero snowfall) is not all
+// called the driest third. Coverage diagnostics (cloud/clear fraction) are
+// never colored as drought stress.
+function standingClass(data, result) {
+  if (manifest.coverage_diagnostic_responses.includes(data.response)) return "";
+  if (result.stressShare === null || result.stressShare === undefined) return "";
+  if (result.stressShare <= 1 / 3) return "stress";
+  if (result.reliefShare <= 1 / 3) return "relief";
+  return "";
 }
 
 function regionalSummaryNote(data) {
-  const nativeNote = data.native_standardized
-    ? " Native standardized index -- rank on record not computed for these (the reading is already a standardized departure)."
+  const asOfNote = data.aggregation === "native_index"
+    ? " This index has a fixed timescale, so a season shows its value as of the season's last month."
     : "";
-  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = more stress, the wettest third blue = less stress, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
+  const sigmaNote = (typeof data.units === "string" && data.units.trim() === "σ")
+    ? " Standardized index: rank on record is not computed (the value is already a standardized departure)."
+    : "";
+  const nativeNote = asOfNote + sigmaNote;
+  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): a year reads gold (more stress) when no more than a third of the record is at least as stressed in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} = more stress), blue (less stress) when no more than a third is at least as un-stressed, and is left uncolored otherwise; tied years count together, so a large block of identical years is not colored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 
 // Show or hide the "% of mean" header of the table holding bodyEl, matching
@@ -877,11 +924,7 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
       // climatological mean a value falls -- the mean is not the line between
       // drought and no-drought. Driest third of years on record read stress,
       // wettest third least stress, the middle third is left uncolored.
-      let cls = "";
-      if (result.stressRank !== null && result.nRecord) {
-        const frac = result.stressRank / result.nRecord; // rank 1 = most drought-stressed
-        cls = frac <= 1 / 3 ? "stress" : frac > 2 / 3 ? "relief" : "";
-      }
+      const cls = standingClass(data, result);
       const rawText = `${(result.rawValue * unitFactor).toFixed(2)} ${dispUnits}`;
       // Normal = this window's baseline (climatology) mean in native units; since
       // the anomaly is the mean-centered departure, mean = raw - anomaly. Not

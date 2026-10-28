@@ -114,8 +114,10 @@ function formatSummaryValue(result, units, valueType, data) {
     return `${anom >= 0 ? "+" : ""}${anom.toFixed(2)} ${dispUnits}`;
   }
   if (valueType === "percentile") {
-    const percentile = result.isNativeIndex ? nativeIndexPercentile(result.sigma) : result.percentile;
-    return sigmaToPercentileLabel(percentile);
+    // One method for the whole column: each value's percentile among its own
+    // region's baseline years (computeWindowValue), native indices included.
+    if (result.percentile === null) return "&mdash;";
+    return sigmaToPercentileLabel(result.percentile);
   }
   if (valueType === "percent_of_normal") {
     // Gated by the pipeline's pct_of_normal_ok flag (a non-negative physical
@@ -184,21 +186,21 @@ async function renderSummaryTable() {
     body.appendChild(groupRow);
     rows.forEach((row) => {
       const data = row.data;
-      let note = "";
-      if (row.cells.some((cell) => cell && cell.isNativeIndex)) {
-        if (SEASON_MONTHS[summaryState.window]) {
-          const lastMonth = SEASON_MONTHS[summaryState.window].slice(-1)[0];
-          note = ` (native index, as of ${MONTH_NAMES[lastMonth - 1]})`;
-        } else {
-          note = " (native index)";
-        }
-      }
+      // Fixed-timescale indices (SPI-03, PDSI, VegDRI...) read a season at its
+      // last month, whatever their units.
+      const note = (data.aggregation === "native_index" && !/^\d{2}$/.test(summaryState.window))
+        ? ` (as of ${nativeWindowLastMonth(summaryState.window)})` : "";
       const cellsHtml = row.cells.map((result) => {
         if (!result) return "<td>&mdash;</td>";
         // Short-record products carry sigma === null (baseline < MIN_BASELINE_YEARS_SIGMA);
         // leave those cells uncolored rather than defaulting them to the low-stress hue.
-        const cls = result.sigma === null ? ""
-          : (data.drier_is_high ? result.sigma > 0 : result.sigma < 0) ? "stress" : "relief";
+        // Rank and percentile color by standing on record, exactly as the
+        // regional tables do; the other value types by the sign of sigma.
+        // Coverage diagnostics are never colored as stress.
+        const byStanding = summaryState.valueType === "rank" || summaryState.valueType === "percentile";
+        const cls = byStanding ? standingClass(data, result)
+          : (result.sigma === null || manifest.coverage_diagnostic_responses.includes(data.response)) ? ""
+            : (data.drier_is_high ? result.sigma > 0 : result.sigma < 0) ? "stress" : "relief";
         const text = formatSummaryValue(result, data.units, summaryState.valueType, data);
         return `<td class="${cls}">${text}</td>`;
       }).join("");

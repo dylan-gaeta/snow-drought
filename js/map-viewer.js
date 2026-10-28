@@ -602,7 +602,8 @@ function initInteractiveMap() {
       // undo this file's own Int16 scale, then convert to the canonical unit
       // (e.g. kg m-2 -> mm) so the map reads in the same unit as everywhere else.
       const value = (raw / olMapState.currentScale) * canonicalUnitFactor(nativeUnits);
-      const unitSuffix = canonicalUnit(nativeUnits);
+      // A multi-month total of a per-month quantity reads as a total (DJFM mm).
+      const unitSuffix = windowUnits(currentResponseEntry(), olMapState.period);
       const lonLat = ol.proj.toLonLat(event.coordinate);
       const latStr = `${Math.abs(lonLat[1]).toFixed(3)}°${lonLat[1] >= 0 ? "N" : "S"}`;
       const lonStr = `${Math.abs(lonLat[0]).toFixed(3)}°${lonLat[0] >= 0 ? "E" : "W"}`;
@@ -941,7 +942,7 @@ async function updateInteractiveMapLayer() {
 
   const legend = document.getElementById("ol-legend");
   const nativeUnits = entry.units || "";
-  const units = canonicalUnit(nativeUnits);
+  const units = windowUnits(entry, olMapState.period);
   const unitFactor = canonicalUnitFactor(nativeUnits);
   const palette = currentPalette(style);
   // Continuous palettes render as a smooth ramp; a native-discrete palette

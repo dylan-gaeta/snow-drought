@@ -140,7 +140,9 @@ function heatmapPairs(category, family) {
       // area means -- never a heatmap row (see POINT_NETWORK_PRODUCTS, common.js).
       if (POINT_NETWORK_PRODUCTS.has(product)) continue;
       for (const [response, entry] of Object.entries(responses)) {
-        // The water-year families read each stored per-month sigma directly --
+        // Cloud/clear fractions are coverage diagnostics, not drought signals.
+        if (manifest.coverage_diagnostic_responses.includes(response)) continue;
+        // The water-year families read each single month directly --
         // no aggregation involved, so they're fine even for products (e.g. NEON
         // NEE) with no established multi-month aggregation rule. Every other
         // family aggregates across a season/month window via
@@ -216,8 +218,11 @@ async function renderHeatmapUnsafe(chart, pairs) {
         const idx = region.dates.indexOf(dateStr);
         if (idx === -1) return null;
         hasData = true; // the product has a value this month even if sigma is floored out
-        const s = monthlyStressSigma(data, region, idx);
-        return s === null ? null : sign * s;
+        // Same per-month window sigma as the "<Month>, by year" family and the
+        // tables (computeWindowValue on a one-month window), so a given month
+        // shows one sigma everywhere on the page.
+        const result = computeWindowValue(data, region, String(month).padStart(2, "0"), year);
+        return (result === null || result.sigma === null) ? null : sign * result.sigma;
       });
       return { z, hasData };
     };
