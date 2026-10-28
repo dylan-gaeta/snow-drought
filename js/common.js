@@ -389,6 +389,11 @@ function aggregateWindow(region, windowKey, targetYear, rule, field) {
   return values.reduce((sum, v, i) => sum + v * weights[i], 0) / totalWeight;
 }
 
+// Largest year-to-year coefficient of variation (baseline SD / baseline mean) at
+// which "percent of mean" is shown: above 1 the spread exceeds the mean itself,
+// so the mean does not describe a typical year.
+const PERCENT_OF_MEAN_MAX_CV = 1;
+
 function meanStd(values) {
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1);
@@ -626,9 +631,13 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // (raw - anomaly: the window's baseline mean on the per-cell / per-site anomaly
   // basis), so every page reads one number. Whether the ratio means anything for
   // this response at all is the pipeline's pct_of_normal_ok flag, checked by
-  // the callers; a non-positive normal (e.g. no snow in the baseline) has none.
+  // the callers. Here it is also left out where the window's year-to-year spread
+  // exceeds its baseline mean (coefficient of variation above
+  // PERCENT_OF_MEAN_MAX_CV): the mean is then not a typical year, and the ratio
+  // runs to thousands of percent off a near-zero mean (off-season snow, winter SIF).
   const normal = targetRaw - targetAnomaly;
-  const percentOfNormal = normal > 0 ? (targetRaw / normal) * 100 : null;
+  const percentOfNormal = (normal > 0 && stdAnom <= PERCENT_OF_MEAN_MAX_CV * normal)
+    ? (targetRaw / normal) * 100 : null;
   // The rank badge is "stressRank of nRecord": stressRank is ranked against
   // the FULL record (recordAnomalies / nRecord above), so its denominator must
   // be nRecord, NOT the smaller baseline sample n -- pairing them gave
