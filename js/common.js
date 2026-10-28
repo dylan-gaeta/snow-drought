@@ -622,7 +622,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // Fractional (mid-rank) -- rounded only where displayed as a badge.
   const stressRank = data.drier_is_high ? nRecord - rankRecord + 1 : rankRecord;
 
-  // Percent of normal against the same "Normal" the regional tables show
+  // Percent of mean against the same "Baseline mean" the regional tables show
   // (raw - anomaly: the window's baseline mean on the per-cell / per-site anomaly
   // basis), so every page reads one number. Whether the ratio means anything for
   // this response at all is the pipeline's pct_of_normal_ok flag, checked by
@@ -833,7 +833,7 @@ function regionalSummaryNote(data) {
   return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): the driest third of years in this variable's own stress direction (${data.drier_is_high ? "higher" : "lower"} = more stress) read gold = more stress, the wettest third blue = less stress, the middle third is left uncolored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 
-// Show or hide the "% of normal" header of the table holding bodyEl, matching
+// Show or hide the "% of mean" header of the table holding bodyEl, matching
 // the cells regionalSummaryRowsHtml writes for this response.
 function applyPctOfNormalHeader(bodyEl, data) {
   bodyEl.closest("table").querySelectorAll(".pct-normal-th").forEach((th) => {
@@ -843,10 +843,10 @@ function applyPctOfNormalHeader(bodyEl, data) {
 
 function regionalSummaryRowsHtml(data, windowKey, year) {
   // Raw value / normal / raw-unit anomaly display in the canonical unit
-  // (e.g. kg m-2 -> mm); % of normal stays a native ratio below.
+  // (e.g. kg m-2 -> mm); % of mean stays a native ratio below.
   const unitFactor = canonicalUnitFactor(data.units);
   const dispUnits = windowUnits(data, windowKey);
-  // % of normal only means something for a physical amount (precipitation, SWE,
+  // % of mean only means something for a physical amount (precipitation, SWE,
   // soil moisture, evaporation...): data.pct_of_normal_ok from the pipeline
   // excludes temperature-like quantities, native indices, and quantities that
   // change sign or are not amounts (net carbon exchange, TWS anomaly, LSWI,

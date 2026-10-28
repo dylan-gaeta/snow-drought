@@ -7,7 +7,7 @@
 const VALUE_TYPE_LABELS = {
   sigma: "Standardized anomaly (σ), charts", sigma_window: "Standardized anomaly (σ), tables and heatmaps",
   anomaly_raw: "Raw-unit anomaly",
-  percent_of_normal: "Percent of normal", percentile: "Percentile",
+  percent_of_normal: "Percent of mean", percentile: "Percentile",
   rank: "Driest/wettest rank", raw: "Raw value",
 };
 

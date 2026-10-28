@@ -95,8 +95,9 @@
       Native indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already a
       fixed-timescale statistic (e.g. SPI-03 = trailing 3 months), so a
       season window shows the reading "as of &lt;month&gt;" instead of
-      re-aggregating it. Percent-of-normal is omitted for native indices
-      and near-zero baselines (unstable).
+      re-aggregating it. Percent of mean is shown only for physical amounts
+      (not temperature-like quantities, indices, net carbon exchange or anomaly
+      products) and only where the baseline mean is positive.
     </p>
     <div class="selector-row">
       <select id="summary-region-group-select" aria-label="Regions">
@@ -111,7 +112,7 @@
         <option value="anomaly_raw">Anomaly (raw units)</option>
         <option value="percentile">Percentile</option>
         <option value="raw">Raw units</option>
-        <option value="percent_of_normal">Percent of normal</option>
+        <option value="percent_of_normal">Percent of mean</option>
         <option value="rank">Rank on record</option>
       </select>
     </div>
