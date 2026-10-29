@@ -39,14 +39,15 @@ function orderedNetworks(networks) {
   const rank = (k) => { const i = FLUX_NETWORKS.indexOf(k); return i === -1 ? FLUX_NETWORKS.length : i; };
   return networks.slice().sort((a, b) => rank(a.key) - rank(b.key));
 }
-// Open on a flux tower (prefer one carrying 2026 data) so the page leads with a
-// GPP/NEE record instead of an empty "click a station" prompt.
+// Open on a flux tower (prefer one reaching the network's latest year) so the
+// page leads with a GPP/NEE record instead of an empty "click a station" prompt.
 function selectDefaultFluxSite() {
   for (const key of FLUX_NETWORKS) {
     const net = sitesState.networks[key];
     if (!net || !net.sites.length) continue;
-    const has2026 = (s) => (net.responses || []).some((r) => s.series[r] && s.series[r].dates.some((d) => String(d).startsWith("2026")));
-    const site = net.sites.find(has2026) || net.sites[0];
+    const siteDates = (s) => (net.responses || []).flatMap((r) => (s.series[r] ? s.series[r].dates : []));
+    const latestYear = net.sites.flatMap(siteDates).reduce((max, d) => (String(d).slice(0, 4) > max ? String(d).slice(0, 4) : max), "");
+    const site = net.sites.find((s) => siteDates(s).some((d) => String(d).startsWith(latestYear))) || net.sites[0];
     selectSite(key, site.site);
     return;
   }
@@ -181,7 +182,7 @@ function renderSiteChart() {
       hovertemplate: `${r} %{x|%Y-%m}: %{y:.2f}<extra></extra>`,
     };
   });
-  const yUnits = (net.units || "").replace("umol", "µmol");
+  const yUnits = prettyUnit(net.units);
   const yTitle = isAnom ? `Anomaly (${yUnits})`
     : responses.length === 1 ? `${responses[0]} (${yUnits})` : `Value (${yUnits})`;
   Plotly.newPlot(el, traces, {

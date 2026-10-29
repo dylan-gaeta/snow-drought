@@ -191,19 +191,20 @@ function renderQuadrantChart() {
   }
 
   // Year labels on every point with a short leader line, matching the static
-  // classification figures (Dylan, #3); 2026 is bold and larger. On a phone the
-  // 36 labels collide into an unreadable mass, so there show only 2026.
+  // classification figures; the latest winter is bold and larger. On a phone the
+  // labels collide into an unreadable mass, so there show only the latest winter.
   const isNarrow = typeof window !== "undefined" && window.innerWidth < 600;
-  const sizes = points.map((p) => (p.winter_year === 2026 ? 16 : 9));
+  const latestWinter = Math.max(...points.map((p) => p.winter_year));
+  const sizes = points.map((p) => (p.winter_year === latestWinter ? 16 : 9));
   points.forEach((p) => {
-    if (isNarrow && p.winter_year !== 2026) return;
+    if (isNarrow && p.winter_year !== latestWinter) return;
     annotations.push({
       x: p[x], y: p[y], text: String(p.winter_year),
       showarrow: true, arrowhead: 0, arrowwidth: 0.7, arrowcolor: "#bbb", ax: 10, ay: -11,
       font: {
-        size: p.winter_year === 2026 ? 14 : 12,
-        color: p.winter_year === 2026 ? "#111" : "#555",
-        weight: p.winter_year === 2026 ? 700 : 400,
+        size: p.winter_year === latestWinter ? 14 : 12,
+        color: p.winter_year === latestWinter ? "#111" : "#555",
+        weight: p.winter_year === latestWinter ? 700 : 400,
       },
     });
   });
@@ -223,7 +224,7 @@ function renderQuadrantChart() {
           x: pr.map((p) => p[x]), y: pr.map((p) => p[y]),
           mode: "markers", type: "scatter", name: REGIME_LEGEND_LABELS[regime],
           marker: {
-            size: pr.map((p) => (p.winter_year === 2026 ? 16 : 9)),
+            size: pr.map((p) => (p.winter_year === latestWinter ? 16 : 9)),
             color: REGIME_COLORS[regime], symbol: REGIME_SYMBOLS[regime], line: { color: "#333", width: 0.8 },
           },
           hovertext: pr.map((p) => `${p.winter_year}: ${REGIME_LABELS[p.regime]}`),

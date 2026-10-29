@@ -9,7 +9,7 @@
 // heatmap uses -- not a locally invented sign convention.
 
 const summaryState = {
-  window: "DJFM", year: 2026, valueType: "sigma", regionGroup: "summary",
+  window: "DJFM", year: null, valueType: "sigma", regionGroup: "summary",
 };
 let summaryRegionColumns = []; // [{code, label}], rebuilt whenever regionGroup changes
 
@@ -103,7 +103,6 @@ function initSummaryTable() {
 }
 
 function formatSummaryValue(result, units, valueType, data) {
-  const sign = result.sigma >= 0 ? "+" : "";
   // Raw value + raw-unit anomaly display in the canonical unit (e.g. kg m-2 -> mm).
   const factor = canonicalUnitFactor(units);
   const dispUnits = windowUnits(data, summaryState.window);
@@ -130,8 +129,7 @@ function formatSummaryValue(result, units, valueType, data) {
     if (result.stressRank === null || result.nRecord === null) return "&mdash;";
     return `${Math.round(result.stressRank)}/${result.nRecord}`;
   }
-  if (result.sigma === null) return "&mdash;"; // short-record product: baseline too short for a sigma (see MIN_BASELINE_YEARS_SIGMA)
-  return `${sign}${result.sigma.toFixed(1)}`; // "sigma" default
+  return sigmaCellHtml(result); // "sigma" default
 }
 
 async function renderSummaryTable() {

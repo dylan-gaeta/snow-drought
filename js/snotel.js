@@ -216,13 +216,15 @@ function renderLegend() {
 function stationMeta(triplet) { return snotelState.stations.stations.find((s) => s.triplet === triplet); }
 
 // Interpolate a climatology percentile band value at a given day-of-year from
-// the downsampled (every-5-day) climatology points.
+// the downsampled (every-5-day) climatology points. A null point is a day with
+// no normal (too few baseline years), so the band stays empty next to it.
 function bandAt(band, key, doy) {
   const xs = band.doy, ys = band[key];
   if (doy <= xs[0]) return ys[0];
   if (doy >= xs[xs.length - 1]) return ys[ys.length - 1];
   let i = 1;
   while (i < xs.length && xs[i] < doy) i++;
+  if (ys[i - 1] === null || ys[i] === null) return null;
   const frac = (doy - xs[i - 1]) / (xs[i] - xs[i - 1]);
   return ys[i - 1] + frac * (ys[i] - ys[i - 1]);
 }
@@ -296,9 +298,9 @@ function renderDetail() {
   const p90 = band ? doys.map((dy) => bandAt(band, "p90", dy)) : null;
   const traces = [];
   if (band) {
-    traces.push({ x: dates, y: p10, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" });
-    traces.push({ x: dates, y: p90, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(33,102,172,0.15)", name: "10th–90th pct", hoverinfo: "skip" });
-    traces.push({ x: dates, y: median, type: "scatter", mode: "lines", line: { color: "#2166ac", width: 2, dash: "dot" }, name: "Normal (median)" });
+    traces.push({ x: dates, y: p10, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip", connectgaps: false });
+    traces.push({ x: dates, y: p90, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(33,102,172,0.15)", name: "10th–90th pct", hoverinfo: "skip", connectgaps: false });
+    traces.push({ x: dates, y: median, type: "scatter", mode: "lines", line: { color: "#2166ac", width: 2, dash: "dot" }, name: "Normal (median)", connectgaps: false });
   }
   traces.push({ x: dates, y: yearCurve, type: "scatter", mode: "lines", line: { color: "#8c510a", width: 2.5 }, name: `WY ${snotelState.wy}`, connectgaps: false });
   Plotly.newPlot("snotel-detail-chart", traces, {
@@ -463,7 +465,9 @@ async function init() {
       const group = typeof NCL_COLORMAPS !== "undefined" && NCL_COLORMAPS[theme];
       if (!group) continue;
       html += `<optgroup label="${lbl}">`;
-      for (const nm of Object.keys(group)) html += `<option value="${nm}">${nm}</option>`;
+      for (const nm of Object.keys(group)) {
+        if (!PICKER_EXCLUDED_PALETTES.has(nm)) html += `<option value="${nm}">${nm}</option>`;
+      }
       html += `</optgroup>`;
     }
     palSel.innerHTML = html;

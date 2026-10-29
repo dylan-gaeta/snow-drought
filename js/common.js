@@ -141,6 +141,14 @@ const DORMANT_SD_FRACTION = 0.02;
 const SEASONAL_DORMANT_FRACTION = 0.03;
 const DASHBOARD_MIN_YEAR = 1990;
 
+// Palettes left out of the Map and SNOTEL colour pickers: rainbow and red-green
+// tables (a colour-blind clash) and the tables rejected as diverging defaults.
+// They stay in ncl-colormaps.js so a product default can still resolve by name.
+const PICKER_EXCLUDED_PALETTES = new Set([
+  "MPL_RdYlGn", "MPL_Spectral", "MPL_hsv", "MPL_gist_rainbow", "MPL_gist_ncar",
+  "GMT_drywet", "precip_diff_12lev", "precip3_16lev",
+]);
+
 // Canonical display units. Physically-equivalent units reported by different
 // products under different strings are normalized to one scale so a variable's
 // datasets read on a common axis (and overlay correctly). Keyed on the native
@@ -161,9 +169,21 @@ const UNIT_CONVERSIONS = {
   "m": { unit: "mm", factor: 1000 },
   "mW m-2 sr-1 µm-1": { unit: "mW m-2 sr-1 nm-1", factor: 0.001 },
 };
+// Unit strings arrive in plain-ASCII form ("g C m-2 d-1", "km2", "umol CO2");
+// display them with real superscripts/subscripts ("g C m⁻² d⁻¹", "km²", "µmol CO₂").
+const SUPERSCRIPT_CHARS = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+const UNIT_TOKEN_SPECIAL = { umol: "µmol", CO2: "CO₂" };
+function prettyUnit(unit) {
+  if (!unit) return "";
+  return unit.split(" ").map((token) => {
+    if (UNIT_TOKEN_SPECIAL[token]) return UNIT_TOKEN_SPECIAL[token];
+    const m = token.match(/^([A-Za-zµ]+)(-?\d+)$/);
+    return m ? m[1] + [...m[2]].map((ch) => SUPERSCRIPT_CHARS[ch]).join("") : token;
+  }).join(" ");
+}
 function canonicalUnit(unit) {
   const conversion = UNIT_CONVERSIONS[unit];
-  return conversion ? conversion.unit : (unit || "");
+  return prettyUnit(conversion ? conversion.unit : (unit || ""));
 }
 function canonicalUnitFactor(unit) {
   const conversion = UNIT_CONVERSIONS[unit];
@@ -834,11 +854,11 @@ function periodLabel(period) {
 // "Raw value" header: a single month is that month's value; a multi-month window
 // is a day-weighted MEAN (mean-type variables) or a SUM (accumulations).
 // Display unit of a window aggregate: a multi-month SUM of monthly totals is a
-// total over the window, so a per-month unit ("mm month-1") drops its
-// "month-1" (a DJFM precipitation total is mm, not mm per month).
+// total over the window, so a per-month unit ("mm month⁻¹") drops its
+// "month⁻¹" (a DJFM precipitation total is mm, not mm per month).
 function windowUnits(data, windowKey) {
   const units = canonicalUnit(data.units);
-  return (data.aggregation === "sum" && !/^\d{2}$/.test(windowKey)) ? units.replace(/\s*month-1$/, "") : units;
+  return (data.aggregation === "sum" && !/^\d{2}$/.test(windowKey)) ? units.replace(/\s*month⁻¹$/, "") : units;
 }
 
 function rawValueHeaderLabel(data, windowKey) {
@@ -878,6 +898,15 @@ function standingClass(data, result) {
   return "";
 }
 
+// Window σ plus the number of baseline years its standard deviation comes from.
+// A product's own standardized index (SPI, SPEI...) passes its σ through
+// unchanged, so it carries no count.
+function sigmaCellHtml(result) {
+  if (result.sigma === null) return "&mdash;";
+  const value = `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
+  return result.isNativeIndex ? value : `${value} <span class="sigma-n">n=${result.n}</span>`;
+}
+
 function regionalSummaryNote(data) {
   const asOfNote = data.aggregation === "native_index"
     ? " This index has a fixed timescale, so a season shows its value as of the season's last month."
@@ -886,7 +915,7 @@ function regionalSummaryNote(data) {
     ? " Standardized index: rank on record is not computed (the value is already a standardized departure)."
     : "";
   const nativeNote = asOfNote + sigmaNote;
-  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): a year reads gold (more stress) when no more than a third of the record is at least as stressed in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} = more stress), blue (less stress) when no more than a third is at least as un-stressed, and is left uncolored otherwise; tied years count together, so a large block of identical years is not colored. The σ sign stays native (+ above / − below the mean). Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
+  return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): a year reads gold (more stress) when no more than a third of the record is at least as stressed in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} = more stress), blue (less stress) when no more than a third is at least as un-stressed, and is left uncolored otherwise; tied years count together, so a large block of identical years is not colored. The σ sign stays native (+ above / − below the mean); n beside σ is the number of baseline years its standard deviation comes from. Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 
 // Show or hide the "% of mean" header of the table holding bodyEl, matching
@@ -936,7 +965,7 @@ function regionalSummaryRowsHtml(data, windowKey, year) {
         : `<td>${result.percentOfNormal === null ? "&mdash;" : `${result.percentOfNormal.toFixed(0)}%`}</td>`;
       const rawAnomText = (result.anomaly === null || result.isNativeIndex)
         ? "&mdash;" : `${result.anomaly >= 0 ? "+" : ""}${(result.anomaly * unitFactor).toFixed(2)} ${dispUnits}`;
-      const sigmaText = result.sigma === null ? "&mdash;" : `${result.sigma >= 0 ? "+" : ""}${result.sigma.toFixed(1)}`;
+      const sigmaText = sigmaCellHtml(result);
       const rankText = (result.stressRank === null || result.nRecord === null) ? "&mdash;"
         : `<span class="rank-badge ${cls === "stress" || cls === "relief" ? cls : ""}">${Math.round(result.stressRank)}/${result.nRecord}</span>`;
       return `<tr><td>${label}</td><td>${rawText}</td><td>${normalText}</td>${pctCell}<td class="${cls}">${rawAnomText}</td><td class="${cls}">${sigmaText}</td><td>${rankText}</td></tr>`;
@@ -1027,7 +1056,7 @@ function productMetaHtml(entry) {
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}`
     : "n/a";
   const glossaryLine = entry.glossary ? `<p class="product-glossary">${entry.glossary}</p>` : "";
-  return `${glossaryLine}<p class="product-facts">Units: ${entry.units || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${STATUS_LABELS[entry.status] || entry.status}</p>`;
+  return `${glossaryLine}<p class="product-facts">Units: ${prettyUnit(entry.units) || "n/a"} · Baseline: ${baseline} · Record: ${recordRange} · Status: ${STATUS_LABELS[entry.status] || entry.status}</p>`;
 }
 
 // Cross-page continuity for the Explore <-> Maps product picker: the last

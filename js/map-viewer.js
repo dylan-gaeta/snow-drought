@@ -32,11 +32,11 @@ let mapPicker = null;
 // First-ever visit (no shared-view URL hash, no remembered localStorage
 // selection) opens on this view rather than whatever happens to sort first
 // in the manifest -- 2m air temperature is the most immediately legible
-// variable for a first-time visitor, and March 2026 is the dashboard's own
-// live season.
+// variable for a first-time visitor, shown for March of the latest year in
+// the data.
 const DEFAULT_MAP_VIEW = {
   category: "climate", product: "ERA5-Land", response: "T2m",
-  period: "03", mode: "anomaly", year: "2026",
+  period: "03", mode: "anomaly", year: null,
 };
 
 // A URL fragment-only change (e.g. a shared link pasted into the same tab,
@@ -194,6 +194,7 @@ function populateColormapSelect() {
     if (!group) continue;
     html += `<div class="cm-theme">${themeLabel}</div>`;
     for (const name of Object.keys(group)) {
+      if (PICKER_EXCLUDED_PALETTES.has(name)) continue;
       const entry = group[name];
       const swatch = entry.discrete
         ? colormapGradientCss(entry.colors, true, entry.colors.length)
@@ -1010,8 +1011,16 @@ async function updateInteractiveMapLayer() {
     const ticks = tickValues.map((v, k) =>
       `<span class="ol-legend-tick" style="left:${(((v - vmin) / span) * 100).toFixed(2)}%">${canonicalTicks[k].toFixed(decimals)}</span>`
     ).join("");
+    // Extend arrows where this file's data run past the colour scale; the layer
+    // paints those values in the end colours.
+    const [dataMin, dataMax] = fileEntry.data_range;
+    const arrow = (side, color) =>
+      `<svg class="ol-legend-arrow ol-legend-arrow-${side}" viewBox="0 0 12 16" aria-hidden="true">` +
+      `<polygon points="${side === "min" ? "12,0 12,16 0,8" : "0,0 0,16 12,8"}" fill="${color}" stroke="#1b1b1b" stroke-width="1"/></svg>`;
+    const arrows = (dataMin < vmin ? arrow("min", palette[0]) : "")
+      + (dataMax > vmax ? arrow("max", palette[palette.length - 1]) : "");
     legend.innerHTML = `<div class="ol-legend-label">${label}</div>` +
-      `<div class="ol-legend-scale-wrap"><div class="ol-legend-gradient" style="background:${gradient}"></div>` +
+      `<div class="ol-legend-scale-wrap">${arrows}<div class="ol-legend-gradient" style="background:${gradient}"></div>` +
       `<div class="ol-legend-ticks">${ticks}</div></div>`;
   }
 

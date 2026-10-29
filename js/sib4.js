@@ -249,8 +249,8 @@ async function renderPftTimeseries() {
   noteEl.textContent = info.bounded && isSigma
     ? (isStressScalar
       ? "Bounded 0–1 stress function (1 = unstressed): shown as native departure (no σ); switch to Anomaly (raw)."
-      : `${info.long_name} (${data.units}) has no standardized σ in this build: shown as native departure; switch to Anomaly (raw).`)
-    : `Units: ${data.units} · area-weighted mean per PFT.`;
+      : `${info.long_name} (${prettyUnit(data.units)}) has no standardized σ in this build: shown as native departure; switch to Anomaly (raw).`)
+    : `Units: ${prettyUnit(data.units)} · area-weighted mean per PFT.`;
   if (!region) { el.innerHTML = '<p class="chart-empty">No data for this region.</p>'; return; }
   const pick = (s) => isSigma ? (info.bounded ? s.anomaly : s.sigma) : isAnom ? s.anomaly : s.value;
   const pfts = orderPfts(Object.keys(region).filter((p) => p !== "AGG"));
@@ -266,7 +266,7 @@ async function renderPftTimeseries() {
     traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: "Region mean", line: { color: SIB4_NAVY, width: 3 }, connectgaps: false });
   }
   const yTitle = isSigma && !info.bounded ? "Standardized anomaly (σ)"
-    : departure ? `${key} anomaly (${data.units})` : `${key} (${data.units})`;
+    : departure ? `${key} anomaly (${prettyUnit(data.units)})` : `${key} (${prettyUnit(data.units)})`;
   const isNarrow = window.innerWidth < 820;
   Plotly.newPlot(el, traces, {
     margin: { t: 8, r: 16, b: isNarrow ? 90 : 40, l: 60 },
@@ -288,7 +288,7 @@ async function renderPftSeasonal() {
   const data = await fetchSib4("seasonal", key);
   document.getElementById("sib4-ts-title").textContent = `${info.long_name} seasonal cycle by PFT — ${regionLabelFor(sib4State.region)}`;
   const region = data && data.regions[sib4State.region];
-  document.getElementById("sib4-ts-note").textContent = `Water year (Oct–Sep) · units ${data ? data.units : ""}.`;
+  document.getElementById("sib4-ts-note").textContent = `Water year (Oct–Sep) · units ${data ? prettyUnit(data.units) : ""}.`;
   if (!region) { el.innerHTML = '<p class="chart-empty">Seasonal cycle not available for this variable.</p>'; return; }
   const x = manifest.water_year_month_names;
   const isAnom = sib4State.tsSeries !== "raw"; // raw climatology vs anomaly band
@@ -321,7 +321,7 @@ async function renderPftSeasonal() {
   const isNarrow = window.innerWidth < 820;
   Plotly.newPlot(el, traces, {
     margin: { t: 8, r: 16, b: isNarrow ? 90 : 45, l: 60 },
-    yaxis: { title: isAnom ? `${key} anomaly (${data.units})` : `${key} (${data.units})`, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: isAnom ? `${key} anomaly (${prettyUnit(data.units)})` : `${key} (${prettyUnit(data.units)})`, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { type: "category", showgrid: false, ...PLOTLY_AXIS_LINE },
     legend: isNarrow ? { orientation: "h", y: -0.3 } : {}, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
@@ -356,7 +356,7 @@ async function renderDiurnal() {
   Plotly.newPlot(el, traces, {
     margin: { t: 8, r: 16, b: 46, l: 60 },
     xaxis: { title: "local solar time (hour)", dtick: 3, range: [0, 23], ...PLOTLY_AXIS_LINE },
-    yaxis: { title: `${key} (${data.units})`, ...PLOTLY_AXIS_LINE },
+    yaxis: { title: `${key} (${prettyUnit(data.units)})`, ...PLOTLY_AXIS_LINE },
     legend: { orientation: "h", y: -0.2 }, ...PLOTLY_BASE,
   }, { displaylogo: false, responsive: true });
 }

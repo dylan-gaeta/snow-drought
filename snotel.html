@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="SNOTEL snowpack dashboard for the Western US: 800+ automated snow stations, mapped by snow water equivalent percent of normal, with per-station records and the elevation dependence of snow drought.">
-<title>SNOTEL &mdash; 2025-2026 Western US Climate and Snow Drought Explorer</title>
+<title>SNOTEL &mdash; Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
@@ -49,10 +49,12 @@
     <h2>SNOTEL Snowpack</h2>
     <p class="finding-note">The NRCS SNOTEL network &mdash; 800+ automated
       stations measuring mountain snow water equivalent (SWE). Each station is
-      colored by its SWE relative to the 1990&ndash;2024 median for the selected
+      colored by its SWE relative to its own baseline median for the selected
       day &mdash; scrub or play through the snow season, and click a station for
-      its own daily record. Percent of median is only meaningful in the snow
-      season. The current water year's data is provisional (NRCS).</p>
+      its own daily record. A station needs at least 10 baseline years for a
+      normal, and a day whose median is zero (no snow in most baseline years)
+      has no percent of median or percentile. The current water year's data is
+      provisional (NRCS).</p>
 
     <div class="selector-row">
       <label class="select-field">Metric <select id="snotel-metric-select" aria-label="Metric">
