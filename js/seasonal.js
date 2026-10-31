@@ -103,19 +103,12 @@ async function renderSeasonal() {
   const unitFactor = canonicalUnitFactor(data.units);
   const dispUnits = canonicalUnit(data.units);
   const scaleUnit = (arr) => (arr || []).map((v) => (v === null || v === undefined ? null : v * unitFactor));
-  const upper = scaleUnit(isAnomaly ? region.anomaly_upper : region.climatology_upper);
-  const lower = scaleUnit(isAnomaly ? region.anomaly_lower : region.climatology_lower);
-  const mean = isAnomaly ? upper.map(() => 0) : scaleUnit(region.climatology_mean);
-
+  const prefix = isAnomaly ? "anomaly" : "climatology";
   const traces = [
-    { x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
+    ...seasonalBandTraces(x, region, prefix, teal, scaleUnit),
     {
-      x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty",
-      fillcolor: hexToRgba(teal, 0.25), name: "Climatology ±2σ", showlegend: false, hoverinfo: "skip",
-    },
-    {
-      x, y: mean, type: "scatter", mode: "lines+markers", line: { color: teal, width: 3 },
-      marker: { color: teal, size: 6 }, name: "Climatological mean", showlegend: false,
+      x, y: scaleUnit(region[`${prefix}_p50`]), type: "scatter", mode: "lines+markers", line: { color: teal, width: 3 },
+      marker: { color: teal, size: 6 }, name: "Baseline median", showlegend: false,
     },
   ];
   // Any selected year that isn't a precomputed highlight year is built
@@ -164,9 +157,11 @@ function renderSeasonalLegend() {
   if (!legend) return;
   legend.innerHTML = "";
   const teal = manifest.climatology_color;
+  const bandLabels = seasonalBandLabels();
   [
-    { label: "Climatological mean", color: teal },
-    { label: "Climatology ±2σ", color: hexToRgba(teal, 0.35) },
+    { label: "Baseline median", color: teal },
+    { label: bandLabels.inner, color: hexToRgba(teal, SEASONAL_BAND_ALPHA.inner) },
+    { label: bandLabels.outer, color: hexToRgba(teal, SEASONAL_BAND_ALPHA.outer) },
   ].forEach(({ label, color }) => {
     const item = document.createElement("span");
     item.className = "checkbox-legend-item is-static";

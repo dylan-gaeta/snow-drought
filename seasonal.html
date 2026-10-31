@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=544826e4fa">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
 <body>
@@ -46,9 +46,9 @@
   <section id="seasonal">
     <h2>Seasonal Cycle</h2>
     <p class="finding-note">Every canonical dataset, one water year (Oct
-      &ndash;Sep) at a time: climatology mean &plusmn; 2 standard deviations
-      (cut at physical limits such as zero), plus a few highlight years and any
-      you add. Raw value or raw-unit anomaly.</p>
+      &ndash;Sep) at a time: the baseline median with the 25th&ndash;75th
+      (dark) and 10th&ndash;90th (light) percentiles of the baseline years, plus
+      a few highlight years and any you add. Raw value or raw-unit anomaly.</p>
 
     <div class="product-search-wrap">
       <input type="search" id="product-search" placeholder="Search products (e.g. &quot;snow water equivalent&quot;, &quot;PRISM&quot;)..." aria-label="Search products">
@@ -111,8 +111,8 @@
   </div>
 </footer>
 
-<script src="js/common.js"></script>
-<script src="js/product-picker.js"></script>
-<script src="js/seasonal.js"></script>
+<script src="js/common.js?v=87605ec77e"></script>
+<script src="js/product-picker.js?v=b50af0d11d"></script>
+<script src="js/seasonal.js?v=8d1f581b19"></script>
 </body>
 </html>

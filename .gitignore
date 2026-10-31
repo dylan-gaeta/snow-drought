@@ -5,6 +5,8 @@
 # git history forever with no way to reclaim the space. figures/maps/,
 # figures/timeseries/, and figures/seasonal/ are all read by gallery.html.
 /cogs/
+# The single-year COGs the multi-band export replaced, kept locally.
+/old_cogs/
 /data/
 /figures/maps/
 /figures/timeseries/

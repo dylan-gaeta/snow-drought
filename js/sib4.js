@@ -278,8 +278,8 @@ async function renderPftTimeseries() {
   }, { displaylogo: false, responsive: true });
 }
 
-// Per-PFT water-year seasonal cycle (climatology mean ±2 SD band + the region
-// mean), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
+// Per-PFT water-year seasonal cycle (baseline medians, plus the region median
+// with its 25th-75th and 10th-90th percentile bands), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
 // a departure already); sigma not applicable to a climatology.
 async function renderPftSeasonal() {
   const el = document.getElementById("sib4-pft-timeseries");
@@ -299,24 +299,18 @@ async function renderPftSeasonal() {
   pfts.filter((code) => checked.has(code)).forEach((code) => {
     const c = region[code];
     if (!c) return;
-    // Only the region mean (AGG) carries an exported anomaly band; a per-PFT
-    // line in the anomaly view would be a flat zero, so per-PFT lines show in
-    // the raw-climatology view only.
+    // A per-PFT median anomaly sits near zero, so per-PFT lines show in the
+    // raw-climatology view only; the anomaly view shows the region band.
     if (isAnom) return;
-    const y = c.climatology_mean;
+    const y = c.climatology_p50;
     if (!y) return;
     traces.push({ x, y, type: "scatter", mode: "lines", name: pftLabel(code), line: { color: pftColor(code), width: 1.5 }, opacity: 0.85 });
   });
   const agg = region.AGG;
   if (sib4State.tsAggregate && agg) {
-    const upper = isAnom ? agg.anomaly_upper : agg.climatology_upper;
-    const lower = isAnom ? agg.anomaly_lower : agg.climatology_lower;
-    const mean = isAnom ? upper.map(() => 0) : agg.climatology_mean;
-    if (upper && lower) {
-      traces.push({ x, y: lower, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" });
-      traces.push({ x, y: upper, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: hexToRgba(SIB4_NAVY, 0.15), name: "Region mean ±2 SD", hoverinfo: "skip" });
-    }
-    traces.push({ x, y: mean, type: "scatter", mode: "lines+markers", line: { color: SIB4_NAVY, width: 3 }, marker: { size: 5 }, name: "Region mean" });
+    const prefix = isAnom ? "anomaly" : "climatology";
+    traces.push(...seasonalBandTraces(x, agg, prefix, SIB4_NAVY, (values) => values));
+    traces.push({ x, y: agg[`${prefix}_p50`], type: "scatter", mode: "lines+markers", line: { color: SIB4_NAVY, width: 3 }, marker: { size: 5 }, name: "Region median" });
   }
   const isNarrow = window.innerWidth < 820;
   Plotly.newPlot(el, traces, {

@@ -1016,6 +1016,25 @@ function sortedPeriods(periodKeys) {
   });
 }
 
+// Seasonal-cycle band: the baseline years' outer (10th-90th, light) and inner
+// (25th-75th, dark) percentiles for each month, read from the exported
+// "<prefix>_p<level>" fields; levels come from manifest.seasonal_band_percentiles.
+const SEASONAL_BAND_ALPHA = { outer: 0.18, inner: 0.4 };
+function seasonalBandLabels() {
+  const { inner, outer } = manifest.seasonal_band_percentiles;
+  return { outer: `${outer[0]}th–${outer[1]}th percentile`, inner: `${inner[0]}th–${inner[1]}th percentile` };
+}
+function seasonalBandTraces(x, source, prefix, color, scale) {
+  const levels = manifest.seasonal_band_percentiles;
+  const labels = seasonalBandLabels();
+  const fill = (band) => [
+    { x, y: scale(source[`${prefix}_p${levels[band][0]}`]), type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
+    { x, y: scale(source[`${prefix}_p${levels[band][1]}`]), type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty",
+      fillcolor: hexToRgba(color, SEASONAL_BAND_ALPHA[band]), name: labels[band], hoverinfo: "skip" },
+  ];
+  return [...fill("outer"), ...fill("inner")];
+}
+
 function hexToRgba(hex, alpha) {
   const value = hex.replace("#", "");
   const r = parseInt(value.substring(0, 2), 16);

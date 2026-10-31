@@ -141,7 +141,7 @@ const olMapState = {
   year: null, // only meaningful when mode !== "climatology"
   availableYears: [],
   styleCache: {},
-  layerCache: {}, // COG url -> built ol.layer.WebGLTile, reused across mode/period/year revisits
+  layerCache: {}, // "COG url#band" -> built ol.layer.WebGLTile, reused across mode/period/year revisits
   currentStyle: null,
   currentScale: null,
   colormap: null, // null = the product's own default NCL palette; else a chosen NCL_COLORMAPS key
@@ -886,20 +886,19 @@ async function updateInteractiveMapLayer() {
   emptyMsg.style.display = "none";
 
   const url = assetUrl(`cogs/${file}`);
-  // Revisiting a mode/period/year already viewed this session re-fetched the
-  // same COG and rebuilt a fresh WebGL source/layer from scratch every time
-  // (confirmed live: the browser's HTTP cache absorbed the byte transfer,
-  // but decoded GeoTIFF metadata/tiles were still discarded and redone).
-  // The url already fully encodes product+response+period+mode+year, so its
-  // colors/boundaries are always the same on a repeat visit -- safe to
-  // reuse the whole built layer, same idea as fetchMapStyle's styleCache.
-  // layerCache[url] is undefined (never tried), a real layer (loaded fine),
-  // or null (tried and failed) -- three states, not just cached/uncached.
-  let layer = olMapState.layerCache[url];
+  // One COG holds every year of a product/variable/period/view as bands; the
+  // source reads only this entry's band (byte-range requests, band-interleaved
+  // file). Revisiting a view reuses its built layer instead of re-decoding:
+  // file + band fully encode product+response+period+mode+year, so its
+  // colors/boundaries are always the same, same idea as fetchMapStyle's
+  // styleCache. layerCache[key] is undefined (never tried), a real layer
+  // (loaded fine), or null (tried and failed).
+  const cacheKey = `${url}#${fileEntry.band}`;
+  let layer = olMapState.layerCache[cacheKey];
   let source = null;
   if (layer === undefined) {
     source = new ol.source.GeoTIFF({
-      sources: [{ url, nodata: -32768 }],
+      sources: [{ url, nodata: -32768, bands: [fileEntry.band] }],
       normalize: false,
       // The layer's own interpolate:false (below) only controls the final
       // display-zoom texture sampling -- this source does its own separate
@@ -927,7 +926,7 @@ async function updateInteractiveMapLayer() {
         new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), 8000)),
       ]);
     } catch (err) {
-      olMapState.layerCache[url] = null;
+      olMapState.layerCache[cacheKey] = null;
       layer = null;
     }
   }
@@ -1036,7 +1035,7 @@ async function updateInteractiveMapLayer() {
       // color block, matching the reference maps exactly.
       interpolate: false,
     });
-    olMapState.layerCache[url] = layer;
+    olMapState.layerCache[cacheKey] = layer;
   }
   if (olMapState.rasterLayer !== layer) {
     // Keep the previous layer visible until the new one has fully rendered,
