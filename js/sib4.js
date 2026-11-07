@@ -42,6 +42,13 @@ const SIB4_CORRESPONDENCE = {
 };
 
 const SIB4_NAVY = "#023858";
+// Region means average fluxes and states over all land, and the stress factors
+// over vegetated land only (config.py SIB4_DETAIL_VARIABLES region_mean).
+const REGION_MEAN_LABELS = { land: "Region mean (all land)", vegetated: "Region mean (vegetated land)" };
+function regionMeanLabel(basis) {
+  if (!(basis in REGION_MEAN_LABELS)) throw new Error(`Unknown SiB4 region-mean basis: ${basis}`);
+  return REGION_MEAN_LABELS[basis];
+}
 const COMPARE_COLORS = ["#b2182b", "#ef8a62", "#fddbc7", "#4393c3", "#2166ac", "#762a83", "#1b7837", "#999999"];
 // Three distinct hues (soil=brown, air/humidity=blue, temperature=magenta):
 // rstfac1 and rstfac2 were both brown and too close to tell apart once the
@@ -87,13 +94,34 @@ function orderPfts(codes) {
 
 const PLOTLY_BASE = { font: { family: "Source Sans Pro, sans-serif", size: 13 }, displaylogo: false, responsive: true };
 
+// Each panel draws only its latest request: a slower fetch for an older
+// selection is dropped instead of overwriting the newer chart.
+const _panelRequests = {};
+function startRequest(panel) {
+  _panelRequests[panel] = (_panelRequests[panel] || 0) + 1;
+  return _panelRequests[panel];
+}
+function isCurrent(panel, request) { return _panelRequests[panel] === request; }
+
+// A "no data" message replaces the chart; the next chart replaces the message.
+function showEmpty(el, message) {
+  Plotly.purge(el);
+  el.innerHTML = `<p class="chart-empty">${message}</p>`;
+}
+function newPlot(el, traces, layout, config) {
+  el.querySelectorAll(":scope > .chart-empty").forEach((node) => node.remove());
+  return Plotly.newPlot(el, traces, layout, config);
+}
+
 // --------------------------------------------------------------- 1. composition
 async function renderComposition() {
   const el = document.getElementById("sib4-composition");
+  const request = startRequest("composition");
   const comp = await fetchSib4("composition");
+  if (!isCurrent("composition", request)) return;
   const region = comp.regions[sib4State.region];
   document.getElementById("sib4-composition-title").textContent = `PFT land cover — ${regionLabelFor(sib4State.region)}`;
-  if (!region) { el.innerHTML = '<p class="chart-empty">No composition for this region.</p>'; return; }
+  if (!region) { showEmpty(el, "No composition for this region."); return; }
   // Desert & Bare Ground (dbg) is ~40% of the Western US and dwarfs every
   // vegetated PFT; the Exclude-DBG button drops its wedge so the plant types
   // read at a usable scale. A pie renormalizes the remaining wedges to fill the
@@ -117,7 +145,7 @@ async function renderComposition() {
     hovertemplate: "%{label}<extra></extra>",
   };
   el.style.height = "340px";
-  Plotly.newPlot(el, [trace], {
+  newPlot(el, [trace], {
     showlegend: false,
     margin: { t: 6, r: 6, b: 6, l: 6 },
     ...PLOTLY_BASE,
@@ -156,7 +184,9 @@ async function renderLimitation() {
   document.getElementById("sib4-limitation-title").textContent = `Stress functions — ${regionLabelFor(sib4State.region)}`;
   const isAnom = sib4State.limitationSeries === "anomaly";
   const shown = STRESS_KEYS.filter((k) => sib4State.stressFactors.has(k));
+  const request = startRequest("limitation");
   const data = await Promise.all(shown.map((k) => fetchSib4("timeseries", k)));
+  if (!isCurrent("limitation", request)) return;
   const traces = [];
   shown.forEach((k, i) => {
     const agg = data[i] && data[i].regions[sib4State.region] && data[i].regions[sib4State.region].AGG;
@@ -166,9 +196,9 @@ async function renderLimitation() {
     const { dates, values } = afterStart(data[i].dates, raw);
     traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: STRESS_LABELS[k], line: { color: STRESS_COLORS[k], width: 2 } });
   });
-  Plotly.newPlot(el, traces, {
+  newPlot(el, traces, {
     margin: { t: 8, r: 16, b: 40, l: 56 },
-    // Autorange rather than a forced [0,1]: WUS rstfac values sit low (~0.06-0.33),
+    // Autorange rather than a forced [0,1]: the region means span only part of 0-1,
     // so pinning the axis to the full 0-1 range flattened all three lines against
     // the bottom and hid their variation (Dylan, 2026-10). The title still states
     // the 0-1 convention.
@@ -192,18 +222,18 @@ function afterStart(dates, values) {
 const SIB4_DEFAULT_PFT_COUNT = 4;
 function checkedPfts(orderedPfts) {
   const region = sib4State.region;
-  // Default: no individual PFTs checked -- the chart opens as just the net
-  // (all-PFTs) mean so the per-PFT breakdown doesn't muddle it; PFTs are opt-in.
+  // Default: no individual PFTs checked -- the chart opens as just the region
+  // mean so the per-PFT breakdown doesn't muddle it; PFTs are opt-in.
   if (!sib4State.tsPfts[region]) {
     sib4State.tsPfts[region] = new Set();
   }
   return sib4State.tsPfts[region];
 }
 
-function renderPftCheckboxes(orderedPfts, checked) {
+function renderPftCheckboxes(orderedPfts, checked, basis) {
   const box = document.getElementById("sib4-pft-checkboxes");
   box.innerHTML = "";
-  // "Net (all PFTs)" -- the region area-weighted mean -- lives in the same
+  // The region mean (all land, or vegetated land for the stress factors) lives in the same
   // checkbox row as the individual PFTs (navy swatch) so the net line toggles
   // the same way, and defaults on with no PFTs checked so the chart opens as a
   // single clean line instead of a tangle of per-PFT breakdowns.
@@ -214,7 +244,7 @@ function renderPftCheckboxes(orderedPfts, checked) {
   netCb.addEventListener("change", (e) => { sib4State.tsAggregate = e.target.checked; renderPftTimeseries(); });
   const netSw = document.createElement("span");
   netSw.className = "compare-legend-swatch"; netSw.style.background = SIB4_NAVY;
-  net.appendChild(netCb); net.appendChild(netSw); net.appendChild(document.createTextNode("Net (all PFTs)"));
+  net.appendChild(netCb); net.appendChild(netSw); net.appendChild(document.createTextNode(regionMeanLabel(basis)));
   box.appendChild(net);
   orderedPfts.forEach((code) => {
     const label = document.createElement("label");
@@ -232,12 +262,28 @@ function renderPftCheckboxes(orderedPfts, checked) {
   });
 }
 
+// Bounded variables carry no σ, and in the seasonal view the anomaly band is
+// already the departure, so σ would draw the same chart as Anomaly (raw):
+// disable the σ button there and fall back to Anomaly (raw).
+function syncSigmaButton() {
+  const info = monthlyVar(sib4State.tsVariable);
+  const sigmaAvailable = !info.bounded && sib4State.tsView === "series";
+  document.querySelector('#sib4-ts-toggle button[data-series="sigma"]').disabled = !sigmaAvailable;
+  if (!sigmaAvailable && sib4State.tsSeries === "sigma") {
+    sib4State.tsSeries = "anomaly";
+    document.querySelectorAll("#sib4-ts-toggle button").forEach((x) => x.classList.toggle("active", x.dataset.series === "anomaly"));
+  }
+}
+
 async function renderPftTimeseries() {
-  if (sib4State.tsView === "seasonal") return renderPftSeasonal();
+  syncSigmaButton();
+  const request = startRequest("variable");
+  if (sib4State.tsView === "seasonal") return renderPftSeasonal(request);
   const el = document.getElementById("sib4-pft-timeseries");
   const key = sib4State.tsVariable;
   const info = monthlyVar(key);
   const data = await fetchSib4("timeseries", key);
+  if (!isCurrent("variable", request)) return;
   const region = data && data.regions[sib4State.region];
   document.getElementById("sib4-ts-title").textContent = `${info.long_name} by PFT — ${regionLabelFor(sib4State.region)}`;
   const mode = sib4State.tsSeries; // raw | sigma | anomaly
@@ -245,17 +291,14 @@ async function renderPftTimeseries() {
   const isAnom = mode === "anomaly";
   const departure = isSigma || isAnom;
   const noteEl = document.getElementById("sib4-ts-note");
-  const isStressScalar = ["ROOT_STRESS", "LEAF_STRESS", "TEMP_STRESS"].includes(key);
-  noteEl.textContent = info.bounded && isSigma
-    ? (isStressScalar
-      ? "Bounded 0–1 stress function (1 = unstressed): shown as native departure (no σ); switch to Anomaly (raw)."
-      : `${info.long_name} (${prettyUnit(data.units)}) has no standardized σ in this build: shown as native departure; switch to Anomaly (raw).`)
+  noteEl.textContent = isSigma
+    ? "σ: departure from the calendar-month baseline mean, divided by one standard deviation shared by every month; quiet months (e.g. winter photosynthesis) read as small σ."
     : `Units: ${prettyUnit(data.units)} · area-weighted mean per PFT.`;
-  if (!region) { el.innerHTML = '<p class="chart-empty">No data for this region.</p>'; return; }
-  const pick = (s) => isSigma ? (info.bounded ? s.anomaly : s.sigma) : isAnom ? s.anomaly : s.value;
+  if (!region) { showEmpty(el, "No data for this region."); return; }
+  const pick = (s) => isSigma ? s.sigma : isAnom ? s.anomaly : s.value;
   const pfts = orderPfts(Object.keys(region).filter((p) => p !== "AGG"));
   const checked = checkedPfts(pfts);
-  renderPftCheckboxes(pfts, checked);
+  renderPftCheckboxes(pfts, checked, data.region_mean);
   const traces = [];
   pfts.filter((code) => checked.has(code)).forEach((code) => {
     const { dates, values } = afterStart(data.dates, pick(region[code]));
@@ -263,12 +306,12 @@ async function renderPftTimeseries() {
   });
   if (sib4State.tsAggregate && region.AGG) {
     const { dates, values } = afterStart(data.dates, pick(region.AGG));
-    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: "Region mean", line: { color: SIB4_NAVY, width: 3 }, connectgaps: false });
+    traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: regionMeanLabel(data.region_mean), line: { color: SIB4_NAVY, width: 3 }, connectgaps: false });
   }
-  const yTitle = isSigma && !info.bounded ? "Standardized anomaly (σ)"
+  const yTitle = isSigma ? "Standardized anomaly (σ)"
     : departure ? `${key} anomaly (${prettyUnit(data.units)})` : `${key} (${prettyUnit(data.units)})`;
   const isNarrow = window.innerWidth < 820;
-  Plotly.newPlot(el, traces, {
+  newPlot(el, traces, {
     margin: { t: 8, r: 16, b: isNarrow ? 90 : 40, l: 60 },
     yaxis: { title: yTitle, zeroline: departure, ...PLOTLY_AXIS_LINE },
     xaxis: { showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
@@ -281,20 +324,21 @@ async function renderPftTimeseries() {
 // Per-PFT water-year seasonal cycle (baseline medians, plus the region median
 // with its 25th-75th and 10th-90th percentile bands), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
 // a departure already); sigma not applicable to a climatology.
-async function renderPftSeasonal() {
+async function renderPftSeasonal(request) {
   const el = document.getElementById("sib4-pft-timeseries");
   const key = sib4State.tsVariable;
   const info = monthlyVar(key);
   const data = await fetchSib4("seasonal", key);
+  if (!isCurrent("variable", request)) return;
   document.getElementById("sib4-ts-title").textContent = `${info.long_name} seasonal cycle by PFT — ${regionLabelFor(sib4State.region)}`;
   const region = data && data.regions[sib4State.region];
   document.getElementById("sib4-ts-note").textContent = `Water year (Oct–Sep) · units ${data ? prettyUnit(data.units) : ""}.`;
-  if (!region) { el.innerHTML = '<p class="chart-empty">Seasonal cycle not available for this variable.</p>'; return; }
+  if (!region) { showEmpty(el, "Seasonal cycle not available for this variable."); return; }
   const x = manifest.water_year_month_names;
-  const isAnom = sib4State.tsSeries !== "raw"; // raw climatology vs anomaly band
+  const isAnom = sib4State.tsSeries === "anomaly"; // raw climatology vs anomaly band
   const pfts = orderPfts(Object.keys(region).filter((p) => p !== "AGG"));
   const checked = checkedPfts(pfts);
-  renderPftCheckboxes(pfts, checked);
+  renderPftCheckboxes(pfts, checked, info.region_mean);
   const traces = [];
   pfts.filter((code) => checked.has(code)).forEach((code) => {
     const c = region[code];
@@ -310,10 +354,16 @@ async function renderPftSeasonal() {
   if (sib4State.tsAggregate && agg) {
     const prefix = isAnom ? "anomaly" : "climatology";
     traces.push(...seasonalBandTraces(x, agg, prefix, SIB4_NAVY, (values) => values));
-    traces.push({ x, y: agg[`${prefix}_p50`], type: "scatter", mode: "lines+markers", line: { color: SIB4_NAVY, width: 3 }, marker: { size: 5 }, name: "Region median" });
+    traces.push({ x, y: agg[`${prefix}_p50`], type: "scatter", mode: "lines+markers", line: { color: SIB4_NAVY, width: 3 }, marker: { size: 5 }, name: `${regionMeanLabel(info.region_mean)}, median` });
+    // Highlight (drought) water years, region mean only, as on the Seasonal page.
+    const colors = manifest.seasonal_highlight_year_colors;
+    Object.keys(agg.highlight_years).sort().forEach((year) => {
+      const curve = agg.highlight_years[year];
+      traces.push({ x, y: isAnom ? curve.anomaly : curve.raw, type: "scatter", mode: "lines", line: { color: colors[year], width: 2 }, name: curve.label });
+    });
   }
   const isNarrow = window.innerWidth < 820;
-  Plotly.newPlot(el, traces, {
+  newPlot(el, traces, {
     margin: { t: 8, r: 16, b: isNarrow ? 90 : 45, l: 60 },
     yaxis: { title: isAnom ? `${key} anomaly (${prettyUnit(data.units)})` : `${key} (${prettyUnit(data.units)})`, zeroline: isAnom, ...PLOTLY_AXIS_LINE },
     xaxis: { type: "category", showgrid: false, ...PLOTLY_AXIS_LINE },
@@ -325,14 +375,16 @@ async function renderPftSeasonal() {
 async function renderDiurnal() {
   const el = document.getElementById("sib4-diurnal");
   const key = sib4State.diurnalVariable;
+  const request = startRequest("diurnal");
   const data = await fetchSib4("diurnal", key);
+  if (!isCurrent("diurnal", request)) return;
   const region = data && data.regions[sib4State.region];
   const dv = pftMeta().diurnal_variables.find((v) => v.key === key);
   const monthIdx = sib4State.diurnalMonth - 1;
   const pft = sib4State.diurnalPft;
   document.getElementById("sib4-diurnal-title").textContent =
     `Diurnal ${dv.long_name} · ${MONTH_NAMES[monthIdx]} — ${regionLabelFor(sib4State.region)}${pft === "AGG" ? "" : " · " + pftLabel(pft)}`;
-  if (!region) { el.innerHTML = '<p class="chart-empty">No diurnal data for this region.</p>'; return; }
+  if (!region) { showEmpty(el, "No diurnal data for this region."); return; }
   const hours = data.hours;
   const traces = [];
   const climatology = pft === "AGG" ? region.climatology_aggregate : (region.climatology[pft] || null);
@@ -346,8 +398,8 @@ async function renderDiurnal() {
       traces.push({ x: hours, y: region.highlight_years[yr][monthIdx], type: "scatter", mode: "lines", name: yr, line: { color: colors[yr] || "#1f78b4", width: 2 } });
     });
   }
-  if (!traces.length) { el.innerHTML = '<p class="chart-empty">This PFT has no cover in this region.</p>'; return; }
-  Plotly.newPlot(el, traces, {
+  if (!traces.length) { showEmpty(el, "This PFT has no cover in this region."); return; }
+  newPlot(el, traces, {
     margin: { t: 8, r: 16, b: 46, l: 60 },
     xaxis: { title: "local solar time (hour)", dtick: 3, range: [0, 23], ...PLOTLY_AXIS_LINE },
     yaxis: { title: `${key} (${prettyUnit(data.units)})`, ...PLOTLY_AXIS_LINE },
@@ -366,6 +418,7 @@ async function renderCompare() {
   if (!sib4State.compareChecked[key]) sib4State.compareChecked[key] = new Set(pairs.slice(0, 3).map(([p, r]) => `${p}|${r}`));
   const checked = sib4State.compareChecked[key];
 
+  const request = startRequest("compare");
   const sib4Data = await fetchSib4("timeseries", key);
   const sib4Region = sib4Data && sib4Data.regions[sib4State.region];
   const traces = [];
@@ -376,6 +429,7 @@ async function renderCompare() {
     traces.push({ x: dates, y: values, type: "scatter", mode: "lines", name: "SiB4", line: { color: SIB4_NAVY, width: 3 }, connectgaps: false });
   }
   const others = await Promise.all(pairs.map(([p, r]) => fetchTimeseriesJson(`${p}_${r}`)));
+  if (!isCurrent("compare", request)) return;
   const legendItems = [];
   pairs.forEach(([product, response], i) => {
     const d = others[i];
@@ -445,7 +499,7 @@ async function populateDiurnalPftSelect() {
   const sel = document.getElementById("sib4-diurnal-pft");
   sel.innerHTML = "";
   const addOpt = (val, text) => { const o = document.createElement("option"); o.value = val; o.textContent = text; if (val === sib4State.diurnalPft) o.selected = true; sel.appendChild(o); };
-  addOpt("AGG", "Region mean (all vegetation)");
+  if (data) addOpt("AGG", regionMeanLabel(data.region_mean));
   if (region) orderPfts(Object.keys(region.climatology)).forEach((code) => addOpt(code, pftLabel(code)));
   if (!region || (sib4State.diurnalPft !== "AGG" && !region.climatology[sib4State.diurnalPft])) sib4State.diurnalPft = "AGG";
   sel.value = sib4State.diurnalPft;

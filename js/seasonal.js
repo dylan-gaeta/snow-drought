@@ -80,6 +80,10 @@ function buildSeasonalYears(entry) {
 async function renderSeasonal() {
   const chart = document.getElementById("seasonal-chart");
   const data = await fetchSeasonalJson(`${pickerState.product}_${pickerState.response}`);
+  if (!data) {
+    chart.innerHTML = '<p class="chart-empty">No seasonal data for this product.</p>';
+    return;
+  }
   const region = data.regions[pickerState.region];
   if (!region) {
     chart.innerHTML = '<p class="chart-empty">No data for this region.</p>';

@@ -15,11 +15,20 @@ const snotelState = {
 // picks a colorbar instead of each metric's default stepped bins. SNOTEL offers
 // only the continuous groups (diverging + sequential), not the discrete tables,
 // since its fields are continuous quantities.
-function snotelPaletteColors(name) {
+// A diverging table on a metric centred on normal (100 % of median, the 50th
+// percentile) gets a pure-white middle stop: the MPL_* tables are off-white there.
+const CENTRED_METRICS = new Set(["pct_of_median", "percentile"]);
+function snotelPaletteColors(name, metric) {
   if (typeof NCL_COLORMAPS === "undefined") return null;
   for (const theme of ["sequential", "diverging"]) {
     const group = NCL_COLORMAPS[theme];
-    if (group && group[name]) return group[name].colors;
+    if (!group || !group[name]) continue;
+    const colors = group[name].colors;
+    if (theme !== "diverging" || !CENTRED_METRICS.has(metric)) return colors;
+    const n = colors.length % 2 ? colors.length : colors.length - 1;
+    const out = Array.from({ length: n }, (_, i) => colors[Math.round((i / (n - 1)) * (colors.length - 1))]);
+    out[(n - 1) / 2] = "#ffffff";
+    return out;
   }
   return null;
 }
@@ -33,11 +42,11 @@ const METRIC_SCALES = {
   pct_of_median: {
     label: "SWE % of median", field: "pct_of_median",
     bounds: [0, 50, 70, 90, 110, 130, 150, 200],
-    colors: ["#8c510a", "#bf812d", "#dfc27d", "#f5f5f5", "#c7eae5", "#5ab4ac", "#2166ac", "#053061"],
+    colors: ["#8c510a", "#bf812d", "#dfc27d", "#ffffff", "#c7eae5", "#5ab4ac", "#2166ac", "#053061"],
   },
   percentile: {
     label: "SWE percentile", field: "percentile",
-    bounds: [0, 10, 30, 50, 70, 90],
+    bounds: [0, 10, 30, 50, 70, 90, 100],
     colors: ["#b2182b", "#ef8a62", "#fddbc7", "#d1e5f0", "#67a9cf", "#2166ac"],
   },
   swe: {
@@ -51,19 +60,18 @@ function colorFor(metric, value) {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   const scale = METRIC_SCALES[metric];
   if (snotelState.palette) {
-    const pal = snotelPaletteColors(snotelState.palette);
+    const pal = snotelPaletteColors(snotelState.palette, metric);
     if (pal) {
-      // Percentile is a 0-100 quantity; its stepped bins stop at 90, but the
-      // continuous palette must span the full 0-100 or the top decile all maps
-      // to a single color.
       const lo = scale.bounds[0];
-      const hi = metric === "percentile" ? 100 : scale.bounds[scale.bounds.length - 1];
+      const hi = scale.bounds[scale.bounds.length - 1];
       const f = Math.min(1, Math.max(0, (value - lo) / (hi - lo)));
       return pal[Math.round(f * (pal.length - 1))];
     }
   }
   let bin = 0;
-  while (bin < scale.bounds.length - 1 && value >= scale.bounds[bin + 1]) bin++;
+  // A scale whose last bound closes its top bin (percentile, 90-100) keeps the
+  // maximum in that bin; the others leave their top bin open-ended.
+  while (bin < scale.colors.length - 1 && value >= scale.bounds[bin + 1]) bin++;
   return scale.colors[bin];
 }
 
@@ -193,12 +201,10 @@ function renderLegend() {
   const d = dateForDay(snotelState.wy, snotelState.dayIndex);
   const when = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const label = `<span class="snotel-legend-label">${scale.label} · ${when}</span>`;
-  const pal = snotelState.palette && snotelPaletteColors(snotelState.palette);
+  const pal = snotelState.palette && snotelPaletteColors(snotelState.palette, snotelState.metric);
   if (pal) {
-    // Match colorFor(): percentile colors span the full 0-100 even though the
-    // stepped bins stop at 90, so the continuous bar must be labeled 0-100 too.
     const lo = scale.bounds[0];
-    const hi = snotelState.metric === "percentile" ? 100 : scale.bounds[scale.bounds.length - 1];
+    const hi = scale.bounds[scale.bounds.length - 1];
     document.getElementById("snotel-legend").innerHTML = label +
       `<span class="snotel-legend-cont">${lo}` +
       `<span class="snotel-legend-bar" style="background-image:linear-gradient(to right, ${pal.join(", ")})"></span>` +

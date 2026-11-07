@@ -13,16 +13,20 @@
 // dashboard, and the list stays scannable.
 const HEATMAP_WATER_YEAR_FLOOR = 2010;
 const HEATMAP_FAMILIES = {};
-for (let wy = currentWaterYear(); wy >= HEATMAP_WATER_YEAR_FLOOR; wy--) {
-  HEATMAP_FAMILIES[`wy_${wy}`] = { label: `WY${wy} (Oct ${wy - 1} – Sep ${wy})`, waterYear: wy };
+// Built once the manifest has loaded: the newest water-year family is the
+// newest water year the data reach (currentWaterYear()).
+function buildHeatmapFamilies() {
+  for (let wy = currentWaterYear(); wy >= HEATMAP_WATER_YEAR_FLOOR; wy--) {
+    HEATMAP_FAMILIES[`wy_${wy}`] = { label: `WY${wy} (Oct ${wy - 1} – Sep ${wy})`, waterYear: wy };
+  }
+  SEASON_ORDER.forEach((key) => {
+    HEATMAP_FAMILIES[`window_${key}`] = { label: `${key} (${SEASON_LABELS[key]}), by year`, window: key };
+  });
+  MONTH_NAMES.forEach((name, i) => {
+    const key = String(i + 1).padStart(2, "0");
+    HEATMAP_FAMILIES[`window_${key}`] = { label: `${name}, by year`, window: key };
+  });
 }
-SEASON_ORDER.forEach((key) => {
-  HEATMAP_FAMILIES[`window_${key}`] = { label: `${key} (${SEASON_LABELS[key]}), by year`, window: key };
-});
-MONTH_NAMES.forEach((name, i) => {
-  const key = String(i + 1).padStart(2, "0");
-  HEATMAP_FAMILIES[`window_${key}`] = { label: `${name}, by year`, window: key };
-});
 
 // null = full record (every "by year" heatmap already scrolls horizontally
 // for a wide column count -- see .heatmap-chart-scroll -- so unlike Time
@@ -31,7 +35,7 @@ MONTH_NAMES.forEach((name, i) => {
 // families; the "wy_<year>" water-year families are always a fixed Oct-Sep
 // window, so the start-year control doesn't apply to them. Default to the
 // current water year.
-const heatmapState = { family: `wy_${currentWaterYear()}`, category: "all", region: "ALL", startYear: null };
+const heatmapState = { family: null, category: "all", region: "ALL", startYear: null };
 
 function initHeatmapStartYearControl() {
   const select = document.getElementById("heatmap-start-year-select");
@@ -64,9 +68,33 @@ function updateStartYearAvailability() {
   select.disabled = heatmapState.family.startsWith("wy_");
 }
 
+// The water year most products' records end in. A few products reaching one
+// month into the next water year would otherwise open the page on a nearly
+// empty heatmap; that newer water year stays in the list.
+function defaultHeatmapWaterYear() {
+  const counts = new Map();
+  for (const products of Object.values(manifest.categories)) {
+    for (const responses of Object.values(products)) {
+      for (const entry of Object.values(responses)) {
+        if (!entry.record_end) continue;
+        const wy = waterYearOf(parseInt(entry.record_end.slice(0, 4), 10), parseInt(entry.record_end.slice(5, 7), 10));
+        counts.set(wy, (counts.has(wy) ? counts.get(wy) : 0) + 1);
+      }
+    }
+  }
+  let best = null;
+  for (const [wy, count] of counts) {
+    if (best === null || count > counts.get(best) || (count === counts.get(best) && wy > best)) best = wy;
+  }
+  if (best === null) throw new Error("manifest has no record_end dates");
+  return best;
+}
+
 function initHeatmaps() {
   const familySelect = document.getElementById("heatmap-family-select");
   if (!familySelect) return;
+  buildHeatmapFamilies();
+  heatmapState.family = `wy_${defaultHeatmapWaterYear()}`;
   populateRegionSelect(document.getElementById("heatmap-region-select"), heatmapState.region);
   Object.entries(HEATMAP_FAMILIES).forEach(([key, family]) => {
     const option = document.createElement("option");
@@ -278,9 +306,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
   // cell's color then means the same z-score on every heatmap, and one genuine
   // extreme -- a real fire or soil-moisture record can run past +/-10 -- no
   // longer stretches the scale and washes every other cell to white. Values
-  // beyond the bound saturate the end color; the true z is in the hover. (A
-  // dormant/degenerate cell is no-data, not a spike -- see
-  // common.js::DORMANT_SD_FRACTION.)
+  // beyond the bound saturate the end color; the true z is in the hover.
   const zAbs = 4;
 
   // In the combined "all products" view, separate the stacked category groups

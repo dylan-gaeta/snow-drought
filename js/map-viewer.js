@@ -252,6 +252,22 @@ function activeDiscreteEntry() {
   const entry = lookupColormap(olMapState.colormap.replace(/_r$/, ""));
   return entry && entry.discrete ? entry : null;
 }
+// A diverging NCL table resampled to an odd stop count with a pure-white middle
+// stop: the MPL_* tables are off-white at their centre, and zero anomaly is
+// meaningful (the exported product palettes are built the same way).
+function whiteCentredPalette(colors) {
+  const n = colors.length % 2 ? colors.length : colors.length - 1;
+  const out = Array.from({ length: n }, (_, i) => colors[Math.round((i / (n - 1)) * (colors.length - 1))]);
+  out[(n - 1) / 2] = "#ffffff";
+  return out;
+}
+// Discrete-group tables that are diverging, whitened like the diverging group.
+const DISCRETE_DIVERGING_PALETTES = new Set(["GMT_polar", "GreenMagenta16"]);
+// A boolean the COG export writes into every map style; a style without it is stale.
+function styleFlag(style, name) {
+  if (typeof style[name] !== "boolean") throw new Error(`Map style lacks ${name}; rerun dashboard_cog_export.py`);
+  return style[name];
+}
 function currentPalette(style) {
   let palette;
   if (olMapState.colormap) {
@@ -260,6 +276,9 @@ function currentPalette(style) {
     const base = olMapState.colormap.replace(/_r$/, "");
     palette = (lookupColormapColors(base) || []).slice();
     if (/_r$/.test(olMapState.colormap)) palette.reverse();
+    const diverging = NCL_COLORMAPS.diverging[base] || DISCRETE_DIVERGING_PALETTES.has(base);
+    const symmetric = olMapState.mode === "anomaly" || styleFlag(style, "baseline_symmetric");
+    if (palette.length && diverging && symmetric) palette = whiteCentredPalette(palette);
     if (!palette.length) palette = olMapState.mode === "anomaly" ? style.anomaly_colors : style.baseline_colors;
   } else {
     // Product default: the style's own baked colors, oriented as exported.
@@ -297,7 +316,7 @@ function hexToRgbTriple(hex) {
 
 // Continuous color ramp (Dylan, 2026-10: "use continuous colorbars for all
 // these maps... good continuous versions at NCL"). The palette's hex stops
-// (256 for climatology/raw, fewer but still smooth for anomaly) are spread
+// (256 for climatology/raw, 255 with a white middle for diverging baselines, 11 for anomaly) are spread
 // evenly across [vmin, vmax] and interpolated linearly; OL clamps values
 // outside that range to the end colors. Replaces the old discrete-bin scheme,
 // whose break ticks/extend arrows were hard to format on the dynamic maps.
@@ -306,9 +325,11 @@ function hexToRgbTriple(hex) {
 // compiles to a GLSL chain so long the fragment shader fails outright with
 // "Expression too complex" and the raster never paints -- raw/climatology maps
 // went fully transparent while anomaly (11 stops) was fine (Dylan, 2026-10). A
-// linear ramp over ~16 evenly-spaced stops of an already-smooth NCL table is
-// visually indistinguishable from the full-resolution palette.
-const MAX_COLOR_STOPS = 16;
+// linear ramp over ~15 evenly-spaced stops of an already-smooth NCL table is
+// visually indistinguishable from the full-resolution palette. The count is odd
+// so one stop sits at the scale's midpoint: a diverging palette's white middle
+// stop then lands exactly on zero of its symmetric scale.
+const MAX_COLOR_STOPS = 15;
 function buildContinuousColorExpression(vmin, vmax, colors, scale) {
   const value = ["/", ["band", 1], scale];
   const stops = [];
@@ -949,7 +970,10 @@ async function updateInteractiveMapLayer() {
   // renders stepped at its own level count (there is no separate mode toggle).
   const discEntry = activeDiscreteEntry();
   const nBins = discEntry ? discEntry.colors.length : DISCRETE_BINS;
-  const renderBinned = !!discEntry;
+  // USDM's climatology/raw value is a D0-D4 category: drawn as hard bins on its
+  // own edges, never blended between category colours.
+  const categorical = !olMapState.colormap && olMapState.mode !== "anomaly" && styleFlag(style, "baseline_categorical");
+  const renderBinned = !!discEntry || categorical;
   syncColormapSelect(style); // reflect the active palette in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
   const pv = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)}`;

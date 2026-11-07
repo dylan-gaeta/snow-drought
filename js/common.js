@@ -126,19 +126,6 @@ function categoryLabelWithIcon(category) {
 // SATELLITE_ERA_START_YEAR (1979), applied in dashboard_export.py. Not a bug if
 // they diverge; would be a bug if this one ever floored BELOW 1979 (data that
 // doesn't exist).
-// A window whose baseline spread is below this fraction of the series' overall
-// anomaly spread is climatologically dormant/absent (e.g. summer snow) and
-// reads as no-data for z-score, matching the pipeline
-// (common/detrend.py::DORMANT_SD_FRACTION). Genuine extremes against a
-// real-variance baseline are untouched and keep their full, uncapped z.
-const DORMANT_SD_FRACTION = 0.02;
-// Off-season dormancy floor: a window whose baseline anomaly spread is below
-// this fraction of the variable's seasonal amplitude (the spread of its 12
-// climatological monthly raw means) is off-season/dormant for that quantity
-// (e.g. summer snowpack, winter photosynthesis) and reads as no-data, matching
-// the pipeline (common/detrend.py::SEASONAL_DORMANT_FRACTION). A spread-vs-
-// spread ratio, so temperature (K or C) is never flagged.
-const SEASONAL_DORMANT_FRACTION = 0.03;
 const DASHBOARD_MIN_YEAR = 1990;
 
 // Palettes left out of the Map and SNOTEL colour pickers: rainbow and red-green
@@ -203,13 +190,21 @@ const WATER_YEAR_START_MONTH = 10;
 function waterYearOf(year, month) {
   return month >= WATER_YEAR_START_MONTH ? year + 1 : year;
 }
-// The most recent COMPLETE water year, anchored on the last complete calendar
-// month -- today rounded back to the end of the previous month -- so a
-// brand-new month that nothing has reported into yet never defines it.
+// The newest water year any product reports into, from the manifest's
+// record_end dates -- never from today's date, which runs ahead of the data
+// (on 1 November the calendar is in a water year nothing reports into yet).
+// Needs the manifest loaded.
 function currentWaterYear() {
-  const now = new Date();
-  const lastCompleteMonth = new Date(now.getFullYear(), now.getMonth(), 0); // last day of previous month
-  return waterYearOf(lastCompleteMonth.getFullYear(), lastCompleteMonth.getMonth() + 1);
+  let latest = null;
+  for (const products of Object.values(manifest.categories)) {
+    for (const responses of Object.values(products)) {
+      for (const entry of Object.values(responses)) {
+        if (entry.record_end && (latest === null || entry.record_end > latest)) latest = entry.record_end;
+      }
+    }
+  }
+  if (latest === null) throw new Error("manifest has no record_end dates");
+  return waterYearOf(parseInt(latest.slice(0, 4), 10), parseInt(latest.slice(5, 7), 10));
 }
 
 // The year range spanning every product's actual record_start/record_end,
@@ -297,15 +292,6 @@ const PRODUCT_OBSERVATION_KIND = {
 // -- its D0-D4 are areal drought-extent fractions, a real area statistic.
 const POINT_NETWORK_PRODUCTS = new Set(["SNOTEL", "AmeriFlux", "NEON", "PhenoCam"]);
 
-// Mirrors config.py's COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION. In the
-// pipeline a calendar month is kept in the vegetation group overlay only where
-// its baseline mean clears this fraction of the seasonal amplitude above the
-// dormant trough -- otherwise a tiny winter absolute anomaly divided by a
-// near-zero dormant-season spread explodes the standardized value. Kept for
-// reference only: this dashboard's z-score window statistics guard the
-// near-zero-SD case directly (return 0/blank) rather than an amplitude mask, so
-// nothing client-side reads this constant today.
-const COMBINED_GROWING_SEASON_MIN_AMPLITUDE_FRACTION = 0.15;
 
 // ---------------------------------------------------------- Window statistics
 //
@@ -394,12 +380,16 @@ function windowMonthYearPairs(windowKey, targetYear) {
 }
 
 function aggregateWindow(region, windowKey, targetYear, rule, field) {
-  const pairs = windowMonthYearPairs(windowKey, targetYear);
+  return aggregatePairs(region, windowMonthYearPairs(windowKey, targetYear), rule, field);
+}
+
+function aggregatePairs(region, pairs, rule, field) {
+  if (!region._dateIndex) region._dateIndex = new Map(region.dates.map((d, i) => [d, i]));
   const values = [];
   const weights = [];
   for (const { month, year } of pairs) {
     const dateStr = `${year}-${String(month).padStart(2, "0")}-01`;
-    const idx = region.dates.indexOf(dateStr);
+    const idx = region._dateIndex.has(dateStr) ? region._dateIndex.get(dateStr) : -1;
     if (idx === -1 || region[field][idx] === null) return null;
     values.push(region[field][idx]);
     weights.push(rule === "day_weighted_mean" ? daysInMonth(year, month) : 1);
@@ -413,6 +403,41 @@ function aggregateWindow(region, windowKey, targetYear, rule, field) {
 // which "percent of mean" is shown: above 1 the spread exceeds the mean itself,
 // so the mean does not describe a typical year.
 const PERCENT_OF_MEAN_MAX_CV = 1;
+
+// One pooled spread per window length, as the pipeline's monthly sigma uses one
+// pooled spread per series (common/detrend.py::normal_score_transform): the
+// baseline anomalies of every window of this many consecutive months (one
+// starting at each calendar month), each centred on its own window mean, pooled
+// into one standard deviation. A window with little year-to-year spread (winter
+// photosynthesis, summer snow) then gets a small sigma rather than none.
+function pooledWindowStd(region, nMonths, rule) {
+  if (!region._pooledStd) region._pooledStd = {};
+  const key = `${nMonths}|${rule}`;
+  if (key in region._pooledStd) return region._pooledStd[key];
+  const deviations = [];
+  for (let start = 1; start <= 12; start++) {
+    const sample = [];
+    for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
+      const startYear = start + nMonths - 1 > 12 ? y - 1 : y;
+      const pairs = [];
+      for (let i = 0; i < nMonths; i++) {
+        const offset = start - 1 + i;
+        pairs.push({ month: (offset % 12) + 1, year: startYear + Math.floor(offset / 12) });
+      }
+      const a = aggregatePairs(region, pairs, rule, "anomaly");
+      if (a !== null) sample.push(a);
+    }
+    if (sample.length >= MIN_BASELINE_YEARS) {
+      const { mean } = meanStd(sample);
+      sample.forEach((a) => deviations.push(a - mean));
+    }
+  }
+  const std = deviations.length > 1
+    ? Math.sqrt(deviations.reduce((sum, d) => sum + d * d, 0) / (deviations.length - 1))
+    : 0;
+  region._pooledStd[key] = std;
+  return std;
+}
 
 function meanStd(values) {
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -567,50 +592,12 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   const atOrBelow = baselineAnomalies.filter((a) => a <= targetAnomaly).length;
   const rank = 0.5 * (below + atOrBelow);
   const percentile = ((rank + 0.5) / (n + 1)) * 100;
-  // Classic z-score: the window anomaly in units of the baseline years' own
-  // window-anomaly standard deviation, matching the pipeline's per-month z-score
-  // (common/detrend.py). A degenerate baseline (SD ~ 0, e.g. a desert cell with
-  // SCA = 0 every year) can't be put in SD units, so a matching target reads 0
-  // and a departing one is left out (null).
+  // z-score: the window anomaly's departure from its baseline mean, in units of
+  // the pooled spread of all windows of the same length (pooledWindowStd).
   const { mean: meanAnom, std: stdAnom } = meanStd(baselineAnomalies);
-  // Dormant/absent window -- baseline spread negligible vs the series' overall
-  // anomaly spread (e.g. summer snow) -- has no climatology to standardize
-  // against, so it reads as no-data, matching the pipeline
-  // (common/detrend.py::DORMANT_SD_FRACTION). A genuine extreme against a
-  // real-variance baseline keeps its full, uncapped z.
-  // Overall baseline spread: SD of the raw value over the baseline years -- the
-  // same reference the pipeline's dormant floor uses (detrend.py standardizes
-  // column='value', sd_floor = fraction * std of baseline values), NOT the
-  // deseasonalized anomaly over the whole record, so the client floors the same
-  // months the stored per-month σ / monthly heatmap do.
-  const baselineVals = [];
-  for (let i = 0; i < region.dates.length; i++) {
-    const y = parseInt(region.dates[i].slice(0, 4), 10);
-    const v = region.value[i];
-    if (y >= region.baseline_start_year && y <= region.baseline_end_year
-        && v !== null && Number.isFinite(v)) baselineVals.push(v);
-  }
-  const overallBaselineStd = baselineVals.length > 1 ? meanStd(baselineVals).std : 0;
-  // Seasonal amplitude = spread of the 12 climatological monthly raw means; a
-  // window whose baseline anomaly spread is a tiny fraction of it is
-  // off-season/dormant (common/detrend.py::SEASONAL_DORMANT_FRACTION).
-  const monthlyMeans = [];
-  for (let m = 1; m <= 12; m++) {
-    const monthVals = [];
-    for (let i = 0; i < region.dates.length; i++) {
-      const y = parseInt(region.dates[i].slice(0, 4), 10);
-      const mo = parseInt(region.dates[i].slice(5, 7), 10);
-      const v = region.value[i];
-      if (mo === m && y >= region.baseline_start_year && y <= region.baseline_end_year
-          && v !== null && Number.isFinite(v)) monthVals.push(v);
-    }
-    if (monthVals.length) monthlyMeans.push(meanStd(monthVals).mean);
-  }
-  const seasonalScale = monthlyMeans.length > 1 ? meanStd(monthlyMeans).std : 0;
-  const seasonalFloor = SEASONAL_DORMANT_FRACTION * seasonalScale;
-  const dormant = stdAnom <= DORMANT_SD_FRACTION * overallBaselineStd
-    || (seasonalFloor > 0 && stdAnom < seasonalFloor);
-  const sigma = dormant ? null : (targetAnomaly - meanAnom) / stdAnom;
+  const nMonths = windowMonthYearPairs(windowKey, targetYear).length;
+  const pooledStd = pooledWindowStd(region, nMonths, data.aggregation);
+  const sigma = pooledStd > 0 ? (targetAnomaly - meanAnom) / pooledStd : null;
 
   // The displayed "rank on record" badge is a separate statistic from sigma:
   // sigma/percentile stay anchored to the fixed baseline_start_year..
@@ -666,15 +653,6 @@ function computeWindowValue(data, region, windowKey, targetYear) {
   // impossible badges like "36/34" (rank out of a 37-year record over a
   // 34-year baseline count) (Dylan, 2026-10). `n` stays for sigma/percentile,
   // which ARE baseline-relative.
-  // A dormant window (no real year-to-year variation, e.g. summer snowpack) has
-  // no meaningful standing either: ranking or percentiling near-identical
-  // values (0.001 mm of July SWE) would be noise, so they go blank with sigma.
-  if (dormant) {
-    return {
-      sigma, percentile: null, rawValue: targetRaw, anomaly: targetAnomaly, percentOfNormal,
-      isNativeIndex: false, stressRank: null, n, nRecord: null, stressShare: null, reliefShare: null,
-    };
-  }
   return {
     sigma, percentile, rawValue: targetRaw, anomaly: targetAnomaly, percentOfNormal,
     isNativeIndex: false, stressRank, n, nRecord, ...recordShares(data, ltRecord, leRecord, nRecord),
