@@ -1043,6 +1043,7 @@ const STATUS_LABELS = {
   complete_target_record: "complete record",
   partial_target_record: "current period provisional",
   no_target_observations: "no current-period data",
+  site_network_record: "site network (towers vary by month)",
 };
 
 function productMetaHtml(entry) {
