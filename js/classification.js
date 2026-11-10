@@ -33,7 +33,7 @@ const QUADRANT_VARIABLES = {
   sca_terra_anom: { label: "MODIS-Terra Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
   sca_aqua_anom: { label: "MODIS-Aqua Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
   era5_vpd_anom: { label: "ERA5-Land VPD", window: "DJFM", unit: "hPa", stress_high: true, stress: "high VPD", benign: "low VPD" },
-  era5_ppt_anom: { label: "ERA5-Land Precipitation", window: "DJFM", unit: "mm", stress_high: false, stress: "dry", benign: "wet" },
+  era5_ppt_anom: { label: "ERA5-Land Precipitation", window: "DJFM", unit: "mm d⁻¹", stress_high: false, stress: "dry", benign: "wet" },
   era5_swe_anom: { label: "ERA5-Land SWE", window: "DJFM", unit: "mm", stress_high: false, stress: "low snow", benign: "high snow" },
   era5_sca_anom: { label: "ERA5-Land Snow Cover", window: "DJFM", unit: "%", stress_high: false, stress: "low snow cover", benign: "high snow cover" },
 };
