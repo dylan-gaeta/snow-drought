@@ -322,7 +322,7 @@ async function renderPftTimeseries() {
 }
 
 // Per-PFT water-year seasonal cycle (baseline medians, plus the region median
-// with its 25th-75th and 10th-90th percentile bands), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
+// with its 25th-75th and 5th-95th percentile bands), from data/sib4/seasonal/{KEY}.json. Raw units only (anomaly band is
 // a departure already); sigma not applicable to a climatology.
 async function renderPftSeasonal(request) {
   const el = document.getElementById("sib4-pft-timeseries");

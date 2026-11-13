@@ -159,7 +159,7 @@ const UNIT_CONVERSIONS = {
 // Unit strings arrive in plain-ASCII form ("g C m-2 d-1", "km2", "umol CO2");
 // display them with real superscripts/subscripts ("g C m⁻² d⁻¹", "km²", "µmol CO₂").
 const SUPERSCRIPT_CHARS = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
-const UNIT_TOKEN_SPECIAL = { umol: "µmol", CO2: "CO₂" };
+const UNIT_TOKEN_SPECIAL = { umol: "µmol", CO2: "CO₂", degC: "°C" };
 function prettyUnit(unit) {
   if (!unit) return "";
   return unit.split(" ").map((token) => {
@@ -993,7 +993,7 @@ function sortedPeriods(periodKeys) {
   });
 }
 
-// Seasonal-cycle band: the baseline years' outer (10th-90th, light) and inner
+// Seasonal-cycle band: the baseline years' outer (5th-95th, light) and inner
 // (25th-75th, dark) percentiles for each month, read from the exported
 // "<prefix>_p<level>" fields; levels come from manifest.seasonal_band_percentiles.
 const SEASONAL_BAND_ALPHA = { outer: 0.18, inner: 0.4 };

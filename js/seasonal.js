@@ -258,6 +258,10 @@ function wireSeasonalControls() {
 
 async function init() {
   await loadManifest();
+  // The band description names the percentiles the exported data actually carry.
+  const { inner, outer } = manifest.seasonal_band_percentiles;
+  document.getElementById("seasonal-band-inner").textContent = `${inner[0]}th–${inner[1]}th`;
+  document.getElementById("seasonal-band-outer").textContent = `${outer[0]}th–${outer[1]}th`;
   wireSeasonalControls();
   initProductPicker(onSeasonalSelectionChanged);
 }

@@ -27,8 +27,17 @@ const RESPONSE_COLORS = {
   // GPP (uptake) green vs NEE blue -- a strongly distinct, colorblind-safe pair
   // (not the old green/red), and NEE no longer shares the AmeriFlux network's
   // own red marker color.
-  GPP: "#238b45", NEE: "#2171b5",
+  GPP: "#238b45", NEE: "#2171b5", RECO: "#8c510a",
+  // One color per unit panel's variable: latent heat, air temperature, VPD, soil water.
+  ET: "#6a51a3", TAIR: "#d94801", VPD: "#b8860b", SOIL_WATER: "#01665e",
 };
+// Names shown for the tower variables (the response codes are the pipeline's).
+const RESPONSE_LABELS = {
+  NEE: "NEE", GPP: "GPP", RECO: "Ecosystem respiration", ET: "Latent heat flux",
+  TAIR: "Air temperature", VPD: "Vapor pressure deficit", SOIL_WATER: "Soil water content",
+};
+const SITE_PANEL_HEIGHT_PX = 230;   // one unit panel of the station chart
+const SITE_PANEL_GAP = 0.05;        // gap between unit panels, as a share of the chart height
 
 // Flux towers lead this page: AmeriFlux + NEON are listed first, shown on by
 // default, and the page opens on one of their stations. PhenoCam's ~200 cameras
@@ -171,31 +180,53 @@ function renderSiteChart() {
   document.getElementById("sites-chart-title").textContent = `${site} — ${net.label}`;
   if (!responses.length) { el.innerHTML = '<p class="chart-empty">No data at this site.</p>'; return; }
   const isAnom = sitesState.series === "anomaly";
-  // Every response at a site shares the network's units, so overlay them on one
-  // axis (GCC+RCC for PhenoCam, GPP+NEE for AmeriFlux) rather than one at a time.
-  const traces = responses.map((r) => {
-    const s = rec.series[r];
-    const color = RESPONSE_COLORS[r] || net.color;
-    return {
-      x: s.dates, y: isAnom ? s.anomaly : s.value, type: "scatter", mode: "lines+markers",
-      name: r, line: { color, width: 2.4 }, marker: { size: 4, color },
-      hovertemplate: `${r} %{x|%Y-%m}: %{y:.2f}<extra></extra>`,
-    };
+  // Responses that share units overlay on one axis (GCC+RCC, GPP+NEE+RECO);
+  // each other unit gets its own panel below, on the same time axis.
+  const unitsOf = (r) => (net.response_units && net.response_units[r]) || net.units;
+  const groups = [];
+  responses.forEach((r) => {
+    let group = groups.find((g) => g.units === unitsOf(r));
+    if (!group) { group = { units: unitsOf(r), responses: [] }; groups.push(group); }
+    group.responses.push(r);
   });
-  const yUnits = prettyUnit(net.units);
-  const yTitle = isAnom ? `Anomaly (${yUnits})`
-    : responses.length === 1 ? `${responses[0]} (${yUnits})` : `Value (${yUnits})`;
-  Plotly.newPlot(el, traces, {
-    margin: { t: 10, r: 16, b: responses.length > 1 ? 70 : 44, l: 60 },
-    // Solid zero line whenever 0 is in view -- NEE (and anomalies) cross it, so
-    // the sign (uptake below 0 / release above) reads at a glance; for GCC/RCC
-    // (~0.3-0.6, 0 off-axis) Plotly simply doesn't draw it.
-    yaxis: { title: yTitle, ...PLOTLY_AXIS_LINE, zeroline: true, zerolinecolor: "#888", zerolinewidth: 1.5 },
-    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
+  const gap = groups.length > 1 ? SITE_PANEL_GAP : 0;
+  const panel = (1 - gap * (groups.length - 1)) / groups.length;
+  const layout = {
+    margin: { t: 10, r: 16, b: 70, l: 64 },
+    height: SITE_PANEL_HEIGHT_PX * groups.length + 80,
+    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS, anchor: groups.length > 1 ? `y${groups.length}` : "y" },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     showlegend: responses.length > 1,
-    legend: { orientation: "h", x: 0.5, xanchor: "center", y: -0.2, yanchor: "top" },
-  }, { responsive: true, displaylogo: false });
+    legend: { orientation: "h", x: 0.5, xanchor: "center", y: -0.12 / groups.length, yanchor: "top" },
+  };
+  const traces = [];
+  groups.forEach((group, k) => {
+    const top = 1 - k * (panel + gap);
+    const yUnits = prettyUnit(group.units);
+    const single = group.responses.length === 1 ? (RESPONSE_LABELS[group.responses[0]] || group.responses[0]) : null;
+    // Solid zero line whenever 0 is in view -- NEE (and anomalies) cross it, so
+    // the sign (uptake below 0 / release above) reads at a glance; where 0 is
+    // off-axis (GCC/RCC) Plotly simply doesn't draw it.
+    layout[k === 0 ? "yaxis" : `yaxis${k + 1}`] = {
+      domain: [top - panel, top],
+      title: isAnom ? `${single ? single + " anomaly" : "Anomaly"} (${yUnits})` : `${single || "Value"} (${yUnits})`,
+      ...PLOTLY_AXIS_LINE, zeroline: true, zerolinecolor: "#888", zerolinewidth: 1.5,
+    };
+    group.responses.forEach((r) => {
+      const series = rec.series[r];
+      const color = RESPONSE_COLORS[r] || net.color;
+      const label = RESPONSE_LABELS[r] || r;
+      traces.push({
+        x: series.dates, y: isAnom ? series.anomaly : series.value, type: "scatter", mode: "lines+markers",
+        name: series.source ? `${label} (${series.source})` : label,
+        yaxis: k === 0 ? "y" : `y${k + 1}`,
+        line: { color, width: 2.4 }, marker: { size: 4, color },
+        hovertemplate: `${label} %{x|%Y-%m}: %{y:.2f}<extra></extra>`,
+      });
+    });
+  });
+  el.style.height = `${layout.height}px`;
+  Plotly.newPlot(el, traces, layout, { responsive: true, displaylogo: false });
 }
 
 function buildNetworkToggles(index) {
