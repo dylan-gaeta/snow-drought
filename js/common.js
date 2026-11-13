@@ -242,9 +242,8 @@ const SEASON_ORDER = ["NDJF", "DJFM", "DJF", "MAM", "AMJJ", "MAMJJAS", "JJA", "S
 // Mirrors config.py's MAP_SEASONAL_PERIODS -- do not diverge for any window
 // also used by the interactive map's period select (built server-side from
 // that same dict, see code/17_dashboard_cog_export.py's SEASON_MONTHS).
-// MAMJJAS/ANNUAL are dashboard-only additions with no COG coverage yet --
-// they work everywhere else (summary table, heatmaps, compare) because
-// those are computed live from monthly timeseries JSON, not pre-rendered maps.
+// The Mar-Sep window is MAMJJAS here and in the COG export; the static map
+// folders call it MARSEP, and dashboard_export.py registers them as MAMJJAS.
 const SEASON_MONTHS = {
   MAM: [3, 4, 5], JJA: [6, 7, 8], SON: [9, 10, 11],
   DJF: [12, 1, 2], NDJF: [11, 12, 1, 2], DJFM: [12, 1, 2, 3], AMJJ: [4, 5, 6, 7],
@@ -1041,7 +1040,7 @@ function findResponseEntry(product, response) {
 // snake_case value (e.g. "partial_target_record") never shows in the UI.
 const STATUS_LABELS = {
   complete_target_record: "complete record",
-  partial_target_record: "current period provisional",
+  partial_target_record: "recent months incomplete",
   no_target_observations: "no current-period data",
   site_network_record: "site network (towers vary by month)",
 };
