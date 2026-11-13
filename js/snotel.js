@@ -292,7 +292,7 @@ function renderDetail() {
   document.getElementById("snotel-detail-title").textContent =
     `${meta.name}, ${meta.state} — ${meta.elev_ft ? meta.elev_ft.toLocaleString() + " ft" : "elevation n/a"}`;
   document.getElementById("snotel-detail-note").textContent = band
-    ? `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median, 10th–90th percentile band).`
+    ? `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median and the lighter percentile band shown).`
     : `Daily SWE, water year ${snotelState.wy} (no climatology normal available for this station).`;
 
   const nDays = wyData ? wyData.n_days : 365;
@@ -300,12 +300,16 @@ function renderDetail() {
   for (let i = 0; i < nDays; i++) { const d = dateForDay(snotelState.wy, i); dates.push(ymd(d)); doys.push(doyOf(d)); }
   const yearCurve = s ? s.swe : dates.map(() => null);
   const median = band ? doys.map((dy) => bandAt(band, "p50", dy)) : null;
-  const p10 = band ? doys.map((dy) => bandAt(band, "p10", dy)) : null;
-  const p90 = band ? doys.map((dy) => bandAt(band, "p90", dy)) : null;
+  // The band's outer levels are whatever the climatology file carries (its lowest and highest pNN).
+  const bandLevels = band ? Object.keys(band).filter((k) => /^p\d+$/.test(k)).map((k) => Number(k.slice(1))).sort((a, b) => a - b) : [];
+  const lowLevel = bandLevels[0], highLevel = bandLevels[bandLevels.length - 1];
+  const bandName = band ? `${lowLevel}th–${highLevel}th` : "";
+  const p10 = band ? doys.map((dy) => bandAt(band, `p${lowLevel}`, dy)) : null;
+  const p90 = band ? doys.map((dy) => bandAt(band, `p${highLevel}`, dy)) : null;
   const traces = [];
   if (band) {
     traces.push({ x: dates, y: p10, type: "scatter", mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip", connectgaps: false });
-    traces.push({ x: dates, y: p90, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(33,102,172,0.15)", name: "10th–90th pct", hoverinfo: "skip", connectgaps: false });
+    traces.push({ x: dates, y: p90, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: "rgba(33,102,172,0.15)", name: `${bandName} pct`, hoverinfo: "skip", connectgaps: false });
     traces.push({ x: dates, y: median, type: "scatter", mode: "lines", line: { color: "#2166ac", width: 2, dash: "dot" }, name: "Normal (median)", connectgaps: false });
   }
   traces.push({ x: dates, y: yearCurve, type: "scatter", mode: "lines", line: { color: "#8c510a", width: 2.5 }, name: `WY ${snotelState.wy}`, connectgaps: false });
