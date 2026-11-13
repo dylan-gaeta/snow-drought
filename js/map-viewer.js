@@ -439,8 +439,14 @@ function initInteractiveMap() {
   // the data but no further onto empty ocean/continent (Dylan, 2026-10: "we
   // shouldn't be able to pan outside of the western US bbox", "a little 0.5deg
   // wiggle room but no more").
-  const extent = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
-  const panExtent = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
+  const DOMAIN = [-125.0, 31.0, -101.5, 49.5]; // west, south, east, north
+  const PAN_PAD_DEG = 0.5;
+  const paddedExtent = (east) => ol.proj.transformExtent(
+    [DOMAIN[0] - PAN_PAD_DEG, DOMAIN[1] - PAN_PAD_DEG, east + PAN_PAD_DEG, DOMAIN[3] + PAN_PAD_DEG],
+    "EPSG:4326", "EPSG:3857",
+  );
+  const extent = ol.proj.transformExtent(DOMAIN, "EPSG:4326", "EPSG:3857");
+  const panExtent = paddedExtent(DOMAIN[2]);
 
   olMapState.boundaryLayer = new ol.layer.Vector({
     source: new ol.source.Vector({
@@ -576,8 +582,35 @@ function initInteractiveMap() {
     updateYearStepperButtons();
     updateInteractiveMapLayer();
   });
+  // The HUC2 layer holds every basin that reaches the western states, whole:
+  // the Missouri, Arkansas-White-Red and others run far east of the data
+  // domain. While the layer is shown, the pan limit moves east to the edge of
+  // the easternmost basin (same 0.5deg slack); hiding it restores the domain limit.
+  const setPanExtent = (newExtent) => {
+    const view = olMapState.map.getView();
+    olMapState.map.setView(new ol.View({
+      center: view.getCenter(), resolution: view.getResolution(), extent: newExtent, showFullExtent: true,
+    }));
+  };
+  const hucPanExtent = () => {
+    const basinExtent = olMapState.hucLayer.getSource().getExtent();
+    const basinEast = ol.proj.transformExtent(basinExtent, "EPSG:3857", "EPSG:4326")[2];
+    return paddedExtent(Math.max(DOMAIN[2], basinEast));
+  };
   document.getElementById("ol-huc-toggle").addEventListener("change", (event) => {
-    olMapState.hucLayer.setVisible(event.target.checked);
+    const shown = event.target.checked;
+    olMapState.hucLayer.setVisible(shown);
+    const source = olMapState.hucLayer.getSource();
+    if (!shown) {
+      setPanExtent(panExtent);
+    } else if (source.getFeatures().length > 0) {
+      setPanExtent(hucPanExtent());
+    } else {
+      // The outlines load the first time the layer is shown.
+      source.once("featuresloadend", () => {
+        if (olMapState.hucLayer.getVisible()) setPanExtent(hucPanExtent());
+      });
+    }
   });
   document.getElementById("ol-boundary-toggle").addEventListener("change", (event) => {
     olMapState.boundaryLayer.setVisible(event.target.checked);
