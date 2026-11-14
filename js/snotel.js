@@ -292,7 +292,7 @@ function renderDetail() {
   document.getElementById("snotel-detail-title").textContent =
     `${meta.name}, ${meta.state} — ${meta.elev_ft ? meta.elev_ft.toLocaleString() + " ft" : "elevation n/a"}`;
   document.getElementById("snotel-detail-note").textContent = band
-    ? `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median and the lighter percentile band shown).`
+    ? `Daily SWE, water year ${snotelState.wy}, vs the ${snotelState.climatology.baseline_start_year}–${snotelState.climatology.baseline_end_year} normal (median and the percentile band the legend names).`
     : `Daily SWE, water year ${snotelState.wy} (no climatology normal available for this station).`;
 
   const nDays = wyData ? wyData.n_days : 365;

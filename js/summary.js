@@ -152,6 +152,7 @@ async function renderSummaryTable() {
       if (POINT_NETWORK_PRODUCTS.has(product)) continue;
       for (const [response, entry] of Object.entries(responses)) {
         if (!entry.aggregation) continue; // no established aggregation rule (e.g. NEON NEE) -- excluded, not guessed
+        if (manifest.summary_excluded_series.includes(`${product}|${response}`)) continue;
         toFetch.push({ category, product, response, entry });
       }
     }

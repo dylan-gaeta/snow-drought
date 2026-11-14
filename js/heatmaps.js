@@ -170,6 +170,8 @@ function heatmapPairs(category, family) {
       for (const [response, entry] of Object.entries(responses)) {
         // Cloud/clear fractions are coverage diagnostics, not drought signals.
         if (manifest.coverage_diagnostic_responses.includes(response)) continue;
+        // Series kept out of every summary display (records that stop before the current water year).
+        if (manifest.summary_excluded_series.includes(`${product}|${response}`)) continue;
         // The water-year families read each single month directly --
         // no aggregation involved, so they're fine even for products (e.g. NEON
         // NEE) with no established multi-month aggregation rule. Every other

@@ -17,9 +17,9 @@ const sitesState = {
 const SITES_EXTENT = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
 const SITES_PAN_EXTENT = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
 
-// Every response a site carries shares the network's units, so they overlay on
-// one axis (PhenoCam GCC+RCC, AmeriFlux GPP+NEE). Each response gets its own
-// color so the two curves stay distinct; GCC green / RCC red mirrors the
+// Responses that share units overlay on one axis (PhenoCam GCC+RCC, AmeriFlux
+// GPP+NEE+RECO); each other unit gets its own panel. Each response gets its
+// own color so the curves stay distinct; GCC green / RCC red mirrors the
 // greenness vs. senescence meaning. Unlisted responses fall back to the
 // network marker color.
 const RESPONSE_COLORS = {
@@ -182,7 +182,13 @@ function renderSiteChart() {
   const isAnom = sitesState.series === "anomaly";
   // Responses that share units overlay on one axis (GCC+RCC, GPP+NEE+RECO);
   // each other unit gets its own panel below, on the same time axis.
-  const unitsOf = (r) => (net.response_units && net.response_units[r]) || net.units;
+  const unitsOf = (r) => {
+    if (!(r in net.response_units)) throw new Error(`${network}.json: no units for response ${r}`);
+    return net.response_units[r];
+  };
+  // The years a response's anomaly is taken from (the two tower archives use
+  // different ones); named on the axis when the panel holds one response.
+  const baselineOf = (r) => (r in net.response_baseline ? ` from ${net.response_baseline[r].join("–")}` : "");
   const groups = [];
   responses.forEach((r) => {
     let group = groups.find((g) => g.units === unitsOf(r));
@@ -209,7 +215,9 @@ function renderSiteChart() {
     // off-axis (GCC/RCC) Plotly simply doesn't draw it.
     layout[k === 0 ? "yaxis" : `yaxis${k + 1}`] = {
       domain: [top - panel, top],
-      title: isAnom ? `${single ? single + " anomaly" : "Anomaly"} (${yUnits})` : `${single || "Value"} (${yUnits})`,
+      title: isAnom
+        ? `${single ? single + " anomaly" + baselineOf(group.responses[0]) : "Anomaly"} (${yUnits})`
+        : `${single || "Value"} (${yUnits})`,
       ...PLOTLY_AXIS_LINE, zeroline: true, zerolinecolor: "#888", zerolinewidth: 1.5,
     };
     group.responses.forEach((r) => {
