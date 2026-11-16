@@ -90,7 +90,44 @@ function renderCoverageChart() {
   Plotly.newPlot(chart, traces, layout, { responsive: true, displaylogo: false });
 }
 
+// Problem reports go to this repository's issue form
+// (.github/ISSUE_TEMPLATE/feedback.yml), which labels them "feedback". The
+// form's field ids are the query-parameter names GitHub fills in.
+const FEEDBACK_REPO = "dylan-gaeta/snow-drought";
+const FEEDBACK_TEMPLATE = "feedback.yml";
+
+function initFeedbackForm() {
+  const form = document.getElementById("feedback-form");
+  // The "Report a problem" footer link on every page passes where the reader
+  // was and what was selected (see reportProblemLink in common.js).
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("page")) document.getElementById("feedback-page").value = params.get("page");
+  if (params.has("selection")) document.getElementById("feedback-selection").value = params.get("selection");
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const category = document.getElementById("feedback-category").value;
+    const shortCategory = category.split(" (")[0];
+    const fields = {
+      template: FEEDBACK_TEMPLATE,
+      title: `[${shortCategory}] ${document.getElementById("feedback-title").value.trim()}`,
+      category,
+      page: document.getElementById("feedback-page").value.trim(),
+      selection: document.getElementById("feedback-selection").value.trim(),
+      details: document.getElementById("feedback-details").value.trim(),
+      expected: document.getElementById("feedback-expected").value.trim(),
+    };
+    const url = `https://github.com/${FEEDBACK_REPO}/issues/new?${new URLSearchParams(fields)}`;
+    window.open(url, "_blank", "noopener");
+  });
+}
+
+initFeedbackForm();
+
 loadManifest().then(() => {
   renderValueTypeGlossary();
   renderCoverageChart();
+  // The glossary and the tall coverage chart push later sections down after the
+  // browser has already jumped to a #section link, so jump again.
+  if (window.location.hash) document.querySelector(window.location.hash)?.scrollIntoView();
 });

@@ -17,6 +17,45 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// Every page's footer links to the About page's problem-report form. The link
+// is filled in when clicked, so it carries the page address (including the
+// map's view in the URL hash) and what is selected at that moment.
+const FEEDBACK_SELECTION_MAX_CHARS = 500;
+
+function pageSelectionSummary() {
+  const parts = [];
+  const title = [...document.querySelectorAll("main .figure-title, main h3")].find((el) => el.offsetParent && el.textContent.trim());
+  if (title) parts.push(title.textContent.trim().replace(/\s+/g, " "));
+  document.querySelectorAll("main select").forEach((select) => {
+    if (!select.offsetParent || select.selectedIndex < 0) return;
+    const label = select.closest("label");
+    const name = label ? label.childNodes[0].textContent.trim() : select.getAttribute("aria-label");
+    if (!name) return;
+    parts.push(`${name}: ${select.options[select.selectedIndex].text.trim()}`);
+  });
+  const region = document.querySelector("main .region-buttons button.active");
+  if (region && region.offsetParent) parts.push(`Region: ${region.textContent.trim()}`);
+  return parts.join("; ").slice(0, FEEDBACK_SELECTION_MAX_CHARS);
+}
+
+function reportProblemLink() {
+  const footer = document.querySelector(".site-footer .footer-inner");
+  if (!footer) return;
+  const paragraph = document.createElement("p");
+  const link = document.createElement("a");
+  link.className = "report-problem-link";
+  link.href = "about.html#feedback";
+  link.textContent = "Report a problem with this page";
+  link.addEventListener("click", () => {
+    const params = new URLSearchParams({ page: window.location.href, selection: pageSelectionSummary() });
+    link.href = `about.html?${params}#feedback`;
+  });
+  paragraph.appendChild(link);
+  footer.appendChild(paragraph);
+}
+
+document.addEventListener("DOMContentLoaded", reportProblemLink);
+
 // Full name for an abbreviated variable code, shown in parentheses after the
 // code in the variable dropdowns and chart/map titles, e.g. "Et (transpiration)"
 // -- disambiguates look-alikes like GLEAM's Et (transpiration) vs ET

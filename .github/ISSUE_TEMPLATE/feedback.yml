@@ -1,0 +1,37 @@
+name: Dashboard feedback
+description: Report a website bug, a data problem, mislabeled data or something drawn incorrectly on the Western US Climate and Snow Drought Explorer.
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: What kind of problem?
+      options:
+        - Website bug (a page, map or chart is broken or does not load)
+        - Data issue (values look wrong or are missing)
+        - Mislabeled data (wrong name, units, dates or region)
+        - Incorrectly displayed data (a map, chart or table draws it wrong)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The address of the page where you saw the problem.
+  - type: input
+    id: selection
+    attributes:
+      label: What was selected
+      description: Dataset, variable, region and period shown, if any.
+  - type: textarea
+    id: details
+    attributes:
+      label: What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?

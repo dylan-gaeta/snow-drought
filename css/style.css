@@ -664,6 +664,41 @@ table.headline-table tr.group-row td {
 .select-field { display: inline-flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .select-field select { text-transform: none; font-weight: 400; letter-spacing: normal; color: var(--text); }
 
+/* About page problem-report form: the same captioned fields, stacked. */
+.feedback-form { display: flex; flex-direction: column; gap: 0.9rem; max-width: 720px; }
+.feedback-form .select-field { display: flex; }
+.feedback-form select, .feedback-form input, .feedback-form textarea {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-sizing: border-box;
+  width: 100%;
+}
+.feedback-form textarea { resize: vertical; }
+.feedback-form select:focus-visible, .feedback-form input:focus-visible, .feedback-form textarea:focus-visible {
+  border-color: var(--blue); box-shadow: var(--shadow-focus); outline: none;
+}
+.feedback-submit {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--blue-dark);
+  border: 1px solid var(--blue-dark);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+}
+.feedback-submit:hover { background: var(--blue); border-color: var(--blue); }
+
 /* Custom colour-theme dropdown: a native <select> can't render a gradient
    swatch per option, so this is a small mac-style popover -- a bordered trigger
    showing the current palette's swatch + name, and a rounded, shadowed panel of
