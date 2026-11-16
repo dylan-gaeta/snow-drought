@@ -455,6 +455,9 @@ function pooledWindowStd(region, nMonths, rule) {
   const key = `${nMonths}|${rule}`;
   if (key in region._pooledStd) return region._pooledStd[key];
   const deviations = [];
+  // One window mean is fitted per start month, so the spread divides by the
+  // number of deviations minus the number of those means (pipeline audit row 15).
+  let fittedMeans = 0;
   for (let start = 1; start <= 12; start++) {
     const sample = [];
     for (let y = region.baseline_start_year; y <= region.baseline_end_year; y++) {
@@ -470,10 +473,11 @@ function pooledWindowStd(region, nMonths, rule) {
     if (sample.length >= MIN_BASELINE_YEARS) {
       const { mean } = meanStd(sample);
       sample.forEach((a) => deviations.push(a - mean));
+      fittedMeans += 1;
     }
   }
-  const std = deviations.length > 1
-    ? Math.sqrt(deviations.reduce((sum, d) => sum + d * d, 0) / (deviations.length - 1))
+  const std = deviations.length > fittedMeans
+    ? Math.sqrt(deviations.reduce((sum, d) => sum + d * d, 0) / (deviations.length - fittedMeans))
     : 0;
   region._pooledStd[key] = std;
   return std;
@@ -485,31 +489,11 @@ function meanStd(values) {
   return { mean, std: Math.sqrt(variance) };
 }
 
-// Per-calendar-month stress σ for the monthly heatmap. The stored region.sigma
-// is already a σ for every product EXCEPT the non-σ native indices (USDM 0-5
-// severity, PDSI/VegDRI "Index"): those keep their native value in region.sigma
-// so the Time Series page can show it, so here they are standardized against
-// that same calendar month's own baseline instead (Dylan, 2026-10), the per-
-// month analog of computeWindowValue's non-σ-native branch. SPI/SPEI/EDDI/ESI/
-// ForDRI (units "σ") and all non-native products pass their stored σ through.
+// Per-calendar-month stress σ for the monthly heatmap: the stored region.sigma,
+// which the pipeline standardizes for every product against its own baseline
+// with one pooled spread, the native drought indices included (audit row 27).
 function monthlyStressSigma(data, region, idx) {
-  const nonSigmaNative = data.native_standardized
-    && !(typeof data.units === "string" && data.units.trim() === "σ");
-  if (!nonSigmaNative) return region.sigma[idx];
-  const v = region.value[idx];
-  if (v === null || v === undefined || !Number.isFinite(v)) return null;
-  const month = parseInt(region.dates[idx].slice(5, 7), 10);
-  const sample = [];
-  for (let i = 0; i < region.dates.length; i++) {
-    const y = parseInt(region.dates[i].slice(0, 4), 10);
-    const mo = parseInt(region.dates[i].slice(5, 7), 10);
-    const val = region.value[i];
-    if (mo === month && y >= region.baseline_start_year && y <= region.baseline_end_year
-        && val !== null && Number.isFinite(val)) sample.push(val);
-  }
-  if (sample.length < MIN_BASELINE_YEARS) return null;
-  const { mean, std } = meanStd(sample);
-  return std <= 0 ? null : (v - mean) / std;
+  return region.sigma[idx];
 }
 
 // Returns { sigma, percentile, rawValue, percentOfNormal, isNativeIndex,
@@ -570,27 +554,20 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     // SD 0.35-0.86 for SPI/SPEI/EDDI/ESI/ForDRI), so reading its value off the
     // standard normal curve made dry years look ordinary.
     const percentileNative = ((rankB + 0.5) / (nB + 1)) * 100;
-    // SPI/SPEI/EDDI/ESI/ForDRI publish in σ units: the value already IS a
-    // standardized departure, so it passes through unchanged -- never
-    // re-standardized or relabelled.
-    const sigmaNative = typeof data.units === "string" && data.units.trim() === "σ";
-    if (sigmaNative) {
-      return {
-        sigma: v, percentile: percentileNative, rawValue: v, anomaly: null, percentOfNormal: null,
-        isNativeIndex: true, stressRank: null, n: nB, nRecord: null, stressShare: null, reliefShare: null,
-      };
-    }
-    // A non-σ native index (USDM 0-5 severity, PDSI/VegDRI "Index") is NOT on a
-    // z scale: running its raw value through the stress-heatmap color and the
-    // normal-CDF percentile put an average USDM month at ~95th-percentile stress
-    // and "no drought" at the 50th. For the cross-product σ heatmap + percentile
-    // it is standardized against its OWN baseline years instead (Dylan, 2026-10);
-    // its native value is still what the Time Series / Map pages read (from the
-    // stored region.sigma, untouched). percentOfNormal stays null -- a drought
-    // index has no physical "normal" to take a percent of. isNativeIndex is
-    // false so the summary uses this empirical percentile, not the normal CDF.
-    const { mean: meanB, std: stdB } = meanStd(baseline);
-    const sigmaNonSigma = (nB < MIN_BASELINE_YEARS || stdB <= 0) ? null : (v - meanB) / stdB;
+    // Every native index, the σ-unit ones (SPI/SPEI/EDDI/ESI/ForDRI) included, is
+    // standardized against its own baseline years like any other variable
+    // (pipeline audit row 27): an area mean of a per-cell index varies far less
+    // than one cell, and its zero is the index's own calibration period. The
+    // window value's departure from its baseline mean is divided by the spread
+    // pooled over every window of the same length (pooledWindowStd; the anomaly
+    // field of a native index holds its value). A fixed-timescale index reads
+    // one month per window. percentOfNormal stays null -- a drought index has no
+    // physical "normal" to take a percent of.
+    const windowLength = data.aggregation === "native_index" ? 1 : windowMonthYearPairs(windowKey, targetYear).length;
+    const windowRule = data.aggregation === "native_index" ? "mean" : data.aggregation;
+    const pooledStd = pooledWindowStd(region, windowLength, windowRule);
+    const { mean: meanB } = meanStd(baseline);
+    const sigmaNative = pooledStd > 0 ? (v - meanB) / pooledStd : null;
     const recordN = [];
     const firstY = parseInt(region.dates[0].slice(0, 4), 10);
     const lastY = parseInt(region.dates[region.dates.length - 1].slice(0, 4), 10);
@@ -605,7 +582,7 @@ function computeWindowValue(data, region, windowKey, targetYear) {
     const rankRecordNative = 0.5 * (ltN + leN) + 0.5;
     const stressRankNative = data.drier_is_high ? nRecordNative - rankRecordNative + 1 : rankRecordNative;
     return {
-      sigma: sigmaNonSigma, percentile: percentileNative, rawValue: v, anomaly: null,
+      sigma: sigmaNative, percentile: percentileNative, rawValue: v, anomaly: null,
       percentOfNormal: null, isNativeIndex: false, stressRank: stressRankNative,
       n: nB, nRecord: nRecordNative, ...recordShares(data, ltN, leN, nRecordNative),
     };
@@ -929,10 +906,7 @@ function regionalSummaryNote(data) {
   const asOfNote = data.aggregation === "native_index"
     ? " This index has a fixed timescale, so a season shows its value as of the season's last month."
     : "";
-  const sigmaNote = (typeof data.units === "string" && data.units.trim() === "σ")
-    ? " Standardized index: rank on record is not computed (the value is already a standardized departure)."
-    : "";
-  const nativeNote = asOfNote + sigmaNote;
+  const nativeNote = asOfNote;
   return `Rows are shaded by standing on record, not by the climatological mean (which is not a drought threshold): a year reads gold (more stress) when no more than a third of the record is at least as stressed in this variable's own direction (${data.drier_is_high ? "higher" : "lower"} = more stress), blue (less stress) when no more than a third is at least as un-stressed, and is left uncolored otherwise; tied years count together, so a large block of identical years is not colored. The σ sign stays native (+ above / − below the mean); n beside σ is the number of baseline years its standard deviation comes from. Rank 1 = the most drought-stressed year of record; higher ranks are progressively less stressed.${nativeNote}`;
 }
 

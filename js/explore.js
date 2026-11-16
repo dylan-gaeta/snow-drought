@@ -66,12 +66,9 @@ async function renderTimeseries() {
   const fullY = isSigma
     ? region.sigma.map((v) => (v === null || v === undefined ? null : v))
     : (isAnomaly ? region.anomaly : region.value).map((v) => (v === null || v === undefined ? null : v * unitFactor));
-  // Native standardized indices (SPI/SPEI/EDDI/PDSI/ForDRI/ESI) are already
-  // a standardized departure -- their sigma series is identical to raw, not
-  // a re-standardization (see common/canonical.py::_load_drought_index).
-  const sigmaLabel = data.native_standardized
-    ? `${data.response} (native standardized index)`
-    : "Standardized anomaly (σ)";
+  // Every series, native drought indices included, is standardized against its
+  // own baseline (pipeline audit row 27); the native index itself is the raw view.
+  const sigmaLabel = "Standardized anomaly (σ)";
   const yTitle = isSigma ? sigmaLabel
     : isAnomaly ? `${data.response} anomaly (${dispUnits})`
     : `${data.response} (${dispUnits})`;
@@ -112,7 +109,7 @@ async function renderTimeseries() {
   });
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
-    sigmaNote.textContent = (isSigma && !data.native_standardized && manifest.value_type_glossary)
+    sigmaNote.textContent = (isSigma && manifest.value_type_glossary)
       ? `σ: ${manifest.value_type_glossary.sigma || ""}`
       : "";
   }
