@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Methodology, data sources, and references for the Western US Climate and Snow Drought Explorer -- an unofficial, descriptive-only research dashboard.">
+<meta name="description" content="Methodology, data sources, and references for the Western US Climate and Snow Drought Explorer -- an unofficial, data-forward research dashboard.">
 <title>About &mdash; Western US Climate and Snow Drought Explorer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23162e51' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4' y1='6' x2='20' y2='18'/%3E%3Cline x1='4' y1='18' x2='20' y2='6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -140,8 +140,8 @@
           <tr><td>ERA5-Land</td><td>Reanalysis land-surface SWE, soil moisture, ET, precipitation, temperature, runoff</td><td><a href="https://cds.climate.copernicus.eu/" target="_blank" rel="noopener">ECMWF / Copernicus Climate Data Store</a></td></tr>
           <tr><td>GLEAM</td><td>Global Land Evaporation Amsterdam Model (v4.3a) &mdash; satellite-based land evaporation components (actual and potential evaporation, transpiration, interception loss, bare-soil/snow/open-water evaporation), evaporative stress, and surface/root-zone soil moisture</td><td><a href="https://www.gleam.eu/" target="_blank" rel="noopener">GLEAM / Hydro-Climate Extremes Lab, Ghent University (Miralles et al.)</a></td></tr>
           <tr><td>UA-SWE-Monthly</td><td>4-km daily gridded snow water equivalent, aggregated to monthly</td><td><a href="https://climate.arizona.edu/data/UA_SWE/DailyData_4km" target="_blank" rel="noopener">University of Arizona</a></td></tr>
-          <tr><td>MODIS-Terra / MODIS-Aqua (snow cover)</td><td>Daily 0.05&deg; snow-cover fraction from the Terra (MOD10C1) and Aqua (MYD10C1) sensors</td><td><a href="https://nsidc.org/data/mod10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
-          <tr><td>Suomi NPP VIIRS (snow cover)</td><td>Satellite (VNP10C1) daily snow-covered-area product</td><td><a href="https://nsidc.org/data/vnp10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
+          <tr><td>Terra MODIS / Aqua MODIS (snow cover)</td><td>Daily 0.05&deg; snow-cover fraction from MODIS on Terra (MOD10C1) and Aqua (MYD10C1)</td><td><a href="https://nsidc.org/data/mod10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
+          <tr><td>Suomi NPP VIIRS (snow cover)</td><td>Daily 0.05&deg; snow-cover fraction from VIIRS on Suomi NPP (VNP10C1)</td><td><a href="https://nsidc.org/data/vnp10c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
           <tr><td>NOAA-20 VIIRS (snow cover)</td><td>The same daily snow-covered-area product from VIIRS on NOAA-20 (VJ110C1)</td><td><a href="https://nsidc.org/data/vj110c1" target="_blank" rel="noopener">NASA / NSIDC</a></td></tr>
           <tr><td>NSIDC-IMS</td><td>Interactive Multisensor Snow and Ice Mapping System, daily snow-cover classification (NSIDC G02156)</td><td><a href="https://nsidc.org/data/g02156" target="_blank" rel="noopener">NOAA / NSIDC</a></td></tr>
           <tr><td>SNODAS</td><td>Snow Data Assimilation System &mdash; modeled daily snow water equivalent and snow depth (NOHRSC, NSIDC G02158)</td><td><a href="https://nsidc.org/data/g02158" target="_blank" rel="noopener">NOAA NOHRSC / NSIDC</a></td></tr>
@@ -149,12 +149,13 @@
           <tr><td>NLDAS-Noah</td><td>NLDAS-2 Noah land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>NLDAS-VIC</td><td>NLDAS-2 VIC land-surface model output (ET, runoff, soil moisture)</td><td><a href="https://ldas.gsfc.nasa.gov/nldas" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>PRISM</td><td>Monthly 4-km precipitation and vapor-pressure-deficit grids</td><td><a href="https://prism.oregonstate.edu/" target="_blank" rel="noopener">PRISM Climate Group, Oregon State University</a></td></tr>
-          <tr><td>MODIS-Terra</td><td>Leaf area index (MOD15A2H.061), evapotranspiration (MOD16A2GF.061), gross primary productivity (MOD17A2HGF.061), NDVI/EVI/LSWI vegetation indices (MOD13C1.061), and day/night land-surface temperature (MOD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
-          <tr><td>MODIS-Aqua</td><td>Aqua-sensor counterparts: leaf area index, evapotranspiration, gross primary productivity, NDVI/EVI/LSWI vegetation indices, and day/night land-surface temperature (MYD-series, e.g. MYD13C1.061, MYD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>Terra MODIS</td><td>Leaf area index (MOD15A2H.061), evapotranspiration (MOD16A2GF.061), gross primary productivity (MOD17A2HGF.061), NDVI/EVI/LSWI vegetation indices (MOD13C1.061), and day/night land-surface temperature (MOD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>Aqua MODIS</td><td>The same products from MODIS on Aqua: leaf area index, evapotranspiration, gross primary productivity, NDVI/EVI/LSWI vegetation indices, and day/night land-surface temperature (MYD-series, e.g. MYD13C1.061, MYD11C3.061)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>Suomi NPP VIIRS (vegetation)</td><td>VIIRS 0.05&deg; NDVI, EVI, and LSWI vegetation indices (VNP13C1), leaf area index (VNP15A2H) and gross primary productivity (VNP17A2GF, VNP17A2)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>Suomi NPP VIIRS (land-surface temperature)</td><td>VIIRS day/night land-surface temperature (VNP21C2)</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>NOAA-20 VIIRS</td><td>The same vegetation indices (VJ113C1), land-surface temperature (VJ121C2), leaf area index (VJ115A2H) and gross primary productivity (VJ117A2GF, VJ117A2) from VIIRS on NOAA-20</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
           <tr><td>NOAA-21 VIIRS</td><td>The same vegetation indices (VJ213C1), land-surface temperature (VJ221C2), leaf area index (VJ215A2H) and gross primary productivity (VJ217A2GF, VJ217A2) from VIIRS on NOAA-21; monthly values only, since its record (from 2023) is too short for a baseline</td><td><a href="https://appeears.earthdatacloud.nasa.gov/" target="_blank" rel="noopener">NASA LP DAAC (AppEEARS)</a></td></tr>
+          <tr><td>MODIS&ndash;VIIRS hybrid</td><td>One monthly record per variable built for this study: Terra MODIS (NDVI, EVI, LSWI, leaf area index, GPP) or Aqua MODIS (land-surface temperature) through December 2021, Suomi NPP VIIRS from January 2022, VIIRS adjusted to the MODIS level using the years both observed (2012&ndash;2021)</td><td>Built from the NASA LP DAAC products above</td></tr>
           <tr><td>GPCP</td><td>Global Precipitation Climatology Project monthly precipitation, 2.5&deg;</td><td><a href="https://www.ncei.noaa.gov/products/global-precipitation-climatology-project" target="_blank" rel="noopener">NOAA NCEI / University of Maryland</a></td></tr>
           <tr><td>GRACE-JPL-L3</td><td>Mascon terrestrial water-storage anomaly (TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4, DOI 10.5067/TEMSC-3JC634)</td><td><a href="https://podaac.jpl.nasa.gov/dataset/TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4" target="_blank" rel="noopener">NASA JPL / PO.DAAC</a></td></tr>
           <tr><td>GRACE-L4</td><td>Catchment land-surface data-assimilation model groundwater/soil-moisture storage (GRACEDADM_CLSM025GL_7D)</td><td><a href="https://earth.gsfc.nasa.gov/hydro/data/groundwater-and-soil-moisture-conditions-grace-data-assimilation" target="_blank" rel="noopener">NASA Goddard Space Flight Center / GES DISC</a></td></tr>
@@ -163,7 +164,7 @@
           <tr><td>SiB4</td><td>Process-based terrestrial biosphere model (GPP, respiration, NEE, plus ET, LAI, SIF, soil water, and VPD by plant functional type)</td><td>Colorado State University (Dr. Aleya Kaushik)</td></tr>
           <tr><td>OCO-2</td><td>Level-2 Lite solar-induced fluorescence (OCO2_L2_Lite_SIF)</td><td><a href="https://disc.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA GES DISC</a></td></tr>
           <tr><td>TROPOMI</td><td>TROPOMI solar-induced fluorescence (TROPOSIF L2B_SIF___)</td><td><a href="https://s5p-pal.com/" target="_blank" rel="noopener">ESA Sentinel-5P S5P-PAL</a></td></tr>
-          <tr><td>NEON</td><td>Bundled eddy-covariance flux product (half-hourly net ecosystem exchange)</td><td><a href="https://data.neonscience.org/data-products/DP4.00200.001" target="_blank" rel="noopener">National Ecological Observatory Network</a></td></tr>
+          <tr><td>NEON</td><td>Eddy-covariance net ecosystem exchange and latent heat; air temperature, VPD and soil water at NEON towers come from each tower's AmeriFlux record</td><td><a href="https://data.neonscience.org/data-products/DP4.00200.001" target="_blank" rel="noopener">National Ecological Observatory Network</a></td></tr>
           <tr><td>CAMS</td><td>Inversion-optimized land-atmosphere CO2 exchange (cams-global-greenhouse-gas-inversion)</td><td><a href="https://ads.atmosphere.copernicus.eu/" target="_blank" rel="noopener">Copernicus Atmosphere Monitoring Service</a></td></tr>
           <tr><td>CarbonTracker</td><td>Atmospheric-inversion-optimized terrestrial CO2 flux (NEE)</td><td><a href="https://gml.noaa.gov/ccgg/carbontracker/" target="_blank" rel="noopener">NOAA Global Monitoring Laboratory</a></td></tr>
           <tr><td>FluxSat</td><td>Satellite-driven (MODIS-based) gross primary productivity</td><td><a href="https://www.earthdata.nasa.gov/data/catalog/ornl-cloud-fluxsat-gpp-fpar-1835-2" target="_blank" rel="noopener">NASA ORNL DAAC</a></td></tr>
@@ -172,7 +173,7 @@
           <tr><td>GFED5</td><td>Burned area and fire carbon emissions, 0.25&deg;, v5.1</td><td><a href="https://www.globalfiredata.org/data.html" target="_blank" rel="noopener">Global Fire Emissions Database consortium</a></td></tr>
           <tr><td>gridMET-Fire</td><td>Fire-weather indices: energy release component, burning index, dead-fuel moisture</td><td><a href="https://www.northwestknowledge.net/metdata/data" target="_blank" rel="noopener">University of Idaho (gridMET / Climatology Lab)</a></td></tr>
           <tr><td>SNOTEL</td><td>Automated mountain snowpack stations &mdash; daily snow water equivalent (SWE); station metadata via the AWDB REST API</td><td><a href="https://www.nrcs.usda.gov/wps/portal/wcc/home/" target="_blank" rel="noopener">USDA NRCS National Water and Climate Center</a></td></tr>
-          <tr><td>AmeriFlux</td><td>Eddy-covariance flux-tower GPP and NEE (BASE data product)</td><td><a href="https://ameriflux.lbl.gov/" target="_blank" rel="noopener">AmeriFlux Network / Lawrence Berkeley National Laboratory</a></td></tr>
+          <tr><td>AmeriFlux</td><td>Eddy-covariance GPP, NEE, ecosystem respiration, latent heat, air temperature, VPD and soil water (BASE data product)</td><td><a href="https://ameriflux.lbl.gov/" target="_blank" rel="noopener">AmeriFlux Network / Lawrence Berkeley National Laboratory</a></td></tr>
         </tbody>
       </table>
 
@@ -190,9 +191,9 @@
     <h2>Disclaimers</h2>
     <ul>
       <li>This site is <strong>not an official NOAA, NIDIS, or U.S. Drought
-        Monitor product</strong>. It issues no forecasts and makes no causal or
-        year-against-year claims &mdash; every chart and map is a direct,
-        descriptive read of the selected variables and datasets.</li>
+        Monitor product</strong>. It issues no forecasts and draws no
+        conclusions; every chart, map and table is a direct read of the
+        selected variables and datasets.</li>
       <li>For data access, authoritative values, complete metadata, quality
         flags, version history, and terms of use, always defer to each
         dataset's <strong>original provider</strong> (linked in the Datasets

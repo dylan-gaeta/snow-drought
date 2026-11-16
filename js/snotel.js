@@ -340,7 +340,7 @@ function renderDetail() {
 function renderElevation() {
   const d = dateForDay(snotelState.wy, snotelState.dayIndex);
   document.getElementById("snotel-elev-title").textContent =
-    `Snow drought by elevation — ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+    `SWE by station elevation — ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const wyData = currentDaily();
   // The scatter follows the same metric selector as the map (SWE % of normal /
   // percentile / raw mm). "% of normal" is a ratio whose day-of-year normal

@@ -8,7 +8,7 @@ const VALUE_TYPE_LABELS = {
   sigma: "Standardized anomaly (σ), charts", sigma_window: "Standardized anomaly (σ), tables and heatmaps",
   anomaly_raw: "Raw-unit anomaly",
   percent_of_normal: "Percent of mean", percentile: "Percentile",
-  rank: "Driest/wettest rank", raw: "Raw value",
+  rank: "Rank on record", raw: "Raw value",
 };
 
 function renderValueTypeGlossary() {
@@ -60,7 +60,7 @@ function renderCoverageChart() {
         return end - start;
       }),
       marker: { color: manifest.category_colors[category] },
-      hovertext: catRows.map((r) => `${r.product} ${r.response}: ${r.start} to ${r.end} (${STATUS_LABELS[r.status] || r.status})`),
+      hovertext: catRows.map((r) => `${productDisplay(r.product)} ${r.response}: ${r.start} to ${r.end} (${STATUS_LABELS[r.status] || r.status})`),
       hoverinfo: "text",
     };
   });

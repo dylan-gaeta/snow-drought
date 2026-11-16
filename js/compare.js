@@ -158,7 +158,7 @@ async function renderCompare() {
   const baselineText = (entry) => (entry && entry.baseline_start_year && entry.baseline_end_year)
     ? `${entry.baseline_start_year}–${entry.baseline_end_year}` : "n/a";
   const metaLine = (label, state, entry) => entry
-    ? `${label}: ${state.product} ${responseDisplay(state.response)} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
+    ? `${label}: ${productDisplay(state.product)} ${responseDisplay(state.response)} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
     : "";
   document.getElementById("compare-title").textContent =
     `${productDisplay(compareState.a.product)} · ${responseDisplay(compareState.a.response)} vs ${productDisplay(compareState.b.product)} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;

@@ -101,22 +101,48 @@ async function renderTimeseries() {
     });
     }
   }
+  // Share of the region the month's value covers (pipeline audit row 25): shown
+  // in the hover and, when any month in view covers less than the whole region,
+  // as a strip under the series. No month is left out for low coverage.
+  const covered = region.covered_share
+    ? region.covered_share.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear)
+    : null;
+  const showCoverage = covered !== null && covered.some((s) => s !== null && s < COVERAGE_STRIP_BELOW);
   traces.push({
     x: dates, y, type: "scatter", mode: "lines",
     line: { color: "#1b1b1b", width: 1.4 },
     name: productDisplay(pickerState.product),
-    hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
+    customdata: covered ? covered.map((s) => (s === null ? null : 100 * s)) : null,
+    hovertemplate: covered
+      ? "%{x|%Y-%m}: %{y:.2f} (covers %{customdata:.0f}% of the region)<extra></extra>"
+      : "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   });
+  if (showCoverage) {
+    traces.push({
+      x: dates, y: covered.map((s) => (s === null ? null : 100 * s)), type: "bar", yaxis: "y2",
+      marker: { color: "#b8bcc2" }, name: "Share of region covered",
+      hovertemplate: "%{x|%Y-%m}: %{y:.0f}% of the region covered<extra></extra>",
+    });
+  }
   const sigmaNote = document.getElementById("timeseries-sigma-note");
   if (sigmaNote) {
-    sigmaNote.textContent = (isSigma && manifest.value_type_glossary)
+    const sigmaText = (isSigma && manifest.value_type_glossary)
       ? `σ: ${manifest.value_type_glossary.sigma || ""}`
       : "";
+    const coverageText = showCoverage
+      ? " The grey strip is the share of the region the month's value covers: a value from part of the region (for example a snow-covered winter month a satellite cannot see through) describes only that part."
+      : "";
+    sigmaNote.textContent = (sigmaText + coverageText).trim();
   }
   const layout = {
     margin: { t: 20, r: 20, b: 45, l: 60 },
-    yaxis: { title: yTitle, zeroline: false, ...PLOTLY_AXIS_LINE },
-    xaxis: { title: "Year", showgrid: false, ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
+    yaxis: { title: yTitle, zeroline: false, ...PLOTLY_AXIS_LINE,
+             ...(showCoverage ? { domain: [COVERAGE_STRIP_HEIGHT + 0.05, 1] } : {}) },
+    ...(showCoverage ? { yaxis2: { domain: [0, COVERAGE_STRIP_HEIGHT], range: [0, 100], title: "Covered (%)",
+                                   tickvals: [0, 50, 100], anchor: "x", ...PLOTLY_AXIS_LINE } } : {}),
+    // With the strip, the year axis sits under the strip rather than between it
+    // and the series.
+    xaxis: { title: "Year", showgrid: false, anchor: showCoverage ? "y2" : "y", ...PLOTLY_AXIS_LINE, ...PLOTLY_YEARLY_MINOR_TICKS },
     font: { family: "Source Sans Pro, sans-serif", size: 13 },
     shapes: isDeparture ? [{ type: "line", x0: 0, x1: 1, xref: "paper", y0: 0, y1: 0, line: { color: "#888", width: 1 } }] : [],
   };

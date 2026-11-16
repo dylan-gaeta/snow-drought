@@ -65,8 +65,11 @@ function buildPickerIndexes(filter, valuesOnly) {
   // ERA5-Land has climate, soil-moisture and snow responses); de-duplicate
   // while keeping category_order's first-seen order.
   Object.keys(datasetVariables).forEach((p) => { datasetVariables[p] = Array.from(new Set(datasetVariables[p])); });
-  Object.keys(variableDatasets).forEach((r) => { variableDatasets[r] = Array.from(new Set(variableDatasets[r])); });
-  const allDatasets = Object.keys(datasetVariables).sort((a, b) => a.localeCompare(b));
+  // Datasets are listed by their displayed name (e.g. "NOAA-20 VIIRS" under N),
+  // not by registry key.
+  const byLabel = (a, b) => productDisplay(a).localeCompare(productDisplay(b));
+  Object.keys(variableDatasets).forEach((r) => { variableDatasets[r] = Array.from(new Set(variableDatasets[r])).sort(byLabel); });
+  const allDatasets = Object.keys(datasetVariables).sort(byLabel);
   const allVariables = Object.keys(variableDatasets).sort((a, b) => a.localeCompare(b));
   return { datasetVariables, variableDatasets, entryCategoryByPair, variableCategory, allDatasets, allVariables };
 }
@@ -229,11 +232,15 @@ function createProductPicker(opts) {
   function seedSelection() {
     const urlView = opts.seedFromUrl ? parseSharedPickerViewFromUrl() : null;
     const remembered = opts.persist && !urlView ? loadLastSelection() : null;
-    const seed = urlView || remembered || opts.defaultView || {};
-    state.product = allDatasets.includes(seed.product) ? seed.product : allDatasets[0];
+    // A remembered or linked dataset this page does not offer falls back to the
+    // page's default view, not to whichever dataset sorts first.
+    const views = [urlView, remembered, opts.defaultView].filter(Boolean);
+    const seed = views.find((view) => allDatasets.includes(view.product)) || { product: allDatasets[0] };
+    state.product = seed.product;
     const vars = datasetVariables[state.product];
     state.response = vars.includes(seed.response) ? seed.response : vars[0];
-    if (seed.region) state.region = seed.region;
+    const regionView = views[0];
+    if (regionView && regionView.region) state.region = regionView.region;
   }
 
   function init() {

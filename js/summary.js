@@ -161,6 +161,7 @@ async function renderSummaryTable() {
   const dataList = await Promise.all(toFetch.map((item) => fetchSummaryData(item.product, item.response)));
 
   const rowsByCategory = {};
+  const noValueSeries = [];
   toFetch.forEach((item, i) => {
     const data = dataList[i];
     const cells = summaryRegionColumns.map((col) => {
@@ -168,7 +169,10 @@ async function renderSummaryTable() {
       if (!region) return null;
       return computeWindowValue(data, region, summaryState.window, summaryState.year);
     });
-    if (cells.every((cell) => cell === null)) return;
+    if (cells.every((cell) => cell === null)) {
+      noValueSeries.push(`${productDisplay(item.product)} ${responseDisplay(item.response)}`);
+      return;
+    }
     (rowsByCategory[item.category] = rowsByCategory[item.category] || []).push({
       product: item.product, response: item.response, cells, data,
     });
@@ -215,6 +219,11 @@ async function renderSummaryTable() {
   if (!anyRows) {
     body.innerHTML = `<tr><td class="no-data-cell" colspan="${colCount}">No data for this window/year.</td></tr>`;
   }
+  // Series whose record ends before (or starts after) the selected window are
+  // named here rather than vanishing from the table.
+  document.getElementById("summary-missing-note").textContent = noValueSeries.length
+    ? `Not shown, no value for this window and year (record ends earlier or starts later): ${noValueSeries.join(", ")}.`
+    : "";
 }
 
 loadManifest().then(initSummaryTable);

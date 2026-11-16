@@ -14,9 +14,11 @@
 const HEATMAP_WATER_YEAR_FLOOR = 2010;
 const HEATMAP_FAMILIES = {};
 // Built once the manifest has loaded: the newest water-year family is the
-// newest water year the data reach (currentWaterYear()).
+// study water year (manifest.study_water_year), or the newest water year the
+// data reach if that is earlier. No view is built for a later water year.
 function buildHeatmapFamilies() {
-  for (let wy = currentWaterYear(); wy >= HEATMAP_WATER_YEAR_FLOOR; wy--) {
+  if (!Number.isInteger(manifest.study_water_year)) throw new Error("manifest has no study_water_year");
+  for (let wy = Math.min(currentWaterYear(), manifest.study_water_year); wy >= HEATMAP_WATER_YEAR_FLOOR; wy--) {
     HEATMAP_FAMILIES[`wy_${wy}`] = { label: `WY${wy} (Oct ${wy - 1} – Sep ${wy})`, waterYear: wy };
   }
   SEASON_ORDER.forEach((key) => {
@@ -68,9 +70,8 @@ function updateStartYearAvailability() {
   select.disabled = heatmapState.family.startsWith("wy_");
 }
 
-// The water year most products' records end in. A few products reaching one
-// month into the next water year would otherwise open the page on a nearly
-// empty heatmap; that newer water year stays in the list.
+// The water year most products' records end in, never past the study water
+// year (records may run a month or more into the next water year).
 function defaultHeatmapWaterYear() {
   const counts = new Map();
   for (const products of Object.values(manifest.categories)) {
@@ -87,7 +88,7 @@ function defaultHeatmapWaterYear() {
     if (best === null || count > counts.get(best) || (count === counts.get(best) && wy > best)) best = wy;
   }
   if (best === null) throw new Error("manifest has no record_end dates");
-  return best;
+  return Math.min(best, manifest.study_water_year);
 }
 
 function initHeatmaps() {

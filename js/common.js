@@ -444,6 +444,12 @@ function aggregatePairs(region, pairs, rule, field) {
 // so the mean does not describe a typical year.
 const PERCENT_OF_MEAN_MAX_CV = 1;
 
+// Time Series coverage strip: drawn when any month in view covers less than this
+// share of the region (a value from the whole region is exactly 1), and its
+// height as a share of the chart.
+const COVERAGE_STRIP_BELOW = 1;
+const COVERAGE_STRIP_HEIGHT = 0.15;
+
 // One pooled spread per window length, as the pipeline's monthly sigma uses one
 // pooled spread per series (common/detrend.py::normal_score_transform): the
 // baseline anomalies of every window of this many consecutive months (one
