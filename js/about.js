@@ -52,7 +52,7 @@ function renderCoverageChart() {
     const catRows = rows.filter((r) => r.category === category);
     return {
       type: "bar", orientation: "h", name: categoryLabelWithIcon(category),
-      y: catRows.map((r) => `${r.product} ${r.response}`),
+      y: catRows.map((r) => `${productDisplay(r.product)} ${r.response}`),
       base: catRows.map((r) => r.start),
       x: catRows.map((r) => {
         const start = new Date(r.start).getTime();

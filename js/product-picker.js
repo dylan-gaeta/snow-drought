@@ -37,7 +37,9 @@ function currentPickerEntry() {
 
 // Build the manifest-derived indexes, keeping only (category, product, response)
 // triples the filter accepts. category_order's first-seen order is preserved.
-function buildPickerIndexes(filter) {
+// Products of monthly values only (entry.values_only) are kept only where the
+// page can show a value without a baseline (Time Series, Map).
+function buildPickerIndexes(filter, valuesOnly) {
   const datasetVariables = {};   // product  -> [response, ...]
   const variableDatasets = {};   // response -> [product, ...]
   const entryCategoryByPair = {}; // `${product} ${response}` -> category
@@ -51,6 +53,7 @@ function buildPickerIndexes(filter) {
       if (POINT_NETWORK_PRODUCTS.has(product)) return;
       Object.keys(products[product]).forEach((response) => {
         if (filter && !filter(category, product, response)) return;
+        if (products[product][response].values_only && !valuesOnly) return;
         (datasetVariables[product] = datasetVariables[product] || []).push(response);
         (variableDatasets[response] = variableDatasets[response] || []).push(product);
         entryCategoryByPair[product + " " + response] = category;
@@ -130,7 +133,7 @@ function createProductPicker(opts) {
   const metaEl = ids.meta ? document.getElementById(ids.meta) : null;
   const regionEl = ids.region ? document.getElementById(ids.region) : null;
 
-  const index = buildPickerIndexes(opts.filter);
+  const index = buildPickerIndexes(opts.filter, opts.valuesOnly === true);
   const { datasetVariables, variableDatasets, entryCategoryByPair, variableCategory, allDatasets, allVariables } = index;
   const state = { pivot: "dataset", category: null, product: null, response: null, region: "ALL" };
 
@@ -141,11 +144,11 @@ function createProductPicker(opts) {
 
   function renderSelects() {
     if (state.pivot === "dataset") {
-      fillPickerSelect(datasetSelect, allDatasets, state.product);
+      fillPickerSelect(datasetSelect, allDatasets, state.product, productDisplay);
       fillVariableSelect(variableSelect, datasetVariables[state.product], state.response, variableCategory);
     } else {
       fillVariableSelect(variableSelect, allVariables, state.response, variableCategory);
-      fillPickerSelect(datasetSelect, variableDatasets[state.response], state.product);
+      fillPickerSelect(datasetSelect, variableDatasets[state.response], state.product, productDisplay);
     }
   }
 
@@ -270,8 +273,9 @@ const DEFAULT_PICKER_VIEW = { category: "climate", product: "ERA5-Land", respons
 // Thin single-instance wrapper for the one-product-at-a-time pages (Time Series,
 // Seasonal Cycle, Gallery): all datasets, region toggle, metadata, search, the
 // shared last-selection memory, and URL-hash seeding.
-function initProductPicker(onSelectionChanged) {
+function initProductPicker(onSelectionChanged, valuesOnly) {
   const picker = createProductPicker({
+    valuesOnly,
     ids: {
       pivot: "picker-pivot", product: "product-select", response: "response-select",
       meta: "product-meta", region: "region-toggle",

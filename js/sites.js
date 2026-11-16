@@ -1,5 +1,5 @@
 // Sites page: the individual observation stations behind the site-based
-// products (AmeriFlux, NEON flux towers, PhenoCam cameras). An OpenLayers
+// products (AmeriFlux and NEON flux towers). An OpenLayers
 // point map of the stations, colored by network; click a station to see its
 // own monthly time series (data/sites/*), every response overlaid on one
 // shared axis. Reuses the Map page's WUS view + boundary layer.
@@ -17,13 +17,10 @@ const sitesState = {
 const SITES_EXTENT = ol.proj.transformExtent([-125.0, 31.0, -101.5, 49.5], "EPSG:4326", "EPSG:3857");
 const SITES_PAN_EXTENT = ol.proj.transformExtent([-125.5, 30.5, -101.0, 50.0], "EPSG:4326", "EPSG:3857");
 
-// Responses that share units overlay on one axis (PhenoCam GCC+RCC, AmeriFlux
-// GPP+NEE+RECO); each other unit gets its own panel. Each response gets its
-// own color so the curves stay distinct; GCC green / RCC red mirrors the
-// greenness vs. senescence meaning. Unlisted responses fall back to the
-// network marker color.
+// Responses that share units overlay on one axis (GPP+NEE+RECO); each other
+// unit gets its own panel. Each response gets its own color so the curves stay
+// distinct. Unlisted responses fall back to the network marker color.
 const RESPONSE_COLORS = {
-  GCC: "#238b45", RCC: "#cb181d",
   // GPP (uptake) green vs NEE blue -- a strongly distinct, colorblind-safe pair
   // (not the old green/red), and NEE no longer shares the AmeriFlux network's
   // own red marker color.
@@ -39,10 +36,8 @@ const RESPONSE_LABELS = {
 const SITE_PANEL_HEIGHT_PX = 230;   // one unit panel of the station chart
 const SITE_PANEL_GAP = 0.05;        // gap between unit panels, as a share of the chart height
 
-// Flux towers lead this page: AmeriFlux + NEON are listed first, shown on by
-// default, and the page opens on one of their stations. PhenoCam's ~200 cameras
-// are secondary (hidden until toggled on) so the tower network isn't buried in
-// camera dots.
+// AmeriFlux + NEON are listed first, shown on by default, and the page opens
+// on one of their stations.
 const FLUX_NETWORKS = ["AmeriFlux", "NEON"];
 function orderedNetworks(networks) {
   const rank = (k) => { const i = FLUX_NETWORKS.indexOf(k); return i === -1 ? FLUX_NETWORKS.length : i; };
@@ -88,9 +83,7 @@ function buildSitesMap() {
   });
 }
 
-// Flux-tower networks (AmeriFlux, NEON) get larger markers than the PhenoCam
-// camera network, which is much denser and secondary here.
-function networkRadius(network) { return network === "PhenoCam" ? 4 : 7; }
+const SITE_MARKER_RADIUS = 7;
 
 function markerStyle(color, selected, radius) {
   return new ol.style.Style({
@@ -108,7 +101,7 @@ function buildNetworkLayer(network) {
     const f = new ol.Feature({ geometry: new ol.geom.Point(ol.proj.fromLonLat([s.lon, s.lat])) });
     f.set("network", network);
     f.set("site", s.site);
-    f.setStyle(markerStyle(net.color, false, networkRadius(network)));
+    f.setStyle(markerStyle(net.color, false, SITE_MARKER_RADIUS));
     return f;
   });
   const layer = new ol.layer.Vector({ source: new ol.source.Vector({ features }), zIndex: 10 });
@@ -122,7 +115,7 @@ function refreshMarkerStyles() {
     if (!layer) return;
     layer.getSource().getFeatures().forEach((f) => {
       const isSel = sitesState.selected && sitesState.selected.network === network && sitesState.selected.site === f.get("site");
-      f.setStyle(markerStyle(net.color, isSel, networkRadius(network)));
+      f.setStyle(markerStyle(net.color, isSel, SITE_MARKER_RADIUS));
     });
   });
 }
@@ -132,7 +125,7 @@ function siteRecord(network, site) {
 }
 
 // Site dropdown grouped by dataset (network), each network's sites A-Z.
-// State filter so the dropdown (esp. PhenoCam's ~200 cameras) isn't one giant
+// State filter so the dropdown isn't one giant
 // list. States come from each site's own `state` (point-in-polygon, set in
 // dashboard_export.py::export_sites).
 function populateSiteStateSelect() {
@@ -180,7 +173,7 @@ function renderSiteChart() {
   document.getElementById("sites-chart-title").textContent = `${site} — ${net.label}`;
   if (!responses.length) { el.innerHTML = '<p class="chart-empty">No data at this site.</p>'; return; }
   const isAnom = sitesState.series === "anomaly";
-  // Responses that share units overlay on one axis (GCC+RCC, GPP+NEE+RECO);
+  // Responses that share units overlay on one axis (GPP+NEE+RECO);
   // each other unit gets its own panel below, on the same time axis.
   const unitsOf = (r) => {
     if (!(r in net.response_units)) throw new Error(`${network}.json: no units for response ${r}`);
@@ -212,7 +205,7 @@ function renderSiteChart() {
     const single = group.responses.length === 1 ? (RESPONSE_LABELS[group.responses[0]] || group.responses[0]) : null;
     // Solid zero line whenever 0 is in view -- NEE (and anomalies) cross it, so
     // the sign (uptake below 0 / release above) reads at a glance; where 0 is
-    // off-axis (GCC/RCC) Plotly simply doesn't draw it.
+    // off-axis Plotly simply doesn't draw it.
     layout[k === 0 ? "yaxis" : `yaxis${k + 1}`] = {
       domain: [top - panel, top],
       title: isAnom

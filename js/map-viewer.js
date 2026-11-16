@@ -93,6 +93,7 @@ function initMapPicker() {
       meta: "product-meta", search: "product-search", searchResults: "product-search-results",
     },
     filter: responseHasSpatialMap,
+    valuesOnly: true,
     persist: true,
     seedFromUrl: true,
     defaultView: DEFAULT_MAP_VIEW,
@@ -104,7 +105,7 @@ function initMapPicker() {
 
 // A response gets a spatial map only if its manifest entry actually carries
 // map outputs and isn't flagged no_spatial_maps -- site/point products whose
-// gridded field would be interpolated from sparse stations (PhenoCam, SNOTEL,
+// gridded field would be interpolated from sparse stations (SNOTEL,
 // NEON, AmeriFlux) have no COG at all and must not appear in the map pickers,
 // only on Time Series/Seasonal/etc. (Dylan, 2026-10).
 function responseHasSpatialMap(category, product, response) {
@@ -846,7 +847,12 @@ async function renderRegionValuesTable(entry) {
     note.textContent = "No years available for this selection.";
     return;
   }
-  heading.textContent = `Regional values — ${mapPickerState.product} · ${responseDisplay(mapPickerState.response)}, ${olPeriodLabel(period)} ${year}`;
+  heading.textContent = `Regional values — ${productDisplay(mapPickerState.product)} · ${responseDisplay(mapPickerState.response)}, ${olPeriodLabel(period)} ${year}`;
+  if (data.values_only) {
+    body.innerHTML = "";
+    note.textContent = VALUES_ONLY_NOTE;
+    return;
+  }
   const rawHeader = document.getElementById("ol-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, period);
   body.innerHTML = regionalSummaryRowsHtml(data, period, year);
@@ -873,7 +879,7 @@ async function updateInteractiveMapLayer() {
     const when = olMapState.mode === "climatology"
       ? periodLabel(olMapState.period)
       : `${periodLabel(olMapState.period)} ${olMapState.year}`;
-    titleEl.textContent = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)} — ${when} (${modeLabel})`;
+    titleEl.textContent = `${productDisplay(mapPickerState.product)} · ${responseDisplay(mapPickerState.response)} — ${when} (${modeLabel})`;
   }
   // Reads the same timeseries JSON every other page uses, not the map image
   // -- so a failure to load/render the actual raster tile below never
@@ -925,7 +931,7 @@ async function updateInteractiveMapLayer() {
     const drawnWhen = olMapState.mode === "climatology"
       ? periodLabel(olMapState.period)
       : `${periodLabel(olMapState.period)} ${olMapState.year}`;
-    titleEl.textContent = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)} — ${drawnWhen} (${drawnModeLabel})`;
+    titleEl.textContent = `${productDisplay(mapPickerState.product)} · ${responseDisplay(mapPickerState.response)} — ${drawnWhen} (${drawnModeLabel})`;
   }
   const key = olMapState.mode === "climatology" ? "baseline" : `${olMapState.mode}_${olMapState.year}`;
   const fileEntry = slot[key];
@@ -1009,7 +1015,7 @@ async function updateInteractiveMapLayer() {
   const renderBinned = !!discEntry || categorical;
   syncColormapSelect(style); // reflect the active palette in the dropdown
   const unitSuffix = units ? ` [${units}]` : "";
-  const pv = `${mapPickerState.product} · ${responseDisplay(mapPickerState.response)}`;
+  const pv = `${productDisplay(mapPickerState.product)} · ${responseDisplay(mapPickerState.response)}`;
   const label = olMapState.mode === "climatology" ? `${pv} — climatology${unitSuffix}`
     : olMapState.mode === "raw" ? `${pv} — ${olMapState.year}${unitSuffix}`
     : `${pv} — ${olMapState.year} anomaly${unitSuffix}`;

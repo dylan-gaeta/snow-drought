@@ -131,7 +131,7 @@ function slotSeries(slot, data) {
       if (v === null || v === undefined) return null;
       return isSigma ? v : toCanonicalValue(v, data.units);
     }),
-    name: `${compareState[slot].product} · ${responseDisplay(data.response)}`,
+    name: `${productDisplay(compareState[slot].product)} · ${responseDisplay(data.response)}`,
     units: canonicalUnit(data.units),
   };
 }
@@ -161,7 +161,7 @@ async function renderCompare() {
     ? `${label}: ${state.product} ${responseDisplay(state.response)} · units ${canonicalUnit(entry.units) || "n/a"} · baseline ${baselineText(entry)}`
     : "";
   document.getElementById("compare-title").textContent =
-    `${compareState.a.product} · ${responseDisplay(compareState.a.response)} vs ${compareState.b.product} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;
+    `${productDisplay(compareState.a.product)} · ${responseDisplay(compareState.a.response)} vs ${productDisplay(compareState.b.product)} · ${responseDisplay(compareState.b.response)} — ${regionLabelFor(compareState.region)}`;
   let metaHtml = `${metaLine("A", compareState.a, aEntry)}<br>${metaLine("B", compareState.b, bEntry)}`;
   if (isSigma) {
     metaHtml += "<br>σ is native-direction (positive = above that variable's own baseline, not necessarily stress).";
@@ -356,9 +356,9 @@ async function renderOverlay() {
     }
     traces.push({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
-      name: product, line: { color: overlayColor(product), width: 2 },
+      name: productDisplay(product), line: { color: overlayColor(product), width: 2 },
       visible: overlayState.hidden[product] ? "legendonly" : true,
-      hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${product}</extra>`,
+      hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${productDisplay(product)}</extra>`,
     });
   });
 
@@ -423,7 +423,7 @@ function renderOverlayLegend() {
     swatch.className = "checkbox-legend-swatch";
     swatch.style.background = overlayColor(product);
     const name = document.createElement("span");
-    name.textContent = product;
+    name.textContent = productDisplay(product);
     item.append(box, swatch, name);
     legend.appendChild(item);
   });

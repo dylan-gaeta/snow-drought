@@ -55,7 +55,7 @@ const VARIABLE_FULL_NAME = {
   LSWI: "land-surface water index",
   // vegetation / carbon
   NDVI: "normalized difference vegetation index", EVI: "enhanced vegetation index",
-  LAI: "leaf area index", GCC: "green chromatic coordinate", SIF: "solar-induced fluorescence",
+  LAI: "leaf area index", SIF: "solar-induced fluorescence",
   GPP: "gross primary productivity", NPP: "net primary productivity", NEE: "net ecosystem exchange",
   RECO: "ecosystem respiration", RH: "heterotrophic respiration",
   LAND_CARBON_EXCHANGE: "NBE incl. fire",
@@ -267,7 +267,7 @@ const PRODUCT_OBSERVATION_KIND = {
   "NLDAS-Noah": "model", "NLDAS-VIC": "model", "PRISM": "observation",
   "SiB4": "model", "UA-SWE-Monthly": "observation", "NSIDC-IMS": "observation",
   "SNOTEL": "observation", "SMAP": "observation", "SNODAS": "model",
-  "gridMET-Fire": "model", "OCO-2": "observation", "PhenoCam": "observation",
+  "gridMET-Fire": "model", "OCO-2": "observation",
   "SMOS": "observation", "CAMS": "model", "CarbonTracker": "model",
   "FluxSat": "model", "GOSIF": "model", "MiCASA": "model",
   "MODIS-Terra": "observation", "MODIS-Aqua": "observation",
@@ -277,6 +277,8 @@ const PRODUCT_OBSERVATION_KIND = {
   "GRACE-L4": "model",
   "NEON": "observation", "AmeriFlux": "observation",
   "GLEAM": "model", "USDM-Extent": "observation",
+  "GOSIF-GPP": "model", "MODIS-VIIRS": "observation", "VIIRS-NOAA20": "observation",
+  "VIIRS-NOAA21": "observation",
 };
 
 // Point-observation networks (stations / eddy-covariance towers / cameras):
@@ -287,9 +289,9 @@ const PRODUCT_OBSERVATION_KIND = {
 // summed over area should be included"). They remain on their own point-network
 // pages (Sites, SNOTEL), which read data/sites + data/snotel directly, not
 // manifest.categories. Authoritative set = dashboard_export.py's SITE_NETWORKS
-// (AmeriFlux/NEON/PhenoCam) plus SNOTEL (its own page); USDM-Extent is NOT here
+// (AmeriFlux/NEON) plus SNOTEL (its own page); USDM-Extent is NOT here
 // -- its D0-D4 are areal drought-extent fractions, a real area statistic.
-const POINT_NETWORK_PRODUCTS = new Set(["SNOTEL", "AmeriFlux", "NEON", "PhenoCam"]);
+const POINT_NETWORK_PRODUCTS = new Set(["SNOTEL", "AmeriFlux", "NEON"]);
 
 
 // ---------------------------------------------------------- Window statistics
@@ -1032,6 +1034,18 @@ function findResponseEntry(product, response) {
   return null;
 }
 
+// The name a product is shown under (manifest.product_labels, from the
+// pipeline's config.product_display_name): a VIIRS platform by its satellite
+// and instrument ("NOAA-20 VIIRS"), never the product key ("VIIRS-NOAA20").
+function productDisplay(product) {
+  if (!(product in manifest.product_labels)) throw new Error(`manifest.product_labels has no entry for ${product}`);
+  return manifest.product_labels[product];
+}
+
+// A product of monthly values only (NOAA-21 VIIRS): its record is too short for
+// a baseline, so it has no anomaly, σ, climatology or rank on record.
+const VALUES_ONLY_NOTE = "Monthly values only: this record is too short for a baseline, so it has no anomaly, σ or rank on record.";
+
 // Shared by explore.js and map-viewer.js's product-meta line -- a short
 // plain-language definition plus the same units/record/baseline facts
 // already in the exported JSON, never any interpretive claim about current
@@ -1043,6 +1057,7 @@ const STATUS_LABELS = {
   partial_target_record: "recent months incomplete",
   no_target_observations: "no current-period data",
   site_network_record: "site network (towers vary by month)",
+  values_only: "monthly values only (record too short for a baseline)",
 };
 
 function productMetaHtml(entry) {
@@ -1091,7 +1106,7 @@ function buildSearchIndex() {
   for (const category of manifest.category_order) {
     for (const [product, responses] of Object.entries(manifest.categories[category])) {
       for (const [response, entry] of Object.entries(responses)) {
-        index.push({ category, product, response, glossary: entry.glossary || "" });
+        index.push({ category, product, label: productDisplay(product), response, glossary: entry.glossary || "" });
       }
     }
   }
@@ -1103,6 +1118,7 @@ function searchProductIndex(index, query) {
   if (!q) return [];
   return index.filter((item) =>
     item.product.toLowerCase().includes(q) ||
+    item.label.toLowerCase().includes(q) ||
     item.response.toLowerCase().includes(q) ||
     item.glossary.toLowerCase().includes(q)
   ).slice(0, 12);
@@ -1125,7 +1141,7 @@ function wireProductSearch(inputId, resultsId, onSelect) {
     }
     results.innerHTML = matches.map((m, i) =>
       `<button type="button" class="search-result" data-index="${i}">
-        <strong>${m.product}</strong> &ndash; ${m.response}
+        <strong>${productDisplay(m.product)}</strong> &ndash; ${m.response}
         <span class="search-result-category">${categoryLabelWithIcon(m.category)}</span>
       </button>`
     ).join("");

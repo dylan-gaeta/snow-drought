@@ -151,6 +151,7 @@ async function renderSummaryTable() {
       // POINT_NETWORK_PRODUCTS, common.js); they live on the Sites/SNOTEL pages.
       if (POINT_NETWORK_PRODUCTS.has(product)) continue;
       for (const [response, entry] of Object.entries(responses)) {
+        if (entry.values_only) continue; // no baseline, so no anomaly, σ or rank (VALUES_ONLY_NOTE)
         if (!entry.aggregation) continue; // no established aggregation rule (e.g. NEON NEE) -- excluded, not guessed
         if (manifest.summary_excluded_series.includes(`${product}|${response}`)) continue;
         toFetch.push({ category, product, response, entry });
@@ -207,7 +208,7 @@ async function renderSummaryTable() {
       const responseCell = data.glossary
         ? `<td title="${data.glossary.replace(/"/g, "&quot;")}">${responseDisplay(row.response)}${note}</td>`
         : `<td>${responseDisplay(row.response)}${note}</td>`;
-      tr.innerHTML = `${responseCell}<td>${row.product}</td>${cellsHtml}`;
+      tr.innerHTML = `${responseCell}<td>${productDisplay(row.product)}</td>${cellsHtml}`;
       body.appendChild(tr);
     });
   });

@@ -170,6 +170,8 @@ function heatmapPairs(category, family) {
       for (const [response, entry] of Object.entries(responses)) {
         // Cloud/clear fractions are coverage diagnostics, not drought signals.
         if (manifest.coverage_diagnostic_responses.includes(response)) continue;
+        // A values-only product has no anomaly to draw.
+        if (entry.values_only) continue;
         // Series kept out of every summary display (records that stop before the current water year).
         if (manifest.summary_excluded_series.includes(`${product}|${response}`)) continue;
         // The water-year families read each single month directly --
@@ -295,7 +297,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     // YEARS_SIGMA) -- render it as a gray no-sigma row rather than letting it
     // silently vanish. Drop only products genuinely absent from the selection.
     if (!hasData) return;
-    yLabels.push(`${pair.product} ${pair.response}`);
+    yLabels.push(`${productDisplay(pair.product)} ${pair.response}`);
     z.push(row);
     rowCategories.push(pair.category);
   });

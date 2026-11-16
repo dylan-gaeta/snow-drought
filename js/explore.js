@@ -45,7 +45,7 @@ async function renderTimeseries() {
   const chart = document.getElementById("timeseries-chart");
   const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
   // Set before the no-data check, so the heading always names the region shown.
-  document.getElementById("timeseries-title").textContent = `${pickerState.product} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
+  document.getElementById("timeseries-title").textContent = `${productDisplay(pickerState.product)} · ${responseDisplay(data.response)} — ${regionLabelFor(pickerState.region)}`;
   const region = data.regions[pickerState.region];
   if (!region) {
     chart.innerHTML = '<p class="chart-empty">No data for this region.</p>';
@@ -107,7 +107,7 @@ async function renderTimeseries() {
   traces.push({
     x: dates, y, type: "scatter", mode: "lines",
     line: { color: "#1b1b1b", width: 1.4 },
-    name: pickerState.product,
+    name: productDisplay(pickerState.product),
     hovertemplate: "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
   });
   const sigmaNote = document.getElementById("timeseries-sigma-note");
@@ -133,10 +133,15 @@ async function renderTimeseriesRegionTable() {
   if (!body) return;
   const data = await fetchTimeseriesJson(`${pickerState.product}_${pickerState.response}`);
   document.getElementById("timeseries-region-table-heading").textContent =
-    `Regional values — ${pickerState.product} · ${responseDisplay(data.response)}, ${periodLabel(tsTableWindow)} ${tsTableYear}`;
+    `Regional values — ${productDisplay(pickerState.product)} · ${responseDisplay(data.response)}, ${periodLabel(tsTableWindow)} ${tsTableYear}`;
+  const note = document.getElementById("timeseries-region-table-note");
+  if (data.values_only) {
+    body.innerHTML = "";
+    note.textContent = VALUES_ONLY_NOTE;
+    return;
+  }
   const rawHeader = document.getElementById("timeseries-region-rawval-th");
   if (rawHeader) rawHeader.textContent = rawValueHeaderLabel(data, tsTableWindow);
-  const note = document.getElementById("timeseries-region-table-note");
   if (!data.aggregation) {
     body.innerHTML = "";
     note.textContent = "No established window-aggregation rule for this variable.";
@@ -147,7 +152,22 @@ async function renderTimeseriesRegionTable() {
   note.textContent = regionalSummaryNote(data);
 }
 
+// A values-only product has only its raw value: the anomaly and σ buttons are
+// disabled and the view returns to the value.
+function updateSeriesToggleAvailability(entry) {
+  document.querySelectorAll("#timeseries-toggle button[data-series]").forEach((btn) => {
+    btn.disabled = Boolean(entry.values_only) && btn.dataset.series !== "value";
+    btn.title = btn.disabled ? VALUES_ONLY_NOTE : "";
+  });
+  if (entry.values_only && timeseriesSeries !== "value") {
+    timeseriesSeries = "value";
+    document.querySelectorAll("#timeseries-toggle button[data-series]").forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.series === "value"));
+  }
+}
+
 function onTimeseriesSelectionChanged(entry) {
+  updateSeriesToggleAvailability(entry);
   // A new product/response has its own record span -- last product's start
   // year may not even exist in this one, so reset rather than carry it over.
   populateStartYearControl(entry);
@@ -189,7 +209,7 @@ function wireTimeseriesControls() {
 async function init() {
   await loadManifest();
   wireTimeseriesControls();
-  initProductPicker(onTimeseriesSelectionChanged);
+  initProductPicker(onTimeseriesSelectionChanged, true);
 }
 
 init();

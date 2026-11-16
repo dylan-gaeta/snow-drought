@@ -96,7 +96,7 @@ function renderGalleryMap(entry) {
   // rather than leaving a broken-image icon.
   img.onerror = () => { wrap.style.display = "none"; empty.style.display = "block"; };
   img.src = url;
-  img.alt = `${pickerState.product} ${pickerState.response}, ${galleryFigureLabel(figureKey)}, ${document.getElementById("gallery-period-select").selectedOptions[0].textContent}`;
+  img.alt = `${productDisplay(pickerState.product)} ${pickerState.response}, ${galleryFigureLabel(figureKey)}, ${document.getElementById("gallery-period-select").selectedOptions[0].textContent}`;
   const download = document.getElementById("gallery-map-download");
   download.href = url;
   download.setAttribute("download", relPath.split("/").pop());
@@ -195,7 +195,7 @@ function renderGalleryRegionFigure(ids, figuresByRegion) {
   const img = document.getElementById(ids.img);
   img.onerror = () => { wrap.style.display = "none"; empty.style.display = "block"; };
   img.src = url;
-  img.alt = `${pickerState.product} ${pickerState.response}, ${galleryRegionFigureLabel(figureKey)}, ${manifest.region_labels[region] || region}`;
+  img.alt = `${productDisplay(pickerState.product)} ${pickerState.response}, ${galleryRegionFigureLabel(figureKey)}, ${manifest.region_labels[region] || region}`;
   const download = document.getElementById(ids.download);
   download.href = url;
   download.setAttribute("download", relPath.split("/").pop());
@@ -291,7 +291,7 @@ async function init() {
   wireGalleryRegionFigureControls(TIMESERIES_GALLERY_IDS);
   wireGalleryRegionFigureControls(SEASONAL_GALLERY_IDS);
   wireGalleryImageFullscreen();
-  initProductPicker(onGallerySelectionChanged);
+  initProductPicker(onGallerySelectionChanged, false);
   initGalleryHeatmaps();
 }
 
