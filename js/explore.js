@@ -120,7 +120,7 @@ async function renderTimeseries() {
   if (showCoverage) {
     traces.push({
       x: dates, y: covered.map((s) => (s === null ? null : 100 * s)), type: "bar", yaxis: "y2",
-      marker: { color: "#b8bcc2" }, name: "Share of region covered",
+      marker: { color: "#b8bcc2" }, name: "Share of region covered", showlegend: false,
       hovertemplate: "%{x|%Y-%m}: %{y:.0f}% of the region covered<extra></extra>",
     });
   }
@@ -136,6 +136,9 @@ async function renderTimeseries() {
   }
   const layout = {
     margin: { t: 20, r: 20, b: 45, l: 60 },
+    // A legend only when it names two or more series (the coverage strip is
+    // named by its own axis).
+    showlegend: traces.filter((trace) => trace.showlegend !== false).length > 1,
     yaxis: { title: yTitle, zeroline: false, ...PLOTLY_AXIS_LINE,
              ...(showCoverage ? { domain: [COVERAGE_STRIP_HEIGHT + 0.05, 1] } : {}) },
     ...(showCoverage ? { yaxis2: { domain: [0, COVERAGE_STRIP_HEIGHT], range: [0, 100], title: "Covered (%)",
