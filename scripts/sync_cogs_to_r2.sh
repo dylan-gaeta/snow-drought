@@ -35,6 +35,15 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENDPOINT="https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
 
+# Optional argument "data": sync data/ only and stop, so the page code can be
+# pushed as soon as the new manifest is live (pages and manifest must change
+# together); a second run without the argument then finishes cogs/ and figures/.
+STAGE="${1:-all}"
+if [ "$STAGE" != "all" ] && [ "$STAGE" != "data" ]; then
+  echo "usage: $0 [data]" >&2
+  exit 2
+fi
+
 # aws s3 sync returns non-zero if EVEN ONE file fails mid-transfer, which
 # (combined with this script's own set -e) killed the entire script before
 # later stages (figures/, or even the rest of cogs/) ever ran -- confirmed
@@ -93,6 +102,9 @@ sync_with_retry "$GZIP_STAGING_DIR/" "s3://$R2_BUCKET/data/" \
   --content-type "application/json" \
   --content-encoding "gzip"
 echo "synced $REPO_DIR/data/ -> s3://$R2_BUCKET/data/ (gzip-encoded)"
+if [ "$STAGE" = "data" ]; then
+  exit 0
+fi
 
 AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
 AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
