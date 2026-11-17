@@ -271,23 +271,13 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-const SEASON_LABELS = {
-  MAM: "Mar–May", JJA: "Jun–Aug", SON: "Sep–Nov",
-  DJF: "Dec–Feb", NDJF: "Nov–Feb",
-  DJFM: "Dec–Mar", AMJJ: "Apr–Jul",
-  MAMJJAS: "Mar–Sep", ANNUAL: "Jan–Dec",
-};
-const SEASON_ORDER = ["NDJF", "DJFM", "DJF", "MAM", "AMJJ", "MAMJJAS", "JJA", "SON", "ANNUAL"];
-// Mirrors config.py's MAP_SEASONAL_PERIODS -- do not diverge for any window
-// also used by the interactive map's period select (built server-side from
-// that same dict, see code/17_dashboard_cog_export.py's SEASON_MONTHS).
-// The Mar-Sep window is MAMJJAS here and in the COG export; the static map
-// folders call it MARSEP, and dashboard_export.py registers them as MAMJJAS.
-const SEASON_MONTHS = {
-  MAM: [3, 4, 5], JJA: [6, 7, 8], SON: [9, 10, 11],
-  DJF: [12, 1, 2], NDJF: [11, 12, 1, 2], DJFM: [12, 1, 2, 3], AMJJ: [4, 5, 6, 7],
-  MAMJJAS: [3, 4, 5, 6, 7, 8, 9], ANNUAL: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-};
+// Multi-month windows: only the winter snow-season ones. Everything else is
+// shown month by month -- the 2026 response moved too fast for a growing-season
+// mean (March and June anomalies have opposite signs).
+// Mirrors config.py's MAP_SEASONAL_PERIODS -- do not diverge.
+const SEASON_LABELS = { DJF: "Dec–Feb", NDJF: "Nov–Feb", DJFM: "Dec–Mar" };
+const SEASON_ORDER = ["NDJF", "DJFM", "DJF"];
+const SEASON_MONTHS = { DJF: [12, 1, 2], NDJF: [11, 12, 1, 2], DJFM: [12, 1, 2, 3] };
 
 // Mirrors config.py's PRODUCT_OBSERVATION_KIND exactly -- do not diverge.
 // Re-synced 2026-10-01 after this copy drifted from the Python source: 6
@@ -316,7 +306,7 @@ const PRODUCT_OBSERVATION_KIND = {
   "GRACE-L4": "model",
   "NEON": "observation", "AmeriFlux": "observation",
   "GLEAM": "model", "USDM-Extent": "observation",
-  "GOSIF-GPP": "model", "MODIS-VIIRS": "observation", "VIIRS-NOAA20": "observation",
+  "GOSIF-GPP": "model", "MODIS-VIIRS": "observation", "VIIRS-NOAA20": "observation", "GOES-West": "observation",
   "VIIRS-NOAA21": "observation",
 };
 
@@ -1002,7 +992,9 @@ function populateYearSelect(select, defaultYear) {
 }
 
 function sortedPeriods(periodKeys) {
-  return periodKeys.slice().sort((a, b) => {
+  // Single months and the winter windows only: map layers of other multi-month
+  // windows made by earlier exports are never offered.
+  return periodKeys.filter((p) => /^\d{2}$/.test(p) || SEASON_ORDER.includes(p)).sort((a, b) => {
     const aSeason = SEASON_ORDER.indexOf(a);
     const bSeason = SEASON_ORDER.indexOf(b);
     if (aSeason !== -1 || bSeason !== -1) {
