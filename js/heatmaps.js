@@ -391,7 +391,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
       ticktext: sigmaTicks(zAbs).map((v) => (v === -zAbs ? `≤−${zAbs}` : v === zAbs ? `≥+${zAbs}`
         : v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0")),
       tickfont: { size: 12 },
-      title: { text: "← Less stress · Standardized anomaly (σ) · More stress →", side: "top", font: { size: 13 } },
+      title: { text: "Standardized anomaly (σ)", side: "top", font: { size: 13 } },
     },
     hoverongaps: false,
   };
