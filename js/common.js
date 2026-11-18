@@ -148,11 +148,44 @@ const CATEGORY_ICONS = {
   vegetation: "\u{1F33F}", // herb (leaf)
   fire: "\u{1F525}", // fire
   drought: "\u{1F3DC}", // desert
+  coverage: "\u{2601}", // cloud
 };
 
 function categoryLabelWithIcon(category) {
   const icon = CATEGORY_ICONS[category];
   return icon ? `${icon} ${manifest.category_labels[category]}` : manifest.category_labels[category];
+}
+
+// A MODIS product's months from its orbit-drift onset month on
+// (manifest.orbit_drift_start): the usual trace before that month, then a dashed
+// line through hollow circles that starts at the last month before the drift.
+// `dates` (YYYY-MM-DD, running forward) align with trace.x and trace.y. The
+// drifted part carries no legend entry or text of its own.
+function driftAwareTraces(trace, product, dates) {
+  if (!(product in manifest.orbit_drift_start)) return [trace];
+  const first = dates.findIndex((d) => d >= manifest.orbit_drift_start[product]);
+  if (first === -1) return [trace];
+  let join = first;
+  for (let i = first - 1; i >= 0; i--) {
+    if (trace.y[i] !== null && trace.y[i] !== undefined) { join = i; break; }
+  }
+  const fromJoin = (values) => (Array.isArray(values) ? values.slice(join) : values);
+  // One legend group, so a legend click shows or hides both parts together.
+  const legendgroup = trace.legendgroup || trace.name;
+  const drifted = {
+    ...trace,
+    legendgroup,
+    x: fromJoin(trace.x), y: fromJoin(trace.y), customdata: fromJoin(trace.customdata),
+    mode: "lines+markers",
+    line: { ...trace.line, dash: "dash" },
+    marker: {
+      symbol: "circle-open", color: trace.line.color,
+      size: trace.x.slice(join).map((_, i) => (i + join >= first ? manifest.orbit_drift_marker_size : 0)),
+    },
+    showlegend: first === 0 ? trace.showlegend : false,
+  };
+  if (first === 0) return [drifted];
+  return [{ ...trace, legendgroup, y: trace.y.map((v, i) => (i >= first ? null : v)) }, drifted];
 }
 
 // Hard floor across every page (Dylan, 2026-09): a handful of products

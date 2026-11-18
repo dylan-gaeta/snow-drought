@@ -108,7 +108,7 @@ async function renderTimeseries() {
     ? region.covered_share.filter((_, i) => parseInt(region.dates[i].slice(0, 4), 10) >= startYear)
     : null;
   const showCoverage = covered !== null && covered.some((s) => s !== null && s < COVERAGE_STRIP_BELOW);
-  traces.push({
+  traces.push(...driftAwareTraces({
     x: dates, y, type: "scatter", mode: "lines",
     line: { color: "#1b1b1b", width: 1.4 },
     name: productDisplay(pickerState.product),
@@ -116,7 +116,7 @@ async function renderTimeseries() {
     hovertemplate: covered
       ? "%{x|%Y-%m}: %{y:.2f} (covers %{customdata:.0f}% of the region)<extra></extra>"
       : "%{x|%Y-%m}: %{y:.2f}<extra></extra>",
-  });
+  }, pickerState.product, dates));
   if (showCoverage) {
     traces.push({
       x: dates, y: covered.map((s) => (s === null ? null : 100 * s)), type: "bar", yaxis: "y2",

@@ -29,6 +29,12 @@ function waterYearLabel(year) {
 // like one of the default highlight years. null where a whole year's data
 // isn't available (e.g. year not fully in the record) rather than plotting
 // a broken partial curve.
+// Month starts (YYYY-MM-DD) of water year `year`, October first.
+function waterYearDates(year) {
+  return [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(
+    (month) => `${month >= 10 ? year - 1 : year}-${String(month).padStart(2, "0")}-01`);
+}
+
 function computeWaterYearCurve(region, year) {
   const months = [
     [10, year - 1], [11, year - 1], [12, year - 1],
@@ -130,11 +136,11 @@ async function renderSeasonal() {
       const highlightCurve = region.highlight_years[String(year)];
       const curve = highlightCurve || (tsRegion && computeWaterYearCurve(tsRegion, year));
       if (!curve) return;
-      traces.push({
+      traces.push(...driftAwareTraces({
         x, y: scaleUnit(isAnomaly ? curve.anomaly : curve.raw), type: "scatter", mode: "lines",
         line: { color: seasonalYearColor[year], width: 2, dash: highlightCurve ? undefined : "dot" },
         name: waterYearLabel(year), showlegend: false,
-      });
+      }, pickerState.product, waterYearDates(year)));
     });
   // Plotly's default legend sits to the right of the plot -- fine on a wide
   // screen, but on mobile it squeezed the actual chart into less than half

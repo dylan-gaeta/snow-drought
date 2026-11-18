@@ -179,16 +179,16 @@ async function renderCompare() {
   }
 
   const traces = [];
-  if (a) traces.push({
+  if (a) traces.push(...driftAwareTraces({
     x: a.dates, y: a.values, type: "scatter", mode: "lines", connectgaps: false,
     name: a.name, line: { color: COMPARE_A_COLOR, width: 2.5 }, yaxis: "y",
     hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${a.name}</extra>`,
-  });
-  if (b) traces.push({
+  }, compareState.a.product, a.dates));
+  if (b) traces.push(...driftAwareTraces({
     x: b.dates, y: b.values, type: "scatter", mode: "lines", connectgaps: false,
     name: b.name, line: { color: COMPARE_B_COLOR, width: 2.5 }, yaxis: isSigma ? "y" : "y2",
     hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${b.name}</extra>`,
-  });
+  }, compareState.b.product, b.dates));
 
   const layout = {
     margin: { t: 10, r: isSigma ? 20 : 66, b: 45, l: 66 },
@@ -320,9 +320,9 @@ async function renderOverlay() {
   const isAnomaly = field === "anomaly";
   const startYear = Math.max(DASHBOARD_MIN_YEAR, overlayState.startYear || DASHBOARD_MIN_YEAR);
 
-  // One trace per dataset, in overlayState.datasets order (even when a dataset
-  // has no data for this region -- an empty trace keeps trace index aligned
-  // with the dataset order, so the legend checkboxes restyle the right line).
+  // One trace per dataset (two for a MODIS dataset, split at its orbit drift),
+  // in overlayState.datasets order, named for the dataset; the legend
+  // checkboxes find a dataset's traces by that name.
   const traces = [];
   const unitsSeen = new Set();
   let anyData = false;
@@ -354,12 +354,12 @@ async function renderOverlay() {
       });
       if (values.some((v) => v !== null)) anyData = true;
     }
-    traces.push({
+    traces.push(...driftAwareTraces({
       x: dates, y: values, type: "scatter", mode: "lines", connectgaps: false,
       name: productDisplay(product), line: { color: overlayColor(product), width: 2 },
       visible: overlayState.hidden[product] ? "legendonly" : true,
       hovertemplate: `%{x|%Y-%m}: %{y:.2f}<extra>${productDisplay(product)}</extra>`,
-    });
+    }, product, dates));
   });
 
   const varName = responseDisplay(response);
@@ -409,7 +409,7 @@ async function renderOverlay() {
 function renderOverlayLegend() {
   const legend = document.getElementById("overlay-legend");
   legend.innerHTML = "";
-  overlayState.datasets.forEach((product, index) => {
+  overlayState.datasets.forEach((product) => {
     const item = document.createElement("label");
     item.className = "checkbox-legend-item";
     const box = document.createElement("input");
@@ -417,7 +417,10 @@ function renderOverlayLegend() {
     box.checked = !overlayState.hidden[product];
     box.addEventListener("change", () => {
       overlayState.hidden[product] = !box.checked;
-      Plotly.restyle(document.getElementById("overlay-chart"), { visible: box.checked ? true : "legendonly" }, [index]);
+      // A MODIS dataset is drawn as two traces (before and after its orbit drift), both named for it.
+      const chart = document.getElementById("overlay-chart");
+      const indices = chart.data.map((trace, i) => (trace.name === productDisplay(product) ? i : -1)).filter((i) => i >= 0);
+      Plotly.restyle(chart, { visible: box.checked ? true : "legendonly" }, indices);
     });
     const swatch = document.createElement("span");
     swatch.className = "checkbox-legend-swatch";

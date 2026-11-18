@@ -127,6 +127,9 @@ function renderHeatmapCategoryTabs() {
   const nav = document.getElementById("heatmap-category-tabs");
   nav.innerHTML = "";
   manifest.category_order.forEach((category) => {
+    // A group of coverage diagnostics only (cloud and clear-sky fraction) has no heatmap rows.
+    const responses = Object.values(manifest.categories[category] || {}).flatMap((byResponse) => Object.keys(byResponse));
+    if (responses.every((response) => manifest.coverage_diagnostic_responses.includes(response))) return;
     const button = document.createElement("button");
     button.className = "category-tab";
     if (category === heatmapState.category) button.classList.add("active");
@@ -213,6 +216,31 @@ async function renderHeatmap() {
   }
 }
 
+// A MODIS cell holding a month after its orbit's drift onset
+// (manifest.orbit_drift_start) is hatched with three falling lines, no label;
+// a cell with no value stays plain gray.
+// Cells sit on category index positions, column c from c - 0.5 to c + 0.5.
+function driftHatchShapes(rowProducts, columnMonths, z) {
+  const shapes = [];
+  rowProducts.forEach((product, row) => {
+    if (!(product in manifest.orbit_drift_start)) return;
+    const start = manifest.orbit_drift_start[product];
+    columnMonths.forEach((dates, col) => {
+      if (!dates.some((date) => date >= start)) return;
+      if (z[row][col] === null || Number.isNaN(z[row][col])) return;
+      // (u, v) run 0..1 across the cell from its top-left corner.
+      for (const [u0, v0, u1, v1] of [[0, 0, 1, 1], [0, 0.5, 0.5, 1], [0.5, 0, 1, 0.5]]) {
+        shapes.push({
+          type: "line", xref: "x", yref: "y", layer: "above",
+          x0: col - 0.5 + u0, y0: row + 0.5 - v0, x1: col - 0.5 + u1, y1: row + 0.5 - v1,
+          line: { color: "#808080", width: 1 },
+        });
+      }
+    });
+  });
+  return shapes;
+}
+
 async function renderHeatmapUnsafe(chart, pairs) {
   // Fetch every product's JSON concurrently instead of one at a time --
   // "All products" is ~100 items, and awaiting each fetch in turn meant a
@@ -222,7 +250,8 @@ async function renderHeatmapUnsafe(chart, pairs) {
     pairs.map(({ product, response }) => fetchHeatmapSeries(`${product}_${response}`))
   );
 
-  let xLabels, computeRow;
+  // columnMonths: each column's months (YYYY-MM-DD), for the drift hatching.
+  let xLabels, computeRow, columnMonths;
   if (heatmapState.family.startsWith("wy_")) {
     const wy = HEATMAP_FAMILIES[heatmapState.family].waterYear;
     // One water year: Oct (wy-1) through Sep (wy).
@@ -234,6 +263,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     // 12-column heatmap has, and each column here really is its own
     // distinct real month/year (unlike the seasonal chart's shared axis).
     xLabels = months.map(({ year, month }) => `${MONTH_NAMES[month - 1].slice(0, 3)}<br>${year}`);
+    columnMonths = months.map(({ year, month }) => [`${year}-${String(month).padStart(2, "0")}-01`]);
     computeRow = (data) => {
       const region = data.regions[heatmapState.region];
       if (!region) return { z: months.map(() => null), hasData: false };
@@ -266,6 +296,8 @@ async function renderHeatmapUnsafe(chart, pairs) {
     const years = [];
     for (let y = startYear; y <= maxYear; y++) years.push(y);
     xLabels = years.map(String);
+    columnMonths = years.map((year) => windowMonthYearPairs(windowKey, year)
+      .map(({ month, year: yr }) => `${yr}-${String(month).padStart(2, "0")}-01`));
     computeRow = (data) => {
       const region = data.regions[heatmapState.region];
       if (!region) return { z: years.map(() => null), hasData: false };
@@ -285,6 +317,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
   const yLabels = [];
   const z = [];
   const rowCategories = [];
+  const rowProducts = [];
   // Plotly's categorical y-axis renders array index 0 at the BOTTOM, so
   // pushing category_order's own top-to-bottom sequence (snow/climate first,
   // drought last) unreversed put drought at the top and snow at the bottom
@@ -301,6 +334,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     yLabels.push(`${productDisplay(pair.product)} ${pair.response}`);
     z.push(row);
     rowCategories.push(pair.category);
+    rowProducts.push(pair.product);
   });
   if (z.length === 0) {
     chart.innerHTML = '<p class="chart-empty">No data for this selection.</p>';
@@ -372,7 +406,7 @@ async function renderHeatmapUnsafe(chart, pairs) {
     yaxis: { automargin: true },
     font: { family: "Source Sans Pro, sans-serif", size: 12 },
     height: Math.max(430, yLabels.length * 22 + 170),
-    shapes: sepShapes,
+    shapes: sepShapes.concat(driftHatchShapes(rowProducts, columnMonths, z)),
     annotations: catLabels,
   };
   // Column count ranges from 12 (monthly) to 35+ (a full-record yearly
